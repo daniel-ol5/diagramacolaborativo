@@ -1,0 +1,575 @@
+{
+  "schemaVersion": "1.0.0",
+  "mutationVersion": 1,
+  "packages": [
+    {
+      "id": "7586fd38-62f0-5c46-b436-498828b968be",
+      "name": "catalogo",
+      "classIds": [
+        "cb97e87a-ed6a-5b88-899f-39bbd46e2a79",
+        "52a0c30d-25ae-510f-9071-8e3cfd9b51e8",
+        "066be93c-be23-59a8-bece-27501c103dd5"
+      ]
+    },
+    {
+      "id": "ff456f4c-eecc-5c5a-ab0d-ecd8f43daebb",
+      "name": "operaciones",
+      "classIds": [
+        "cda5842a-5bf5-55cb-8d48-092fe7835b73",
+        "a13d3f05-7f2d-5031-b864-752f4340cbb1"
+      ]
+    }
+  ],
+  "classes": [
+    {
+      "id": "cb97e87a-ed6a-5b88-899f-39bbd46e2a79",
+      "name": "Categoria",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 60.0,
+        "y": 60.0
+      },
+      "width": 240.0,
+      "height": 180.0,
+      "attributes": [
+        {
+          "id": "bd127928-4e58-5bbd-882d-c3fc4efb3f29",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "08b08a4a-27f9-5112-9423-0e20506d98ca",
+          "name": "nombre",
+          "type": "VARCHAR",
+          "length": 80,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "2f1533dd-d528-50b7-a109-c3f330fe8be1",
+          "name": "descripcion",
+          "type": "TEXT",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        },
+        {
+          "id": "636012ea-5e15-5802-8ea8-67fd8bd43ef8",
+          "name": "activa",
+          "type": "BOOLEAN",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false,
+          "defaultValue": "true"
+        }
+      ],
+      "methods": [
+        {
+          "id": "8f69f185-baf0-58a9-93df-585796c7ac00",
+          "name": "cantidadProductos",
+          "returnType": "Integer",
+          "visibility": "PUBLIC",
+          "parameters": []
+        }
+      ]
+    },
+    {
+      "id": "066be93c-be23-59a8-bece-27501c103dd5",
+      "name": "Proveedor",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 740.0,
+        "y": 60.0
+      },
+      "width": 260.0,
+      "height": 220.0,
+      "attributes": [
+        {
+          "id": "cfc5d484-aa56-5661-9dbe-3663820b1131",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "480a496f-b371-5b5a-8308-42d7719f4761",
+          "name": "razonSocial",
+          "type": "VARCHAR",
+          "length": 150,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "16a244d2-b84d-58df-bdf4-de2e30984d46",
+          "name": "nit",
+          "type": "VARCHAR",
+          "length": 20,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "ef8b9e22-1ac7-5274-817b-17079f169d44",
+          "name": "telefono",
+          "type": "VARCHAR",
+          "length": 20,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        },
+        {
+          "id": "b343d90a-6a39-5727-a21a-e8f2bb857def",
+          "name": "email",
+          "type": "VARCHAR",
+          "length": 150,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        },
+        {
+          "id": "7781d89c-66f7-5ab4-86d5-1c4442384562",
+          "name": "direccion",
+          "type": "VARCHAR",
+          "length": 200,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        }
+      ],
+      "methods": [
+        {
+          "id": "aa220e26-5baa-5d69-9d56-e02d271cfd3d",
+          "name": "calificarPuntualidad",
+          "returnType": "Integer",
+          "visibility": "PUBLIC",
+          "parameters": [
+            {
+              "name": "desde",
+              "type": "LocalDate"
+            },
+            {
+              "name": "hasta",
+              "type": "LocalDate"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "52a0c30d-25ae-510f-9071-8e3cfd9b51e8",
+      "name": "Producto",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 400.0,
+        "y": 340.0
+      },
+      "width": 280.0,
+      "height": 260.0,
+      "attributes": [
+        {
+          "id": "a0ad7e10-ac8d-5116-81cf-a54035448534",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "342e91ba-c494-57e3-bac0-80659557571e",
+          "name": "codigo",
+          "type": "VARCHAR",
+          "length": 30,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "42382a0e-409c-5912-9fd8-32136173ad04",
+          "name": "nombre",
+          "type": "VARCHAR",
+          "length": 150,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "e994e2e1-0de5-54f0-8583-6640d4ea4db7",
+          "name": "descripcion",
+          "type": "TEXT",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        },
+        {
+          "id": "5dcbfdfb-cfb0-5cad-bf70-96de0cdc6f54",
+          "name": "precioUnitario",
+          "type": "DECIMAL",
+          "length": 255,
+          "precision": 12,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "b662ade4-4624-57a6-9302-c65dff4aabc6",
+          "name": "stockMinimo",
+          "type": "INTEGER",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false,
+          "defaultValue": "0"
+        },
+        {
+          "id": "a697faf1-d151-559c-93cd-d77538200579",
+          "name": "activo",
+          "type": "BOOLEAN",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false,
+          "defaultValue": "true"
+        }
+      ],
+      "methods": [
+        {
+          "id": "3d39c409-9c30-5bcc-86ec-e6fe79f28857",
+          "name": "stockTotal",
+          "returnType": "Integer",
+          "visibility": "PUBLIC",
+          "parameters": []
+        },
+        {
+          "id": "2b58216a-7be3-5220-83d1-21df623c24a9",
+          "name": "necesitaReposicion",
+          "returnType": "Boolean",
+          "visibility": "PUBLIC",
+          "parameters": []
+        },
+        {
+          "id": "05087114-f06c-588b-9a1f-49e8bb0d6059",
+          "name": "aplicarDescuento",
+          "returnType": "BigDecimal",
+          "visibility": "PUBLIC",
+          "parameters": [
+            {
+              "name": "porcentaje",
+              "type": "BigDecimal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cda5842a-5bf5-55cb-8d48-092fe7835b73",
+      "name": "Almacen",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 60.0,
+        "y": 700.0
+      },
+      "width": 240.0,
+      "height": 200.0,
+      "attributes": [
+        {
+          "id": "764e7ab0-abcf-529f-a786-74cfc8c07d3c",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "eab2b8fd-3fc1-5f6a-8f4d-f2cd17fd89fd",
+          "name": "nombre",
+          "type": "VARCHAR",
+          "length": 100,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "b6d36168-0862-5e11-84ed-44ca551c15e6",
+          "name": "ubicacion",
+          "type": "VARCHAR",
+          "length": 200,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "88f1b385-a536-5030-a9c6-a4e92f04ba16",
+          "name": "capacidadM3",
+          "type": "DECIMAL",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        }
+      ],
+      "methods": [
+        {
+          "id": "81a49c2c-2395-561d-94f2-171516456c67",
+          "name": "espacioDisponible",
+          "returnType": "BigDecimal",
+          "visibility": "PUBLIC",
+          "parameters": []
+        }
+      ]
+    },
+    {
+      "id": "a13d3f05-7f2d-5031-b864-752f4340cbb1",
+      "name": "MovimientoStock",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 520.0,
+        "y": 740.0
+      },
+      "width": 280.0,
+      "height": 240.0,
+      "attributes": [
+        {
+          "id": "885c6552-971e-5d51-9d17-b6dcd2253161",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "a1517089-900e-54ac-a0a0-035fbc13abfc",
+          "name": "tipo",
+          "type": "VARCHAR",
+          "length": 20,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false,
+          "defaultValue": "ENTRADA"
+        },
+        {
+          "id": "f4311670-2d63-5669-a0d6-4e3a1999056e",
+          "name": "cantidad",
+          "type": "INTEGER",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "580da30c-d64b-5c87-bf29-ab7d4bd0559d",
+          "name": "fecha",
+          "type": "DATETIME",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "717b8634-13c2-5db7-838b-9633bbb7b8f4",
+          "name": "motivo",
+          "type": "VARCHAR",
+          "length": 200,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        },
+        {
+          "id": "baf2d776-e190-5dea-b8f7-a33a3f7560e9",
+          "name": "costoUnitario",
+          "type": "DECIMAL",
+          "length": 255,
+          "precision": 12,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        }
+      ],
+      "methods": [
+        {
+          "id": "5e3ed4a1-3d33-553f-bbf5-f08638505293",
+          "name": "revertir",
+          "returnType": "void",
+          "visibility": "PUBLIC",
+          "parameters": [
+            {
+              "name": "motivo",
+              "type": "String"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "16f5081e-ae49-5cc7-803b-b38a5df062c2",
+      "sourceClassId": "cb97e87a-ed6a-5b88-899f-39bbd46e2a79",
+      "targetClassId": "52a0c30d-25ae-510f-9071-8e3cfd9b51e8",
+      "type": "ASSOCIATION",
+      "owningSide": "TARGET",
+      "sourceMultiplicity": "1..1",
+      "targetMultiplicity": "0..*",
+      "sourceRole": "categoria",
+      "targetRole": "productos",
+      "isNavigable": true,
+      "waypoints": [
+        {
+          "x": 300.0,
+          "y": 260.0
+        },
+        {
+          "x": 380.0,
+          "y": 420.0
+        }
+      ]
+    },
+    {
+      "id": "da26dcce-36d8-5751-9302-f9248d0be4f5",
+      "sourceClassId": "52a0c30d-25ae-510f-9071-8e3cfd9b51e8",
+      "targetClassId": "066be93c-be23-59a8-bece-27501c103dd5",
+      "type": "MANY_TO_MANY",
+      "owningSide": "SOURCE",
+      "joinTableName": "producto_proveedor",
+      "sourceMultiplicity": "0..*",
+      "targetMultiplicity": "0..*",
+      "sourceRole": "productos",
+      "targetRole": "proveedores",
+      "isNavigable": true,
+      "waypoints": [
+        {
+          "x": 720.0,
+          "y": 380.0
+        }
+      ]
+    },
+    {
+      "id": "da645067-fcb4-5aeb-9886-96a46513bafd",
+      "sourceClassId": "52a0c30d-25ae-510f-9071-8e3cfd9b51e8",
+      "targetClassId": "a13d3f05-7f2d-5031-b864-752f4340cbb1",
+      "type": "ASSOCIATION",
+      "owningSide": "TARGET",
+      "sourceMultiplicity": "1..1",
+      "targetMultiplicity": "0..*",
+      "sourceRole": "producto",
+      "targetRole": "movimientos",
+      "isNavigable": true,
+      "waypoints": []
+    },
+    {
+      "id": "b2a887f4-5e8e-5110-a7d2-3c8345b729b8",
+      "sourceClassId": "cda5842a-5bf5-55cb-8d48-092fe7835b73",
+      "targetClassId": "a13d3f05-7f2d-5031-b864-752f4340cbb1",
+      "type": "ASSOCIATION",
+      "owningSide": "TARGET",
+      "sourceMultiplicity": "1..1",
+      "targetMultiplicity": "0..*",
+      "sourceRole": "almacen",
+      "targetRole": "movimientos",
+      "isNavigable": true,
+      "waypoints": [
+        {
+          "x": 360.0,
+          "y": 860.0
+        }
+      ]
+    }
+  ]
+}

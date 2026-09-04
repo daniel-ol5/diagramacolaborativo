@@ -1,0 +1,645 @@
+{
+  "schemaVersion": "1.0.0",
+  "mutationVersion": 1,
+  "packages": [
+    {
+      "id": "d005c29b-c730-59a3-b639-19f8f2d754d5",
+      "name": "personas",
+      "classIds": [
+        "02ce161a-0547-5a9d-b16f-1a42904dc171",
+        "b42935e5-9113-5a37-8696-0244cfd828af",
+        "7e781276-27b9-5f3f-b7eb-2b8bf06954fe"
+      ]
+    },
+    {
+      "id": "d3f0a687-ffe8-570c-b288-036a630c1fc1",
+      "name": "clinica",
+      "classIds": [
+        "0ae2da39-83b2-55bf-a3f9-59275c858dc4",
+        "d8d44918-19b7-58e9-a5b0-d3ac4fea345b",
+        "93865075-87f1-5974-b6f8-235978cee77d"
+      ]
+    }
+  ],
+  "classes": [
+    {
+      "id": "02ce161a-0547-5a9d-b16f-1a42904dc171",
+      "name": "Persona",
+      "visibility": "PUBLIC",
+      "isAbstract": true,
+      "position": {
+        "x": 340.0,
+        "y": 40.0
+      },
+      "width": 240.0,
+      "height": 200.0,
+      "attributes": [
+        {
+          "id": "c15df619-195c-5f33-8eb6-5a6bcbb3fbe1",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "54d115e2-8992-5983-ab4f-10d570f4ccfa",
+          "name": "nombres",
+          "type": "VARCHAR",
+          "length": 100,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "c87d18c5-4916-5c78-a99c-5f0c6e720c5a",
+          "name": "apellidos",
+          "type": "VARCHAR",
+          "length": 100,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "3736b67d-76ad-5550-aae5-fe8dbb5df344",
+          "name": "ci",
+          "type": "VARCHAR",
+          "length": 20,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "c2781872-c9ab-579a-9f39-55740cf86dd7",
+          "name": "telefono",
+          "type": "VARCHAR",
+          "length": 20,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        }
+      ],
+      "methods": [
+        {
+          "id": "d3ee1e21-1cbd-5395-b2bd-50cc44165403",
+          "name": "nombreCompleto",
+          "returnType": "String",
+          "visibility": "PUBLIC",
+          "parameters": []
+        }
+      ]
+    },
+    {
+      "id": "b42935e5-9113-5a37-8696-0244cfd828af",
+      "name": "Dueno",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 60.0,
+        "y": 340.0
+      },
+      "width": 240.0,
+      "height": 180.0,
+      "attributes": [
+        {
+          "id": "debf8e62-7d8e-503b-90a2-55421ef6d744",
+          "name": "direccion",
+          "type": "VARCHAR",
+          "length": 200,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        },
+        {
+          "id": "1f6a1217-508a-5c66-a381-068194e2254c",
+          "name": "email",
+          "type": "VARCHAR",
+          "length": 150,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": true
+        },
+        {
+          "id": "058365dc-827f-5175-a6a7-de2736a46009",
+          "name": "fechaAlta",
+          "type": "DATE",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        }
+      ],
+      "methods": [
+        {
+          "id": "8602e41a-c067-540b-873e-bf7d463feca4",
+          "name": "registrarMascota",
+          "returnType": "Mascota",
+          "visibility": "PUBLIC",
+          "parameters": [
+            {
+              "name": "nombre",
+              "type": "String"
+            },
+            {
+              "name": "especie",
+              "type": "String"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "7e781276-27b9-5f3f-b7eb-2b8bf06954fe",
+      "name": "Veterinario",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 620.0,
+        "y": 340.0
+      },
+      "width": 240.0,
+      "height": 180.0,
+      "attributes": [
+        {
+          "id": "11adaf7f-9afd-5ead-ab55-27fac350302e",
+          "name": "matricula",
+          "type": "VARCHAR",
+          "length": 30,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "20f906bd-16c1-55a2-85d8-834df677962e",
+          "name": "especialidad",
+          "type": "VARCHAR",
+          "length": 80,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        },
+        {
+          "id": "e831e580-5d8a-5b55-8898-7937185fdbb9",
+          "name": "disponible",
+          "type": "BOOLEAN",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false,
+          "defaultValue": "true"
+        }
+      ],
+      "methods": [
+        {
+          "id": "c09c720d-095b-51e3-b54a-14818af00bf7",
+          "name": "agendarConsulta",
+          "returnType": "Consulta",
+          "visibility": "PUBLIC",
+          "parameters": [
+            {
+              "name": "mascotaId",
+              "type": "UUID"
+            },
+            {
+              "name": "fecha",
+              "type": "LocalDateTime"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0ae2da39-83b2-55bf-a3f9-59275c858dc4",
+      "name": "Mascota",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 60.0,
+        "y": 640.0
+      },
+      "width": 260.0,
+      "height": 240.0,
+      "attributes": [
+        {
+          "id": "d088c6f9-387b-56c1-a82a-c8d305513aaf",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "035eb696-dab1-5e04-b348-930df7f1caa7",
+          "name": "nombre",
+          "type": "VARCHAR",
+          "length": 80,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "e45029b8-e73b-54ef-8823-0bd4a6b2f4bd",
+          "name": "especie",
+          "type": "VARCHAR",
+          "length": 50,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "c5fec95e-bd9e-5fbc-908b-4f2aa39a9f6f",
+          "name": "raza",
+          "type": "VARCHAR",
+          "length": 80,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        },
+        {
+          "id": "e9604e44-8b0a-5cfa-8978-3c86f4c3da18",
+          "name": "fechaNacimiento",
+          "type": "DATE",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        },
+        {
+          "id": "c42a1cbe-af0a-502f-9a3e-3d8c7acb3ab7",
+          "name": "pesoKg",
+          "type": "DECIMAL",
+          "length": 255,
+          "precision": 5,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        },
+        {
+          "id": "78d4455f-3f98-52ee-97fe-0b60e267832c",
+          "name": "esterilizado",
+          "type": "BOOLEAN",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false,
+          "defaultValue": "false"
+        }
+      ],
+      "methods": [
+        {
+          "id": "d8964625-441e-542e-8869-ea8f55d270c4",
+          "name": "edadEnMeses",
+          "returnType": "Integer",
+          "visibility": "PUBLIC",
+          "parameters": []
+        }
+      ]
+    },
+    {
+      "id": "d8d44918-19b7-58e9-a5b0-d3ac4fea345b",
+      "name": "Consulta",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 420.0,
+        "y": 640.0
+      },
+      "width": 260.0,
+      "height": 220.0,
+      "attributes": [
+        {
+          "id": "6a5458e8-fda5-5577-b2a0-6d03b9e992e4",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "0e76bb64-8d23-539e-b079-cf1802df3d2d",
+          "name": "fecha",
+          "type": "DATETIME",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "f2cd6f37-870c-57dc-9611-8e3b05270c55",
+          "name": "motivo",
+          "type": "TEXT",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "73d15427-80ff-5c17-9cb4-fcca86bdbf19",
+          "name": "diagnostico",
+          "type": "TEXT",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        },
+        {
+          "id": "e5a9477c-298a-5369-b6a4-e3e29ac3a1da",
+          "name": "temperatura",
+          "type": "DECIMAL",
+          "length": 255,
+          "precision": 4,
+          "scale": 1,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        },
+        {
+          "id": "e58739bd-09ba-517f-980d-a921423f90c8",
+          "name": "costo",
+          "type": "DECIMAL",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false,
+          "defaultValue": "0.00"
+        }
+      ],
+      "methods": [
+        {
+          "id": "f3ebfc5d-df2e-501b-9834-034cb7a9b686",
+          "name": "cerrar",
+          "returnType": "void",
+          "visibility": "PUBLIC",
+          "parameters": [
+            {
+              "name": "diagnostico",
+              "type": "String"
+            }
+          ]
+        },
+        {
+          "id": "1199985c-8bec-5da6-96a1-4c055f87151c",
+          "name": "agregarTratamiento",
+          "returnType": "Tratamiento",
+          "visibility": "PUBLIC",
+          "parameters": [
+            {
+              "name": "medicamento",
+              "type": "String"
+            },
+            {
+              "name": "dosis",
+              "type": "String"
+            },
+            {
+              "name": "dias",
+              "type": "Integer"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "93865075-87f1-5974-b6f8-235978cee77d",
+      "name": "Tratamiento",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 780.0,
+        "y": 940.0
+      },
+      "width": 240.0,
+      "height": 200.0,
+      "attributes": [
+        {
+          "id": "1be938fa-93c5-5f46-9d87-8ef280425857",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "4c1ffa96-cdb7-534b-9990-e9fc7b67d7d3",
+          "name": "descripcion",
+          "type": "TEXT",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "e68bceee-4e5c-58f8-bb1c-df4c631b6f14",
+          "name": "medicamento",
+          "type": "VARCHAR",
+          "length": 150,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "60ecf405-3e70-5a6b-95be-20fef8f88024",
+          "name": "dosis",
+          "type": "VARCHAR",
+          "length": 80,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        },
+        {
+          "id": "29c3b2ea-0a75-50e9-b93f-327c42a8c40c",
+          "name": "diasDuracion",
+          "type": "INTEGER",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false,
+          "defaultValue": "7"
+        },
+        {
+          "id": "2b6eec33-7450-520c-acc2-1c6b123ccdc9",
+          "name": "fechaInicio",
+          "type": "DATE",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        }
+      ],
+      "methods": []
+    }
+  ],
+  "relationships": [
+    {
+      "id": "50bc5760-43fd-5cf8-a8fd-243b6bfc256b",
+      "sourceClassId": "b42935e5-9113-5a37-8696-0244cfd828af",
+      "targetClassId": "02ce161a-0547-5a9d-b16f-1a42904dc171",
+      "type": "INHERITANCE",
+      "owningSide": "SOURCE",
+      "isNavigable": true,
+      "waypoints": [
+        {
+          "x": 180.0,
+          "y": 300.0
+        }
+      ]
+    },
+    {
+      "id": "8bb0fd83-fd28-5f0e-b73e-f70c031b15bd",
+      "sourceClassId": "7e781276-27b9-5f3f-b7eb-2b8bf06954fe",
+      "targetClassId": "02ce161a-0547-5a9d-b16f-1a42904dc171",
+      "type": "INHERITANCE",
+      "owningSide": "SOURCE",
+      "isNavigable": true,
+      "waypoints": []
+    },
+    {
+      "id": "602582ff-5dc0-52ea-baeb-68a91b141663",
+      "sourceClassId": "b42935e5-9113-5a37-8696-0244cfd828af",
+      "targetClassId": "0ae2da39-83b2-55bf-a3f9-59275c858dc4",
+      "type": "AGGREGATION",
+      "owningSide": "TARGET",
+      "sourceMultiplicity": "1..1",
+      "targetMultiplicity": "0..*",
+      "sourceRole": "dueno",
+      "targetRole": "mascotas",
+      "isNavigable": true,
+      "waypoints": []
+    },
+    {
+      "id": "76643be9-9bb5-56a2-a8df-0c789ba4f647",
+      "sourceClassId": "0ae2da39-83b2-55bf-a3f9-59275c858dc4",
+      "targetClassId": "d8d44918-19b7-58e9-a5b0-d3ac4fea345b",
+      "type": "ASSOCIATION",
+      "owningSide": "TARGET",
+      "sourceMultiplicity": "1..1",
+      "targetMultiplicity": "0..*",
+      "sourceRole": "mascota",
+      "targetRole": "consultas",
+      "isNavigable": true,
+      "waypoints": [
+        {
+          "x": 340.0,
+          "y": 760.0
+        }
+      ]
+    },
+    {
+      "id": "5126f445-c4b9-5f82-b2b5-fd9bdd514179",
+      "sourceClassId": "7e781276-27b9-5f3f-b7eb-2b8bf06954fe",
+      "targetClassId": "d8d44918-19b7-58e9-a5b0-d3ac4fea345b",
+      "type": "ASSOCIATION",
+      "owningSide": "TARGET",
+      "sourceMultiplicity": "1..1",
+      "targetMultiplicity": "0..*",
+      "sourceRole": "veterinario",
+      "targetRole": "consultas",
+      "isNavigable": true,
+      "waypoints": []
+    },
+    {
+      "id": "cfc57030-bc6b-5338-8fa1-2eb5ac7f1d8d",
+      "sourceClassId": "d8d44918-19b7-58e9-a5b0-d3ac4fea345b",
+      "targetClassId": "93865075-87f1-5974-b6f8-235978cee77d",
+      "type": "COMPOSITION",
+      "owningSide": "TARGET",
+      "sourceMultiplicity": "1..1",
+      "targetMultiplicity": "0..*",
+      "sourceRole": "consulta",
+      "targetRole": "tratamientos",
+      "isNavigable": true,
+      "waypoints": []
+    }
+  ]
+}

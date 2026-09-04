@@ -1,0 +1,49 @@
+# ModelCollab :: stack de desarrollo/despliegue del backend.
+#
+# NO VERIFICADO todavía: la máquina de desarrollo actual no tiene Docker instalado
+# (3 sep 2026). El archivo queda escrito para el despliegue en AWS del 13 de septiembre;
+# hasta entonces el backend se valida contra el PostgreSQL local.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: modelcollab-postgres
+    environment:
+      POSTGRES_DB: modelcollab
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-12345678}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # El backend arranca Flyway apenas conecta; sin este gate falla la primera migración.
+      test: ["CMD-SHELL", "pg_isready -U postgres -d modelcollab"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: modelcollab-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/modelcollab
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-12345678}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/v1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
