@@ -1,0 +1,42 @@
+# Java / Maven
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/timing.properties
+
+# Node / Web
+node_modules/
+dist/
+.vite/
+*.local
+
+# Flutter / Android
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+*.iml
+local.properties
+.gradle/
+key.properties
+*.keystore
+*.jks
+
+# Expo / React Native
+.expo/
+.expo-shared/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Entorno
+.env
+.env.local
+application-local.yml
+
+# SO
+Thumbs.db
+.DS_Store
