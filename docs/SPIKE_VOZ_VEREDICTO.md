@@ -52,8 +52,10 @@ defensa.
 | Plugin de red (evidencia visual) | `connectivity_plus` 7.3.1 |
 | Proyecto | `spike-voz/` · applicationId `com.modelcollab.spike_voz` |
 | compileSdk | 36 |
-| Dispositivo | _(pendiente — serial `1cd53c50`)_ |
-| Modelo / versión Android | _(pendiente)_ |
+| Dispositivo | Xiaomi **M2012K11AG** (Mi 11T Pro) · serial `1cd53c50` |
+| Android | **13** (API 33) · build `TKQ1.221114.001` |
+| Proveedor de reconocimiento | `com.google.android.tts` v`17.52.22.ve.arm64` (Speech Services by Google) |
+| Otros paquetes presentes | `com.google.android.as`, `com.google.android.as.oss` (Android System Intelligence) |
 
 ### Configuración Android relevante
 
@@ -148,7 +150,65 @@ Una dependencia menos en el camino crítico.
 aceptar la huella RSA en la pantalla del celular. Bloqueo de hardware, no de
 código. Checklist para resolverlo: `spike-voz/CHECKLIST_DANIEL.md`.
 
-### 5.3. _(reservado para los hallazgos de la ejecución en el teléfono)_
+### 5.3. MIUI bloquea la instalación y la automatización del dispositivo
+
+Tres fricciones distintas del ROM de Xiaomi, todas ajenas al spike pero que
+consumieron tiempo real:
+
+1. `adb install` falla con `INSTALL_FAILED_USER_RESTRICTED`. MIUI exige activar
+   **"Instalar vía USB"** en Opciones de desarrollador **y además** muestra un
+   diálogo en el teléfono con cuenta regresiva que **se auto-rechaza a los ~10
+   segundos**. Por eso el error dice literalmente *"Install canceled by user"*
+   sin que el usuario haya cancelado nada. Empujar el APK a `/data/local/tmp` y
+   usar `pm install` da exactamente el mismo rechazo: no es un rodeo válido.
+2. `adb shell input tap` falla con
+   `SecurityException: Injecting input events requires ... INJECT_EVENTS`.
+   No se puede automatizar la operación de la UI: **cada dictado exige que una
+   persona toque el teléfono**.
+3. `am start` sobre la pantalla de descarga de idiomas offline
+   (`...languagepack.settings.AddLanguagesActivity`) falla con
+   `Permission Denial: not exported`. La descarga del modelo hay que hacerla a
+   mano por la UI.
+
+**Consecuencia para la Fase 5:** cualquier plan de pruebas automatizadas de la
+app de voz sobre dispositivos Xiaomi tiene que asumir intervención manual, o
+usar un dispositivo con ROM menos restrictivo.
+
+### 5.4. `onDevice: true` → `error_language_unavailable` (modelo local ausente)
+
+Es el hallazgo central del spike hasta el momento.
+
+| Corrida | Red | `onDevice` | Resultado |
+| :--- | :--- | :--- | :--- |
+| Contraste | Wi-Fi | `false` | ✅ `agenda una cita para mañana a las 10` — 4498 ms |
+| Forzada local | Wi-Fi | `true` | ❌ `error_language_unavailable` (**permanente: true**), texto vacío |
+
+La segunda corrida falló **con red disponible**. Eso descarta la red como causa
+y aísla el diagnóstico: el reconocedor resuelve el idioma `es_ES` en
+`locales()`, pero **no tiene el modelo acústico descargado en el dispositivo**.
+
+Este es exactamente el motivo por el que el switch de `onDevice` se incluyó en
+la app. Sin él, las dos causas —"no hay modelo local" y "no hay red"— producen
+la misma pantalla vacía y son indistinguibles. Con él, quedan separadas antes
+de siquiera activar el modo avión.
+
+> **Que `locales()` liste `es_ES` no prueba que el español offline esté
+> instalado.** El reconocedor conoce el idioma de todas formas. La única prueba
+> es forzar `onDevice: true` y ver si responde. Éste es el falso positivo más
+> peligroso de este spike, y quedó documentado porque se cayó en él.
+
+También se observó `error_busy` al tocar el botón repetidamente mientras una
+sesión anterior seguía cerrándose: el reconocedor nativo no acepta sesiones
+solapadas. Una app real necesita bloquear el botón hasta recibir `done`.
+
+### 5.5. El reconocedor normaliza numerales a dígitos
+
+Se dictó *"a las **diez**"* y devolvió *"a las **10**"*. Insumo directo para el
+`SlotExtractor` de la Fase 5 (§10.3): el parser de `DATETIME` **no puede asumir
+que los números llegan como palabras** — tiene que aceptar ambas formas. Es un
+hallazgo lateral del spike, fuera de su alcance, pero que ahorra una corrección
+el día 19.
+
 
 ---
 
