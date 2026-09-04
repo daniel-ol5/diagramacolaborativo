@@ -91,11 +91,37 @@ referencia.
 | Campos desconocidos | **Estricto a propósito** (`FAIL_ON_UNKNOWN_PROPERTIES`). Un campo extra da 400 en vez de ignorarse en silencio. Es el único mecanismo que detecta drift en el momento en que ocurre. |
 | Opcionales | Se **omiten**, no se mandan como `null` explícito (la serialización usa `NON_NULL`, así que un `null` explícito de entrada se perdería en el round-trip). |
 | `visibility` | §7 no define default. Convención: **PUBLIC** en clases y métodos, **PRIVATE** en atributos (campo privado + getter público, que es lo que espera el generador). |
-| `owningSide` | "El lado donde vive la FK". En 1..N el generador lo **deriva de las multiplicidades** y el campo es informativo; en MANY_TO_MANY el campo es **autoritativo**. Detalle completo en el javadoc de `Relationship`. |
+| `owningSide` | "El lado donde vive la FK". Casi siempre **derivable** de las multiplicidades; el campo sólo es autoritativo cuando no hay respuesta mecánica. Ver la tabla de abajo y el javadoc de `Relationship`. |
 | `joinTableName` | Sólo en MANY_TO_MANY. Si viene ausente, se deriva como `{source}_{target}` en snake_case. |
 | Multiplicidades | Ausentes en INHERITANCE y DEPENDENCY (el canvas no dibuja cardinalidades en una flecha de herencia y el XMI no las espera). |
 | `defaultValue` | Siempre string, incluso para no-strings (`"true"`, `"0"`, `"10.00"`). El generador castea según el `AttributeType`. |
 | `current_state` | Se guarda como `String` con `@JdbcTypeCode(SqlTypes.JSON)`, no como objeto mapeado por Hibernate: así la única ruta de conversión a `CanonicalModel` pasa por el mapper canónico y Hibernate no puede introducir una serialización paralela. |
+
+### Dónde vive la FK: autoridad de `owningSide`
+
+El generador **no confía ciegamente** en `owningSide`. Un diagrama escrito a mano —o generado
+por Gemini en la Fase 4— puede traerlo invertido, o simplemente heredar el default `SOURCE`
+del schema sin que nadie lo haya decidido, y eso pondría las FK del lado equivocado en
+silencio. Casi siempre el lado dueño es derivable de las multiplicidades:
+
+| Caso | Lado dueño | `owningSide` |
+| :--- | :--- | :--- |
+| Hay un extremo de colección (`0..*` / `1..*`) | Derivado: el lado "muchos" | Informativo — advertencia si contradice |
+| Escalares distintos (`1..1` ↔ `0..1`) | Derivado: el extremo "flojo", el `0..1` | Informativo — advertencia si contradice |
+| Escalares iguales (`1..1` ↔ `1..1`, `0..1` ↔ `0..1`) | No derivable | **Autoritativo** — advertencia **siempre** |
+| `MANY_TO_MANY` | Elección del modelador (dónde va `@JoinTable`) | **Autoritativo** |
+| `INHERITANCE` / `DEPENDENCY` | No aplica | Ignorado |
+
+El caso de los escalares distintos no es una convención arbitraria sino diseño de base de
+datos: con la FK en el extremo obligatorio, la columna tendría que ser nullable sobre la
+mayoría de las filas más un UNIQUE para simular el 1:1; en el extremo flojo es NOT NULL y no
+deja huérfanos. Ejemplo real del fixture: `Cita 1..1 → Pago 0..1` genera `cita_id NOT NULL`
+en `pagos`, no `pago_id` en `citas`.
+
+El tercer caso es el único donde el campo decide el esquema sin posibilidad de verificación
+—y como el constructor compacto ya normalizó el default, no se puede distinguir "vino
+ausente" de "lo eligieron a propósito"—, así que el `MetamodelValidator` debe advertir
+**siempre** ahí, aunque el valor sea correcto.
 
 ### Nota para el lienzo web
 

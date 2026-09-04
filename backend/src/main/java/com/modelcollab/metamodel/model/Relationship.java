@@ -11,20 +11,33 @@ import java.util.List;
  *
  * <p>{@code owningSide} significa <em>el lado donde vive la FK</em>, que coincide con la
  * semántica JPA: el lado dueño es el que lleva {@code @ManyToOne} y el otro lleva
- * {@code @OneToMany(mappedBy = ...)}. Pero cuánto le cree el generador depende del tipo:
+ * {@code @OneToMany(mappedBy = ...)}. Pero el generador <b>no le cree ciegamente</b>: casi
+ * siempre el lado dueño es derivable de las multiplicidades, y un diagrama escrito a mano —o
+ * generado por Gemini en la Fase 4— puede traer el campo invertido y poner las FK del lado
+ * equivocado en silencio. La regla, por caso:
  *
- * <ul>
- *   <li><b>1..N (ASSOCIATION, AGGREGATION, COMPOSITION):</b> el lado dueño está
- *       determinado mecánicamente por las multiplicidades — es siempre el lado "muchos".
- *       El generador lo <b>deriva</b> de ellas; aquí {@code owningSide} es sólo
- *       informativo. Un diagrama escrito a mano, o generado por Gemini en la Fase 4,
- *       puede traerlo invertido, y confiar en él pondría las FK del lado equivocado.
- *       Cuando contradice a las multiplicidades, el MetamodelValidator emite advertencia.</li>
- *   <li><b>MANY_TO_MANY:</b> acá {@code owningSide} <b>sí manda</b>. Es el único caso donde
- *       el campo es autoritativo, porque es una elección genuina del modelador: decide de
- *       qué lado va {@code @JoinTable} y de cuál el {@code mappedBy}.</li>
+ * <ol>
+ *   <li><b>Hay un extremo de colección ({@code 0..*} o {@code 1..*}):</b> <b>derivado</b>.
+ *       La FK va en el lado "muchos". {@code owningSide} es informativo; si contradice a las
+ *       multiplicidades, el MetamodelValidator emite advertencia.</li>
+ *   <li><b>Ambos extremos escalares y DISTINTOS ({@code 1..1} ↔ {@code 0..1}):</b>
+ *       <b>derivado</b> también. La FK va en el extremo "flojo", el {@code 0..1}. No es una
+ *       convención arbitraria sino diseño de base de datos: puesta en el extremo obligatorio,
+ *       la columna tendría que ser nullable sobre la mayoría de las filas más un UNIQUE para
+ *       simular el 1:1; puesta en el extremo flojo, es NOT NULL y no deja huérfanos.
+ *       {@code owningSide} informativo; advertencia si contradice.</li>
+ *   <li><b>Ambos extremos escalares e IGUALES ({@code 1..1} ↔ {@code 1..1}, o
+ *       {@code 0..1} ↔ {@code 0..1}):</b> acá no hay respuesta mecánica, así que
+ *       {@code owningSide} es <b>AUTORITATIVO</b>. Es el caso peligroso: el campo decide el
+ *       esquema de base de datos sin que nadie pueda verificarlo, y como el constructor
+ *       compacto ya normalizó el default, no se distingue "vino ausente" de "lo eligieron".
+ *       Por eso el MetamodelValidator debe emitir <b>siempre</b> una advertencia acá, del
+ *       tipo "owningSide no derivable en esta relación simétrica; se usa el valor declarado,
+ *       verificá que sea intencional".</li>
+ *   <li><b>MANY_TO_MANY:</b> <b>AUTORITATIVO</b>. Es una elección genuina del modelador:
+ *       decide de qué lado va {@code @JoinTable} y de cuál el {@code mappedBy}.</li>
  *   <li><b>INHERITANCE / DEPENDENCY:</b> no aplica; tampoco llevan multiplicidades.</li>
- * </ul>
+ * </ol>
  *
  * <p>Si {@code joinTableName} viene ausente en un MANY_TO_MANY, el generador deriva el
  * nombre como {@code {source}_{target}} en snake_case.
