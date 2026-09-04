@@ -1,0 +1,107 @@
+{
+  "schemaVersion": "1.0.0",
+  "mutationVersion": 1,
+  "packages": [
+    {
+      "id": "804a0b95-8995-5472-a9bb-8c2dc38c970a",
+      "name": "invalido",
+      "classIds": [
+        "d17a263f-a9b3-5648-9c9b-2ab117c3f1ff",
+        "09815a6b-426d-5b47-a7c6-c185bbd894f5"
+      ]
+    }
+  ],
+  "classes": [
+    {
+      "id": "d17a263f-a9b3-5648-9c9b-2ab117c3f1ff",
+      "name": "Existente",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 60.0,
+        "y": 60.0
+      },
+      "width": 240.0,
+      "height": 160.0,
+      "attributes": [
+        {
+          "id": "32bdc84b-6cd2-5b7f-93a9-aeaf3a1a6c8e",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "66219a93-5ca7-5385-b3bc-4c30460a0e13",
+          "name": "nombre",
+          "type": "VARCHAR",
+          "length": 80,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        }
+      ],
+      "methods": []
+    },
+    {
+      "id": "09815a6b-426d-5b47-a7c6-c185bbd894f5",
+      "name": "Otra",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 400.0,
+        "y": 60.0
+      },
+      "width": 240.0,
+      "height": 160.0,
+      "attributes": [
+        {
+          "id": "71016eeb-535c-5fc2-8bb5-2c4e1b9bf42e",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "45654367-ddec-5673-b35f-03261e9e384c",
+          "name": "descripcion",
+          "type": "TEXT",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        }
+      ],
+      "methods": []
+    }
+  ],
+  "relationships": [
+    {
+      "id": "0c478ec9-5146-5973-8688-72be5ce92c8a",
+      "sourceClassId": "8b6f18a5-33e6-535b-9ac6-094f98e9fa1d",
+      "targetClassId": "09815a6b-426d-5b47-a7c6-c185bbd894f5",
+      "type": "ASSOCIATION",
+      "owningSide": "TARGET",
+      "sourceMultiplicity": "1..1",
+      "targetMultiplicity": "0..*",
+      "isNavigable": true,
+      "waypoints": []
+    }
+  ]
+}

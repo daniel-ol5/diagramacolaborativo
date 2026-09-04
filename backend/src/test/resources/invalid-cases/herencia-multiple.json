@@ -1,0 +1,142 @@
+{
+  "schemaVersion": "1.0.0",
+  "mutationVersion": 1,
+  "packages": [
+    {
+      "id": "f24a9c9b-d337-5659-96b4-f6c6bad36557",
+      "name": "invalido",
+      "classIds": [
+        "1a6d7959-1c9e-5d3a-ba8f-134d707f17ce",
+        "cd1bd548-2489-5919-adb2-4aff725c8a16",
+        "300c4332-8895-5749-9f36-94255b6d8613"
+      ]
+    }
+  ],
+  "classes": [
+    {
+      "id": "1a6d7959-1c9e-5d3a-ba8f-134d707f17ce",
+      "name": "PadreA",
+      "visibility": "PUBLIC",
+      "isAbstract": true,
+      "position": {
+        "x": 60.0,
+        "y": 60.0
+      },
+      "width": 240.0,
+      "height": 160.0,
+      "attributes": [
+        {
+          "id": "0b89e71a-74a6-59bb-a812-089b45efbe63",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "d448742f-903a-5f7b-952c-c70c7f220ed9",
+          "name": "campoA",
+          "type": "VARCHAR",
+          "length": 80,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        }
+      ],
+      "methods": []
+    },
+    {
+      "id": "cd1bd548-2489-5919-adb2-4aff725c8a16",
+      "name": "PadreB",
+      "visibility": "PUBLIC",
+      "isAbstract": true,
+      "position": {
+        "x": 400.0,
+        "y": 60.0
+      },
+      "width": 240.0,
+      "height": 160.0,
+      "attributes": [
+        {
+          "id": "e259affc-3961-539d-98e7-7958f2360782",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "d8004702-48f3-59fb-92d8-04fbee8f04de",
+          "name": "campoB",
+          "type": "VARCHAR",
+          "length": 80,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        }
+      ],
+      "methods": []
+    },
+    {
+      "id": "300c4332-8895-5749-9f36-94255b6d8613",
+      "name": "Hijo",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 230.0,
+        "y": 340.0
+      },
+      "width": 240.0,
+      "height": 160.0,
+      "attributes": [
+        {
+          "id": "e47b6ab4-ca50-5af2-8dad-46f63b891e41",
+          "name": "campoPropio",
+          "type": "VARCHAR",
+          "length": 80,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        }
+      ],
+      "methods": []
+    }
+  ],
+  "relationships": [
+    {
+      "id": "8493c9cf-7281-55fe-b3fe-fc07b1d6ba39",
+      "sourceClassId": "300c4332-8895-5749-9f36-94255b6d8613",
+      "targetClassId": "1a6d7959-1c9e-5d3a-ba8f-134d707f17ce",
+      "type": "INHERITANCE",
+      "owningSide": "SOURCE",
+      "isNavigable": true,
+      "waypoints": []
+    },
+    {
+      "id": "24522e31-9c14-5626-99cf-7a32e9ce4cc4",
+      "sourceClassId": "300c4332-8895-5749-9f36-94255b6d8613",
+      "targetClassId": "cd1bd548-2489-5919-adb2-4aff725c8a16",
+      "type": "INHERITANCE",
+      "owningSide": "SOURCE",
+      "isNavigable": true,
+      "waypoints": []
+    }
+  ]
+}

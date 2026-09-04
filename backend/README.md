@@ -143,6 +143,42 @@ cualquier track.
 | `veterinaria` | INHERITANCE desde una clase abstracta (`Persona`), AGGREGATION, dos paquetes |
 | `inventario` | MANY_TO_MANY derivable, multi-paquete (`catalogo` / `operaciones`) |
 
+**Estos tres son los únicos que se demuestran ante el tribunal.** No les agregues casos raros
+para probar el generador: para eso están los dos grupos de abajo. Un dominio con una clase
+metida a la fuerza para cubrir una rama huele a "preparado para la demo", que es justo lo que
+hay que evitar.
+
+### `edge-cases.json` — raro pero válido
+
+Lo que los dominios naturales no producen y el generador igual tiene que soportar. Debe pasar
+round-trip y, desde el día 9, generar código que compile.
+
+| Cubre | Dónde |
+| :--- | :--- |
+| Palabras reservadas de SQL (§11.2.1) | Clases `Order`, `Group`, `Table` |
+| Palabras reservadas de Java (§11.2.1) | Atributos `class`, `public`, `int` en `Order` |
+| Inyección automática de PK (§11.2.2) | `SinPrimaryKey`, sin ningún `isPrimaryKey: true` |
+| Clase completamente vacía | `SinAtributos` |
+| `owningSide` caso 3 (simétrica) | `Cuenta 1..1 ↔ Credencial 1..1`, `Suscripcion 0..1 ↔ Cupon 0..1` |
+| M2M sin `joinTableName` | `Order ↔ Table` → deriva `order_table` |
+| Multiplicidad `1..*` | `Group 1..1 → Order 1..*` |
+| `DEPENDENCY` | `Auditoria → Order` |
+| Método con parámetros y retorno no primitivo | `Group.buscarMiembros(String, Integer): List<Order>` |
+
+Entre los tres dominios y este archivo se cubren los **9 `AttributeType`** del schema (hay un
+test que lo verifica: un tipo sin fixture es una rama del generador que nunca se ejecuta).
+
+### `invalid-cases/` — se rechazan a propósito
+
+Modelos **estructuralmente válidos** según §7 —deserializan sin problema— pero semánticamente
+inválidos. El `PreGenerationValidatorService` (día 10) tiene que rechazarlos: acá el test pasa
+cuando el modelo **es rechazado**, al revés que en todos los demás.
+
+| Archivo | Violación |
+| :--- | :--- |
+| `herencia-multiple.json` | `Hijo` con dos relaciones `INHERITANCE` — Java no lo soporta (§11.2.3, error bloqueante) |
+| `relacion-huerfana.json` | `sourceClassId` apuntando a un id inexistente: el residuo que deja un `DELETE_CLASS` mal aplicado |
+
 ## Estructura
 
 Los paquetes de §6 existen desde el día 1 (los vacíos llevan `.gitkeep`) para evitar

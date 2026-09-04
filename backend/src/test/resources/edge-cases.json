@@ -1,0 +1,647 @@
+{
+  "schemaVersion": "1.0.0",
+  "mutationVersion": 1,
+  "packages": [
+    {
+      "id": "e3cdb0bf-d143-55ae-9f61-688c0495eebd",
+      "name": "reservadas",
+      "classIds": [
+        "98f0a972-186d-5136-88aa-44e22a4c49be",
+        "364fc77c-0d65-5e88-ac63-c9472eeb8b5a",
+        "f4ed1018-5dee-57cd-b3ea-245be4c03959"
+      ]
+    },
+    {
+      "id": "8683b563-fecc-558b-a30b-4d62db4b11b8",
+      "name": "cardinalidades",
+      "classIds": [
+        "beb66a84-e359-5449-bee9-423609979fda",
+        "b2e51905-9573-5e20-9b86-889ee453f516",
+        "e23dd75b-178a-5852-bc70-0101ee9a49b0",
+        "d7b1440e-ede9-5e72-a043-79269370b9ea"
+      ]
+    },
+    {
+      "id": "6a87b84c-9c94-5d50-8c15-3e95c7746d2d",
+      "name": "degenerados",
+      "classIds": [
+        "579e60b6-3986-5bdd-ae07-ce4677d78ac3",
+        "b3437b6f-54c7-5905-ace7-a51a99ef6008",
+        "0a807a3c-6f45-5cc2-bf23-e8af81e75d6a"
+      ]
+    }
+  ],
+  "classes": [
+    {
+      "id": "98f0a972-186d-5136-88aa-44e22a4c49be",
+      "name": "Order",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 60.0,
+        "y": 60.0
+      },
+      "width": 280.0,
+      "height": 260.0,
+      "attributes": [
+        {
+          "id": "9dee099e-35f4-5dfb-946f-e4f1044ac9f8",
+          "name": "id",
+          "type": "BIGINT",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "0879d837-7f72-543f-ad2d-d193982b97e9",
+          "name": "class",
+          "type": "VARCHAR",
+          "length": 50,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "06367aa1-d3ad-596f-b23f-07f14fc2bacf",
+          "name": "public",
+          "type": "BOOLEAN",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false,
+          "defaultValue": "false"
+        },
+        {
+          "id": "1c6074c1-7ee7-5fac-94af-55e24f5c008a",
+          "name": "int",
+          "type": "INTEGER",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false,
+          "defaultValue": "0"
+        },
+        {
+          "id": "40ec8d2e-0851-5746-be84-715741fb3c02",
+          "name": "total",
+          "type": "DECIMAL",
+          "length": 255,
+          "precision": 12,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        }
+      ],
+      "methods": [
+        {
+          "id": "2927b5e2-2c4f-5043-b8e7-4806e6eab2c0",
+          "name": "procesarPago",
+          "returnType": "void",
+          "visibility": "PUBLIC",
+          "parameters": [
+            {
+              "name": "monto",
+              "type": "BigDecimal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "364fc77c-0d65-5e88-ac63-c9472eeb8b5a",
+      "name": "Group",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 420.0,
+        "y": 60.0
+      },
+      "width": 260.0,
+      "height": 200.0,
+      "attributes": [
+        {
+          "id": "8e51f230-361c-55ac-b382-71d0912e00c7",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "16354f56-2fc5-5d11-92d2-8a0ba4d29f30",
+          "name": "name",
+          "type": "VARCHAR",
+          "length": 100,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "389a111a-222e-587e-964c-d5eb90afaddc",
+          "name": "description",
+          "type": "TEXT",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        }
+      ],
+      "methods": [
+        {
+          "id": "6e275df6-4dca-53f2-a7d5-a3e2aac49b46",
+          "name": "buscarMiembros",
+          "returnType": "List<Order>",
+          "visibility": "PUBLIC",
+          "parameters": [
+            {
+              "name": "filtro",
+              "type": "String"
+            },
+            {
+              "name": "limite",
+              "type": "Integer"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "f4ed1018-5dee-57cd-b3ea-245be4c03959",
+      "name": "Table",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 760.0,
+        "y": 60.0
+      },
+      "width": 240.0,
+      "height": 180.0,
+      "attributes": [
+        {
+          "id": "6ea44e64-df23-5ead-9a29-55a508a2cc2d",
+          "name": "id",
+          "type": "BIGINT",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "c7201bd8-783e-509f-b774-854ec519c2b7",
+          "name": "etiqueta",
+          "type": "VARCHAR",
+          "length": 80,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        }
+      ],
+      "methods": []
+    },
+    {
+      "id": "beb66a84-e359-5449-bee9-423609979fda",
+      "name": "Cuenta",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 60.0,
+        "y": 400.0
+      },
+      "width": 240.0,
+      "height": 200.0,
+      "attributes": [
+        {
+          "id": "0b9f87e3-9f98-5c6a-960e-6efd155b9830",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "b57dbab1-b539-55ec-a59b-3ad62725759e",
+          "name": "saldo",
+          "type": "DECIMAL",
+          "length": 255,
+          "precision": 14,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false,
+          "defaultValue": "0.00"
+        },
+        {
+          "id": "a94661c8-82ee-5a98-b817-7bb6ac3e226a",
+          "name": "creadaEn",
+          "type": "DATETIME",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        }
+      ],
+      "methods": []
+    },
+    {
+      "id": "b2e51905-9573-5e20-9b86-889ee453f516",
+      "name": "Credencial",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 420.0,
+        "y": 400.0
+      },
+      "width": 240.0,
+      "height": 200.0,
+      "attributes": [
+        {
+          "id": "b0b1b323-24b5-5d68-ace8-b4e7011c5baf",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "785b8f10-d281-57d0-b16e-23033e40694b",
+          "name": "hash",
+          "type": "VARCHAR",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "db511c0b-6a10-5349-bfbc-5cd1a003c74e",
+          "name": "expiraEn",
+          "type": "DATE",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        }
+      ],
+      "methods": []
+    },
+    {
+      "id": "e23dd75b-178a-5852-bc70-0101ee9a49b0",
+      "name": "Suscripcion",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 760.0,
+        "y": 400.0
+      },
+      "width": 240.0,
+      "height": 180.0,
+      "attributes": [
+        {
+          "id": "f2af518a-4a87-5448-b702-89113b92b595",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "ca126f50-93d8-5cdd-b756-59bae34eaa7f",
+          "name": "vence",
+          "type": "DATE",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        }
+      ],
+      "methods": []
+    },
+    {
+      "id": "d7b1440e-ede9-5e72-a043-79269370b9ea",
+      "name": "Cupon",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 1060.0,
+        "y": 400.0
+      },
+      "width": 240.0,
+      "height": 180.0,
+      "attributes": [
+        {
+          "id": "2d793302-eff6-5321-8da7-c3ede3b10435",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "3569972d-7f06-5225-b349-b9b6aaae66cc",
+          "name": "codigo",
+          "type": "VARCHAR",
+          "length": 40,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": true
+        }
+      ],
+      "methods": []
+    },
+    {
+      "id": "579e60b6-3986-5bdd-ae07-ce4677d78ac3",
+      "name": "SinPrimaryKey",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 60.0,
+        "y": 700.0
+      },
+      "width": 260.0,
+      "height": 200.0,
+      "attributes": [
+        {
+          "id": "659c1e7b-1917-534a-928e-81636a5c8eb8",
+          "name": "nombre",
+          "type": "VARCHAR",
+          "length": 120,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "2847ed32-4ed6-5704-b1f2-9065af5407e7",
+          "name": "creadoEn",
+          "type": "DATETIME",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "13458fcf-75f4-5a83-999d-398a50cac2e7",
+          "name": "activo",
+          "type": "BOOLEAN",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false,
+          "defaultValue": "true"
+        }
+      ],
+      "methods": [
+        {
+          "id": "39079640-626a-57c3-93b0-aec94ea6d5ae",
+          "name": "describir",
+          "returnType": "String",
+          "visibility": "PUBLIC",
+          "parameters": []
+        }
+      ]
+    },
+    {
+      "id": "b3437b6f-54c7-5905-ace7-a51a99ef6008",
+      "name": "SinAtributos",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 420.0,
+        "y": 700.0
+      },
+      "width": 240.0,
+      "height": 120.0,
+      "attributes": [],
+      "methods": []
+    },
+    {
+      "id": "0a807a3c-6f45-5cc2-bf23-e8af81e75d6a",
+      "name": "Auditoria",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 760.0,
+        "y": 700.0
+      },
+      "width": 240.0,
+      "height": 200.0,
+      "attributes": [
+        {
+          "id": "8b57cb45-e600-5c4e-85ea-9adbe169f7ac",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "59ae14f7-5c5e-5058-a739-352fcf68b362",
+          "name": "detalle",
+          "type": "TEXT",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "39e2e569-4914-51f6-8fd8-88d1347d8860",
+          "name": "registradoEn",
+          "type": "DATETIME",
+          "length": 255,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        }
+      ],
+      "methods": [
+        {
+          "id": "f5023e48-0e22-5e3d-a995-74a76e96934a",
+          "name": "registrar",
+          "returnType": "void",
+          "visibility": "PUBLIC",
+          "parameters": [
+            {
+              "name": "entidad",
+              "type": "String"
+            },
+            {
+              "name": "accion",
+              "type": "String"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "73430ad4-b243-5cb2-8c93-6c486a7ef667",
+      "sourceClassId": "beb66a84-e359-5449-bee9-423609979fda",
+      "targetClassId": "b2e51905-9573-5e20-9b86-889ee453f516",
+      "type": "ASSOCIATION",
+      "owningSide": "TARGET",
+      "sourceMultiplicity": "1..1",
+      "targetMultiplicity": "1..1",
+      "sourceRole": "cuenta",
+      "targetRole": "credencial",
+      "isNavigable": true,
+      "waypoints": [
+        {
+          "x": 320.0,
+          "y": 500.0
+        }
+      ]
+    },
+    {
+      "id": "f1042ff5-b8d6-5421-9b96-3baca7da5940",
+      "sourceClassId": "e23dd75b-178a-5852-bc70-0101ee9a49b0",
+      "targetClassId": "d7b1440e-ede9-5e72-a043-79269370b9ea",
+      "type": "ASSOCIATION",
+      "owningSide": "SOURCE",
+      "sourceMultiplicity": "0..1",
+      "targetMultiplicity": "0..1",
+      "sourceRole": "suscripcion",
+      "targetRole": "cupon",
+      "isNavigable": true,
+      "waypoints": []
+    },
+    {
+      "id": "bd40df02-b037-54cd-a288-5bb9c11a6768",
+      "sourceClassId": "98f0a972-186d-5136-88aa-44e22a4c49be",
+      "targetClassId": "f4ed1018-5dee-57cd-b3ea-245be4c03959",
+      "type": "MANY_TO_MANY",
+      "owningSide": "SOURCE",
+      "sourceMultiplicity": "0..*",
+      "targetMultiplicity": "0..*",
+      "sourceRole": "orders",
+      "targetRole": "tables",
+      "isNavigable": true,
+      "waypoints": []
+    },
+    {
+      "id": "e66af557-7db8-5e8f-b5b9-40ef73b31f04",
+      "sourceClassId": "364fc77c-0d65-5e88-ac63-c9472eeb8b5a",
+      "targetClassId": "98f0a972-186d-5136-88aa-44e22a4c49be",
+      "type": "ASSOCIATION",
+      "owningSide": "TARGET",
+      "sourceMultiplicity": "1..1",
+      "targetMultiplicity": "1..*",
+      "sourceRole": "group",
+      "targetRole": "orders",
+      "isNavigable": true,
+      "waypoints": [
+        {
+          "x": 400.0,
+          "y": 200.0
+        }
+      ]
+    },
+    {
+      "id": "1284edf3-32cb-53f7-8cd7-91d7609bd048",
+      "sourceClassId": "98f0a972-186d-5136-88aa-44e22a4c49be",
+      "targetClassId": "579e60b6-3986-5bdd-ae07-ce4677d78ac3",
+      "type": "COMPOSITION",
+      "owningSide": "TARGET",
+      "sourceMultiplicity": "1..1",
+      "targetMultiplicity": "0..*",
+      "sourceRole": "order",
+      "targetRole": "detalles",
+      "isNavigable": true,
+      "waypoints": []
+    },
+    {
+      "id": "8abcfff7-a6d6-5f65-9d81-09bc4779a822",
+      "sourceClassId": "0a807a3c-6f45-5cc2-bf23-e8af81e75d6a",
+      "targetClassId": "98f0a972-186d-5136-88aa-44e22a4c49be",
+      "type": "DEPENDENCY",
+      "owningSide": "SOURCE",
+      "isNavigable": true,
+      "waypoints": [
+        {
+          "x": 700.0,
+          "y": 780.0
+        }
+      ]
+    }
+  ]
+}
