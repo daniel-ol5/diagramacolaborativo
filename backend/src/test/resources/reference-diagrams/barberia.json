@@ -554,7 +554,7 @@
       "sourceClassId": "c3383fbd-5db2-5655-a32c-28a4a6c71706",
       "targetClassId": "f8ecc8ec-5351-54ca-b969-93075c12e0ec",
       "type": "COMPOSITION",
-      "owningSide": "SOURCE",
+      "owningSide": "TARGET",
       "sourceMultiplicity": "1..1",
       "targetMultiplicity": "0..1",
       "sourceRole": "cita",
