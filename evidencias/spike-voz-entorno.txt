@@ -1,11 +1,11 @@
-# Entorno del spike B-2 — 2026-09-03 21:21:22
+# Entorno del spike B-2 — 2026-09-03 21:46:20
 
 serial            : 1cd53c50
 fabricante        : Xiaomi
 modelo            : M2012K11AG
 Android           : 13 (API 33)
 build             : TKQ1.221114.001 test-keys
-modo avion        : 0 (1 = activado)
+modo avion        : 1 (1 = activado)
 
 ## Reconocedores de voz instalados
 package:com.google.android.googlequicksearchbox

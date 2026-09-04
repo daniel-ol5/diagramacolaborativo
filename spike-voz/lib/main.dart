@@ -49,6 +49,7 @@ class _PantallaSpikeState extends State<PantallaSpike> {
   String _error = '';
   String _localeElegido = '(sin elegir)';
   String _localesEs = '—';
+  List<String> _localesEsIds = const [];
   List<ConnectivityResult> _red = const [];
   Duration? _latencia;
   DateTime? _inicioEscucha;
@@ -99,17 +100,22 @@ class _PantallaSpikeState extends State<PantallaSpike> {
 
     var locale = '(ninguno en español)';
     var resumenEs = '—';
+    var esIds = <String>[];
     if (ok) {
       final locales = await _speech.locales();
       final es =
           locales.where((l) => l.localeId.toLowerCase().startsWith('es')).toList();
+      esIds = es.map((l) => l.localeId).toList();
       resumenEs = es.isEmpty
           ? 'NINGUNO (falta el paquete de español)'
           : es.map((l) => l.localeId).join(', ');
       if (es.isNotEmpty) {
-        // Preferimos es_BO / es_MX / es_ES en ese orden; si no, el primero.
+        // OJO: el orden NO es por cercania dialectal, es por probabilidad de
+        // tener modelo OFFLINE descargado. En el dispositivo de prueba estaba
+        // es_US (74 MB) y NO es_ES, y pedir es_ES devuelve
+        // error_language_unavailable aunque locales() lo liste.
         var elegido = es.first;
-        for (final pref in ['es_BO', 'es-BO', 'es_MX', 'es-MX', 'es_ES', 'es-ES']) {
+        for (final pref in ['es_US', 'es-US', 'es_BO', 'es-BO', 'es_MX', 'es-MX', 'es_ES', 'es-ES']) {
           final m = es.where((l) => l.localeId == pref);
           if (m.isNotEmpty) {
             elegido = m.first;
@@ -128,6 +134,7 @@ class _PantallaSpikeState extends State<PantallaSpike> {
       _inicializado = ok;
       _localeElegido = locale;
       _localesEs = resumenEs;
+      _localesEsIds = esIds;
     });
   }
 
@@ -149,12 +156,26 @@ class _PantallaSpikeState extends State<PantallaSpike> {
     await _speech.listen(
       onResult: (r) {
         setState(() {
-          _texto = r.recognizedWords;
+          // El reconocedor OFFLINE emite el texto en los resultados PARCIALES
+          // y luego manda un resultado final VACIO. Pisar el texto con ese
+          // vacio borraba la evidencia justo al terminar de dictar.
+          if (r.recognizedWords.isNotEmpty) {
+            _texto = r.recognizedWords;
+          }
           if (_inicioEscucha != null) {
             _latencia = DateTime.now().difference(_inicioEscucha!);
           }
           if (r.finalResult) {
-            _log('resultado final (${r.recognizedWords.length} chars)');
+            _log('final: ${r.recognizedWords.length} chars '
+                '(retenido: ${_texto.length})');
+            // Marca en logcat para poder disparar la captura de evidencia justo
+            // cuando hay texto final, y para dejar registro textual del
+            // resultado exacto sin depender de leer la imagen.
+            debugPrint(
+              'SPIKE_FINAL|avion=$_sinRed|onDevice=$_forzarOnDevice'
+              '|locale=$_localeElegido|ms=${_latencia?.inMilliseconds}'
+              '|texto=$_texto',
+            );
           }
         });
       },
@@ -218,6 +239,8 @@ class _PantallaSpikeState extends State<PantallaSpike> {
                   'OFF = el sistema puede usar la nube si quiere.',
                 ),
               ),
+              const SizedBox(height: 10),
+              _selectorLocale(),
               const SizedBox(height: 10),
               _botonMicrofono(),
               const SizedBox(height: 10),
@@ -328,6 +351,40 @@ class _PantallaSpikeState extends State<PantallaSpike> {
               fontWeight: FontWeight.bold,
               color: _texto.isEmpty ? Colors.grey : Colors.black,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // El modelo offline descargado puede ser de un locale distinto al que uno
+  // esperaria. Elegirlo a mano es la unica forma de probar cual responde.
+  Widget _selectorLocale() {
+    if (_localesEsIds.length < 2) return const SizedBox.shrink();
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'LOCALE A USAR (probar cual tiene modelo offline)',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            children: _localesEsIds
+                .map(
+                  (id) => ChoiceChip(
+                    label: Text(id, style: const TextStyle(fontSize: 15)),
+                    selected: _localeElegido == id,
+                    onSelected: _escuchando
+                        ? null
+                        : (_) => setState(() => _localeElegido = id),
+                  ),
+                )
+                .toList(),
           ),
         ],
       ),

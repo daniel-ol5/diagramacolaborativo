@@ -1,8 +1,12 @@
 # Spike B-2 — Veredicto: STT móvil offline
 
-> **VEREDICTO:** ⏳ _pendiente de ejecución en teléfono físico_
-> **Estado:** app compilada y lista; esperando que el dispositivo sea autorizado y
-> que el paquete de español offline esté descargado.
+> # ✅ VEREDICTO: **el stack móvil es FLUTTER.**
+>
+> Transcripción correcta en español, en un teléfono Android real, con **modo
+> avión activado** y `connectivity: none`. `speech_to_text` + el reconocedor
+> nativo resuelven el STT offline sin compilaciones en la nube. **No se recurre
+> a React Native ni a Vosk.** B-2 cerrado; el cronograma no se mueve.
+>
 > **Fecha:** 3 de septiembre de 2026 · **Track B (Móvil/IA)**
 
 ---
@@ -105,19 +109,55 @@ local"* de *"no reconoce nada"*.
 
 ## 4. Resultados
 
+### 4.1. Corrida decisiva — modo avión
+
 | Medición | Resultado |
 | :--- | :--- |
-| `initialize()` | _(pendiente)_ |
-| Locales `es_*` reportados por el dispositivo | _(pendiente)_ |
-| `localeId` usado | _(pendiente)_ |
-| Reconocedor reporta soporte on-device | _(pendiente)_ |
-| Modo avión activo durante la prueba | _(pendiente)_ |
+| `initialize()` | **`true`** |
+| Locales `es_*` reportados | `es_ES`, `es_US` |
+| `localeId` usado | **`es_US`** |
+| `onDevice` pedido | `false` (ver §5.4 — forzarlo es contraproducente en este equipo) |
+| **Modo avión activo** | **SÍ** — `settings get global airplane_mode_on` → `1`, verificado por `adb` en el momento de la captura; la app muestra `connectivity: none` |
 | Frase dictada | `agenda una cita para mañana a las diez` |
-| **Texto exacto devuelto** | _(pendiente)_ |
-| Latencia aproximada | _(pendiente)_ |
-| Errores observados | _(pendiente)_ |
+| **Texto exacto devuelto** | **`agenda una cita para mañana a las 10`** |
+| Latencia | **13 682 ms** (medida desde el toque del botón, incluye el habla) |
+| Errores | ninguno |
 
-**Evidencia:** `evidencias/spike-voz-modo-avion.png` _(pendiente)_
+Registro textual del resultado, emitido por la propia app a `logcat`:
+
+```
+09-03 21:44:07.758 I flutter : SPIKE_FINAL|avion=true|onDevice=false
+                               |locale=es_US|ms=13682
+                               |texto=agenda una cita para mañana a las 10
+```
+
+**Evidencia:** `evidencias/spike-voz-modo-avion.png` — banner verde
+*"SIN RED — MODO AVIÓN OK"*, `connectivity: none`, ícono de avión en la barra de
+estado del sistema y el texto transcrito en pantalla. Entorno del dispositivo en
+`evidencias/spike-voz-entorno.txt` (incluye `modo avion: 1`).
+
+### 4.2. Corrida de contraste — con Wi-Fi
+
+| Medición | Resultado |
+| :--- | :--- |
+| Texto devuelto | `agenda una cita para mañana a las 10` |
+| Latencia | 4 498 ms |
+| `onDevice` pedido | `false` |
+
+**Evidencia:** `evidencias/spike-voz-baseline-con-red.png`
+
+Se corrió **antes** de la decisiva, a propósito: prueba que micrófono, permisos y
+reconocedor funcionaban, de modo que cualquier fallo posterior fuera atribuible a
+la falta de red y no al entorno. El banner rojo *"HAY RED — EL SPIKE NO VALE"*
+está en la captura para que nadie la confunda con la evidencia decisiva.
+
+### 4.3. Lectura de los números
+
+El offline tarda **~3× más** que la nube (13,7 s vs 4,5 s), aunque la
+comparación no es limpia: la latencia se mide desde el toque del botón e incluye
+el tiempo de habla y la espera de `pauseFor` (4 s). El margen real de
+procesamiento offline es holgado para un asistente de comandos. **La precisión
+fue idéntica** — texto correcto en ambos casos.
 
 ---
 
@@ -176,7 +216,7 @@ usar un dispositivo con ROM menos restrictivo.
 
 ### 5.4. `onDevice: true` → `error_language_unavailable` (modelo local ausente)
 
-Es el hallazgo central del spike hasta el momento.
+Es el hallazgo tecnico central del spike.
 
 | Corrida | Red | `onDevice` | Resultado |
 | :--- | :--- | :--- | :--- |
@@ -212,6 +252,68 @@ el día 19.
 
 ---
 
+### 5.6. `onDevice: true` apunta al stack de reconocimiento equivocado
+
+Ampliación de §5.4, con la causa raíz ya identificada en el código del plugin.
+
+`SpeechToTextPlugin.kt:623-626` — cuando `onDevice = true` y la API ≥ 31, el
+plugin **no** usa el `SpeechRecognizer` normal:
+
+```kotlin
+if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && onDevice) {
+    speechRecognizer = createOnDeviceSpeechRecognizer(pluginContext!!)
+```
+
+`createOnDeviceSpeechRecognizer()` resuelve contra **Android System
+Intelligence** (`com.google.android.as`), que mantiene **su propio juego de
+modelos**. Pero el paquete de español descargado en el dispositivo —
+**Español (EE.UU.), 74 MB, v3056** — pertenece a **Speech Services by Google**
+(`com.google.android.tts`), que es además el `voice_recognition_service`
+configurado en el sistema.
+
+**Son dos stacks de reconocimiento on-device distintos, y el modelo estaba en el
+que esa API no consulta.** De ahí el `Error 13 / ERROR_LANGUAGE_UNAVAILABLE`
+disparado en 82-337 ms, tanto con `es_US` como con `es_ES`.
+
+**Conclusión operativa, y es contraintuitiva:** para lograr STT offline en este
+equipo hay que **dejar `onDevice` en `false`** y quitar la red. Sin red el
+reconocedor normal no tiene a dónde ir salvo al modelo local, y funciona.
+Forzar `onDevice: true` — que es lo que uno haría por instinto para "asegurar"
+el offline — **rompe** el caso que pretende garantizar.
+
+### 5.7. `locales()` lista locales sin modelo descargado
+
+`locales()` devolvía `es_ES` y `es_US`. La primera versión de la app elegía
+`es_ES` por cercanía dialectal, y fallaba. El único modelo descargado era
+`es_US`.
+
+**Que un locale aparezca en `locales()` no dice nada sobre si su modelo offline
+está instalado.** El orden de preferencia debe basarse en qué modelo está
+efectivamente descargado, no en el dialecto. Por eso la app terminó con un
+selector de locale en pantalla: la corazonada no es un método.
+
+### 5.8. El resultado FINAL llega vacío; el texto está en los PARCIALES
+
+Con reconocimiento offline, la secuencia observada fue: varios resultados
+parciales **con** el texto y, al cerrar la sesión, un `finalResult` con
+`recognizedWords` **vacío**.
+
+```
+SPIKE_FINAL|avion=true|onDevice=false|locale=es_US|ms=9731|texto=
+```
+
+La app hacía `_texto = r.recognizedWords` en cada callback, de modo que el
+resultado final vacío **borraba la transcripción** justo al terminar de hablar:
+el texto aparecía en pantalla y se desvanecía solo. Corregido reteniendo el
+último resultado no vacío.
+
+> **Impacto directo en la Fase 5:** un `IntentClassifier` que escuche únicamente
+> `finalResult` — la implementación por defecto y la que muestran casi todos los
+> ejemplos — **no recibiría nada** en modo offline. Debe consumir el último
+> parcial no vacío.
+
+---
+
 ## 6. Alcance — lo que este spike deliberadamente NO hace
 
 No hay `IntentClassifier`, no hay `intents.json`, no hay app móvil real. El
@@ -236,3 +338,26 @@ adb exec-out screencap -p > evidencias/spike-voz-modo-avion.png
 ```
 
 (`adb` no está en el PATH: `C:\Users\Daniel\AppData\Local\Android\Sdk\platform-tools\adb.exe`)
+
+`spike-voz/evidencia.sh` automatiza la captura: solo escribe
+`spike-voz-modo-avion.png` si `airplane_mode_on` es `1`; con red guarda el
+archivo como baseline. Una corrida de contraste no puede colarse como evidencia
+decisiva.
+
+Preparación del teléfono paso a paso: `spike-voz/CHECKLIST_DANIEL.md`.
+
+---
+
+## 8. Qué se lleva la Fase 5 de este spike
+
+1. **Stack móvil: Flutter.** Decidido y cerrado.
+2. **No forzar `onDevice: true`.** Apunta al stack de modelos equivocado (§5.6).
+3. **Leer el último parcial no vacío**, nunca solo `finalResult` (§5.8).
+4. **Elegir el locale por modelo descargado**, no por dialecto (§5.7).
+5. **El parser de `DATETIME` debe aceptar dígitos y palabras**: se dictó
+   *"a las diez"* y volvió *"a las 10"* (§5.5).
+6. **Bloquear el botón de micrófono hasta `done`**: las sesiones solapadas dan
+   `error_busy` (§5.4).
+7. **El paquete de idioma offline es un requisito de instalación**, no un
+   detalle: sin él no hay asistente sin conexión, y el fallo es silencioso. La
+   app debe detectarlo y guiar al usuario.
