@@ -19,7 +19,30 @@ deja instalar nada.
   y después Ajustes → Sistema → Opciones de desarrollador → activar
   **Depuración por USB**.
 
-Avisame cuando lo hayas hecho y yo verifico.
+✅ **Ya está hecho** — el celular (Xiaomi M2012K11AG, Android 13) ya aparece
+autorizado. Gracias.
+
+---
+
+## 1-bis) Activar "Instalar vía USB" — MIUI lo está bloqueando
+
+Tu celular es un Xiaomi y MIUI rechaza la instalación con
+`INSTALL_FAILED_USER_RESTRICTED: Install canceled by user`. Es una restricción
+propia de MIUI, no un problema de la app.
+
+- **Ajustes → Opciones de desarrollador → activar "Instalar vía USB"**
+  (*Install via USB*).
+- Activá también **"Depuración USB (Ajustes de seguridad)"**
+  (*USB debugging (Security settings)*) si aparece.
+
+⚠️ Dos cosas molestas de MIUI en este paso:
+
+- Suele exigir **sesión iniciada con cuenta Mi y conexión a internet** para
+  permitir el toggle. Por eso **hacé esto ANTES de poner el modo avión**
+  (paso 3). El orden importa.
+- A veces pide tener una **SIM insertada**.
+
+Si el toggle se apaga solo o da error, avisame y lo instalamos por otra vía.
 
 ---
 
