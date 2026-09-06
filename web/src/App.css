@@ -19,3 +19,29 @@
   flex: 1;
   min-height: 0;
 }
+
+.app__collab-status {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #eee;
+}
+.app__collab-status[data-status="conectado"] {
+  background: #d3f9d8;
+  color: #2b8a3e;
+}
+.app__collab-status[data-status="error"] {
+  background: #ffe3e3;
+  color: #c92a2a;
+}
+
+.app__collab-warning {
+  font-size: 12px;
+  color: #e8590c;
+}
+
+.app__session {
+  margin-left: auto;
+  font-size: 12px;
+  color: #666;
+}
