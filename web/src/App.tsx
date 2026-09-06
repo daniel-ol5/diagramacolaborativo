@@ -14,7 +14,9 @@ import { toFlowNodes } from "./lib/toFlowNodes";
 import { toFlowEdges } from "./lib/toFlowEdges";
 import { useCanonicalStore } from "./store/canonicalStore";
 import { usePresentationStore } from "./store/presentationStore";
+import { useCollaborationStore } from "./store/collaborationStore";
 import { useCollaboration } from "./hooks/useCollaboration";
+import { CollaborationActionsContext } from "./hooks/collaborationActionsContext";
 import { DIAGRAMA_COLABORATIVO_ID } from "./services/config";
 import "./App.css";
 
@@ -33,6 +35,37 @@ const DIAGRAMA_EN_VIVO: keyof typeof DIAGRAMS = "barberia";
 const nodeTypes = { umlClass: UmlClassNode };
 const edgeTypes = { umlRelationship: UmlRelationshipEdge };
 
+/** Toasts de lock: se auto-descartan, no se acumulan uno atrás del otro. */
+function CollaborationToasts() {
+  const deniedNotice = useCollaborationStore((s) => s.deniedNotice);
+  const setDeniedNotice = useCollaborationStore((s) => s.setDeniedNotice);
+  const lostLockNotice = useCollaborationStore((s) => s.lostLockNotice);
+  const setLostLockNotice = useCollaborationStore((s) => s.setLostLockNotice);
+
+  useEffect(() => {
+    if (!deniedNotice) return;
+    const timer = setTimeout(() => setDeniedNotice(null), 4000);
+    return () => clearTimeout(timer);
+  }, [deniedNotice, setDeniedNotice]);
+
+  useEffect(() => {
+    if (!lostLockNotice) return;
+    const timer = setTimeout(() => setLostLockNotice(null), 5000);
+    return () => clearTimeout(timer);
+  }, [lostLockNotice, setLostLockNotice]);
+
+  if (!deniedNotice && !lostLockNotice) return null;
+
+  return (
+    <div className="app__toasts">
+      {deniedNotice && (
+        <div className="app__toast">Elemento en edición por {deniedNotice.heldBy}</div>
+      )}
+      {lostLockNotice && <div className="app__toast app__toast--warning">{lostLockNotice}</div>}
+    </div>
+  );
+}
+
 function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [diagramKey, setDiagramKey] = useState<keyof typeof DIAGRAMS>("barberia");
@@ -46,7 +79,7 @@ function App() {
 
   const liveDiagramId =
     session && diagramKey === DIAGRAMA_EN_VIVO ? DIAGRAMA_COLABORATIVO_ID : null;
-  const collaboration = useCollaboration(liveDiagramId, session?.token ?? null);
+  const collaboration = useCollaboration(liveDiagramId, session?.token ?? null, session?.userId ?? null);
 
   const nodes = useMemo(() => (model ? toFlowNodes(model) : []), [model]);
   const edges = useMemo(() => (model ? toFlowEdges(model) : []), [model]);
@@ -109,19 +142,29 @@ function App() {
       </header>
       <div className="app__canvas">
         <UmlMarkerDefs />
-        <ReactFlow
-          key={diagramKey}
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          onNodeClick={handleNodeClick}
-          onNodesChange={handleNodesChange}
-          fitView
+        <CollaborationToasts />
+        <CollaborationActionsContext.Provider
+          value={{
+            requestLock: collaboration.requestLock,
+            releaseLock: collaboration.releaseLock,
+            renewLock: collaboration.renewLock,
+            renameClass: collaboration.renameClass,
+          }}
         >
-          <Background />
-          <Controls />
-        </ReactFlow>
+          <ReactFlow
+            key={diagramKey}
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            onNodeClick={handleNodeClick}
+            onNodesChange={handleNodesChange}
+            fitView
+          >
+            <Background />
+            <Controls />
+          </ReactFlow>
+        </CollaborationActionsContext.Provider>
       </div>
     </div>
   );

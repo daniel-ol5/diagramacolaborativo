@@ -19,6 +19,8 @@ interface CanonicalState {
    * clase a una posicion dada.
    */
   updateClassPosition: (classId: string, x: number, y: number) => void;
+  /** Aplica un RENAME_CLASS, propio ya confirmado o ajeno recibido por el topic. */
+  renameClass: (classId: string, name: string) => void;
 }
 
 export const useCanonicalStore = create<CanonicalState>((set) => ({
@@ -33,6 +35,16 @@ export const useCanonicalStore = create<CanonicalState>((set) => ({
           classes: state.model.classes.map((c) =>
             c.id === classId ? { ...c, position: { x, y } } : c,
           ),
+        },
+      };
+    }),
+  renameClass: (classId, name) =>
+    set((state) => {
+      if (!state.model) return state;
+      return {
+        model: {
+          ...state.model,
+          classes: state.model.classes.map((c) => (c.id === classId ? { ...c, name } : c)),
         },
       };
     }),

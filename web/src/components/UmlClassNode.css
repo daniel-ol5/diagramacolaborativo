@@ -24,6 +24,54 @@
   font-style: italic;
 }
 
+.uml-class-node__name-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.uml-class-node__name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.uml-class-node__lock-icon {
+  font-size: 10px;
+  line-height: 1;
+}
+
+.uml-class-node__edit-btn {
+  border: none;
+  background: none;
+  padding: 0 2px;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  color: #666;
+  border-radius: 3px;
+}
+
+.uml-class-node__edit-btn:hover {
+  background: #d8dcf5;
+}
+
+.uml-class-node__edit-btn[data-locked="true"] {
+  color: #e8590c;
+  cursor: not-allowed;
+}
+
+.uml-class-node__name-input {
+  width: 100%;
+  font: inherit;
+  font-weight: 700;
+  text-align: center;
+  border: 1px solid #3b5bdb;
+  border-radius: 3px;
+  padding: 2px 4px;
+  box-sizing: border-box;
+}
+
 .uml-class-node__section {
   padding: 4px 8px;
   border-bottom: 1px solid #c9cbe0;

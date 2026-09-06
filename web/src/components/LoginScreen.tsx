@@ -4,6 +4,7 @@ import "./LoginScreen.css";
 
 export interface Session {
   token: string;
+  userId: string;
   email: string;
   fullName: string;
 }
@@ -24,7 +25,12 @@ export function LoginScreen({ onLogin }: Props) {
     setLoading(true);
     try {
       const result = await login(email, password);
-      onLogin({ token: result.token, email: result.email, fullName: result.fullName });
+      onLogin({
+        token: result.token,
+        userId: result.userId,
+        email: result.email,
+        fullName: result.fullName,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
