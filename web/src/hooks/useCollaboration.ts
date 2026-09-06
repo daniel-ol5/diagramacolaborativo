@@ -5,8 +5,9 @@ import { useCanonicalStore } from "../store/canonicalStore";
 import { useCollaborationStore } from "../store/collaborationStore";
 import {
   esBroadcastDeMutacion,
-  esEventoDeLock,
+  esEventoDeSala,
   type LockDeniedMessage,
+  type Participante,
   type StompErrorMessage,
 } from "../types/collaboration";
 
@@ -49,6 +50,8 @@ export interface UseCollaborationResult {
   renewLock: (targetId: string) => void;
   /** Envia el RENAME_CLASS. El servidor libera el lock solo al confirmarlo (ver CollaborationStompController). */
   renameClass: (targetId: string, name: string) => void;
+  /** Publica la posicion del cursor propio, con throttling. No es una mutacion: no toca el canonico. */
+  sendCursor: (x: number, y: number, selectedId: string | null) => void;
 }
 
 const THROTTLE_MS = 50; // ~20 mensajes/seg durante el arrastre (Dia 8)
@@ -72,6 +75,7 @@ export function useCollaboration(
   const ownMutationIds = useRef<Set<string>>(new Set());
   const lastSequenceNum = useRef<number | null>(null);
   const lastSentAt = useRef(0);
+  const lastCursorSentAt = useRef(0);
 
   const updateClassPosition = useCanonicalStore((s) => s.updateClassPosition);
   const renameClassLocal = useCanonicalStore((s) => s.renameClass);
@@ -104,9 +108,17 @@ export function useCollaboration(
       onConnect: () => {
         setStatus("conectado");
 
+        // El orden importa: primero TODAS las suscripciones, recien despues
+        // el pedido de roster. [cl1] probo empujarlo automaticamente al
+        // conectar y hay una carrera con el registro de la suscripcion en
+        // el broker que no se puede evitar desde el servidor — el cliente
+        // es el unico que sabe cuando ya termino de suscribirse a todo.
         client.subscribe(`/topic/diagrams/${diagramId}`, (message) => handleTopic(message));
         client.subscribe("/user/queue/errors", (message) => handleError(message));
         client.subscribe("/user/queue/locks", (message) => handleLockDenied(message));
+        client.subscribe("/user/queue/presence", (message) => handlePresenceResponse(message));
+
+        client.publish({ destination: `/app/diagram/${diagramId}/presence`, body: "" });
       },
       onStompError: (frame) => {
         setStatus("error");
@@ -128,6 +140,21 @@ export function useCollaboration(
         setSequenceGap({ esperaba: esperado, llego: seq });
       }
       lastSequenceNum.current = seq;
+    }
+
+    function aplicarRoster(participantes: Participante[]) {
+      const store = useCollaborationStore.getState();
+      store.setRoster(participantes.map((p) => ({ userId: p.userId, nombre: p.nombre, color: p.color })));
+      store.pruneCursors(new Set(participantes.map((p) => p.userId)));
+    }
+
+    function handlePresenceResponse(message: IMessage) {
+      try {
+        const body = JSON.parse(message.body) as { participants: Participante[] };
+        aplicarRoster(body.participants);
+      } catch {
+        console.warn("[colaboracion] respuesta de presencia no es JSON valido:", message.body);
+      }
     }
 
     function handleTopic(message: IMessage) {
@@ -161,33 +188,58 @@ export function useCollaboration(
         return;
       }
 
-      if (esEventoDeLock(body)) {
+      if (esEventoDeSala(body)) {
         const store = useCollaborationStore.getState();
-        if (body.event === "LOCK_ACQUIRED") {
-          store.setLock({
-            targetId: body.targetId,
-            userId: body.userId ?? "",
-            userName: body.userName ?? "",
-            color: body.color ?? "#999",
-            ttl: body.ttl ?? 5000,
-          });
-          if (body.userId && body.userId === store.myUserId) {
-            store.setEditingTargetId(body.targetId);
+        switch (body.event) {
+          case "LOCK_ACQUIRED":
+            store.setLock({
+              targetId: body.targetId,
+              userId: body.userId ?? "",
+              userName: body.userName ?? "",
+              color: body.color ?? "#999",
+              ttl: body.ttl ?? 5000,
+            });
+            if (body.userId && body.userId === store.myUserId) {
+              store.setEditingTargetId(body.targetId);
+            }
+            break;
+
+          case "LOCK_RELEASED": {
+            // Si todavia creia que este era mi lock abierto, el servidor lo
+            // vencio sin que yo lo soltara (§8.2 punto 5): releaseLock() y
+            // renameClass() limpian editingTargetId ANTES de mandar su
+            // mensaje, asi que si sigue puesto acá es porque nadie de este
+            // lado lo cerro a proposito.
+            const wasMine = store.editingTargetId === body.targetId;
+            store.clearLock(body.targetId);
+            if (wasMine) {
+              store.setEditingTargetId(null);
+              store.setLostLockNotice(
+                "se venció tu lock mientras editabas — el cambio no se envió, probá de nuevo",
+              );
+            }
+            break;
           }
-        } else if (body.event === "LOCK_RELEASED") {
-          // Si todavia creia que este era mi lock abierto, el servidor lo
-          // vencio sin que yo lo soltara (§8.2 punto 5): releaseLock() y
-          // renameClass() limpian editingTargetId ANTES de mandar su
-          // mensaje, asi que si sigue puesto acá es porque nadie de este
-          // lado lo cerro a proposito.
-          const wasMine = store.editingTargetId === body.targetId;
-          store.clearLock(body.targetId);
-          if (wasMine) {
-            store.setEditingTargetId(null);
-            store.setLostLockNotice(
-              "se venció tu lock mientras editabas — el cambio no se envió, probá de nuevo",
-            );
-          }
+
+          case "USER_CURSOR":
+            // El propio cursor no se guarda ni se dibuja: el mouse real ya
+            // le muestra al usuario donde esta, y pintar el eco redondeado
+            // solo agregaria un salto fantasma detras del puntero real.
+            if (body.userId !== store.myUserId) {
+              store.setCursor({
+                userId: body.userId,
+                userName: body.userName,
+                color: body.color,
+                x: body.x,
+                y: body.y,
+                selectedId: body.selectedId,
+              });
+            }
+            break;
+
+          case "PRESENCE":
+            aplicarRoster(body.participants);
+            break;
         }
         return;
       }
@@ -243,6 +295,18 @@ export function useCollaboration(
     });
   }
 
+  function sendCursor(x: number, y: number, selectedId: string | null) {
+    const client = clientRef.current;
+    if (!diagramId || !client?.connected) return;
+    const now = performance.now();
+    if (now - lastCursorSentAt.current < THROTTLE_MS) return;
+    lastCursorSentAt.current = now;
+    client.publish({
+      destination: `/app/diagram/${diagramId}/cursor`,
+      body: JSON.stringify({ x, y, selectedId }),
+    });
+  }
+
   function moveClass(classId: string, x: number, y: number) {
     updateClassPosition(classId, x, y);
 
@@ -286,5 +350,6 @@ export function useCollaboration(
     releaseLock,
     renewLock,
     renameClass,
+    sendCursor,
   };
 }

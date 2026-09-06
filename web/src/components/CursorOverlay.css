@@ -1,0 +1,33 @@
+.cursor-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+  overflow: hidden;
+}
+
+.cursor-overlay__cursor {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transform: translate(-2px, -2px);
+  transition: left 80ms linear, top 80ms linear;
+}
+
+.cursor-overlay__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
+}
+
+.cursor-overlay__label {
+  font-family: "Segoe UI", Roboto, sans-serif;
+  font-size: 11px;
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+}

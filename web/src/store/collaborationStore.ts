@@ -16,6 +16,21 @@ export interface LockInfo {
   ttl: number;
 }
 
+export interface CursorInfo {
+  userId: string;
+  userName: string;
+  color: string;
+  x: number;
+  y: number;
+  selectedId: string | null;
+}
+
+export interface RosterEntry {
+  userId: string;
+  nombre: string;
+  color: string;
+}
+
 interface CollaborationState {
   myUserId: string | null;
   setMyUserId: (id: string | null) => void;
@@ -36,6 +51,16 @@ interface CollaborationState {
   /** Se puso "perdiste el lock" — el TTL vencio mientras vos creias tenerlo. */
   lostLockNotice: string | null;
   setLostLockNotice: (message: string | null) => void;
+
+  /** Cursor ajeno mas reciente por userId (el propio nunca se guarda aca, ver useCollaboration). */
+  cursors: Record<string, CursorInfo>;
+  setCursor: (info: CursorInfo) => void;
+  /** Saca los cursores de quien ya no esta en el roster (se fue sin un ultimo aviso de cursor). */
+  pruneCursors: (userIdsPresentes: Set<string>) => void;
+
+  /** Quienes estan en la sala ahora mismo (PRESENCE, lista completa siempre). */
+  roster: RosterEntry[];
+  setRoster: (roster: RosterEntry[]) => void;
 }
 
 export const useCollaborationStore = create<CollaborationState>((set) => ({
@@ -60,4 +85,16 @@ export const useCollaborationStore = create<CollaborationState>((set) => ({
 
   lostLockNotice: null,
   setLostLockNotice: (message) => set({ lostLockNotice: message }),
+
+  cursors: {},
+  setCursor: (info) => set((state) => ({ cursors: { ...state.cursors, [info.userId]: info } })),
+  pruneCursors: (userIdsPresentes) =>
+    set((state) => {
+      const entries = Object.entries(state.cursors).filter(([userId]) => userIdsPresentes.has(userId));
+      if (entries.length === Object.keys(state.cursors).length) return state;
+      return { cursors: Object.fromEntries(entries) };
+    }),
+
+  roster: [],
+  setRoster: (roster) => set({ roster }),
 }));

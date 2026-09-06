@@ -1,5 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
-import ReactFlow, { Background, Controls, type NodeChange, type NodeMouseHandler } from "reactflow";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import ReactFlow, {
+  Background,
+  Controls,
+  type NodeChange,
+  type NodeMouseHandler,
+  type ReactFlowInstance,
+} from "reactflow";
 import "reactflow/dist/style.css";
 import barberia from "@fixtures/reference-diagrams/barberia.json";
 import veterinaria from "@fixtures/reference-diagrams/veterinaria.json";
@@ -9,6 +15,7 @@ import type { CanonicalModel } from "./types/canonical";
 import { UmlClassNode } from "./components/UmlClassNode";
 import { UmlRelationshipEdge } from "./components/UmlRelationshipEdge";
 import { UmlMarkerDefs } from "./components/UmlMarkerDefs";
+import { CursorOverlay } from "./components/CursorOverlay";
 import { LoginScreen, type Session } from "./components/LoginScreen";
 import { toFlowNodes } from "./lib/toFlowNodes";
 import { toFlowEdges } from "./lib/toFlowEdges";
@@ -66,12 +73,29 @@ function CollaborationToasts() {
   );
 }
 
+/** Quienes estan en la sala ahora. Dos pestañas del mismo usuario cuentan como una sola persona: lo dedupe el servidor. */
+function RosterPanel() {
+  const roster = useCollaborationStore((s) => s.roster);
+  if (roster.length === 0) return null;
+  return (
+    <div className="app__roster" title={roster.map((p) => p.nombre).join(", ")}>
+      {roster.map((p) => (
+        <span key={p.userId} className="app__roster-chip" style={{ background: p.color }}>
+          {p.nombre.split(" ")[0]}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [diagramKey, setDiagramKey] = useState<keyof typeof DIAGRAMS>("barberia");
   const selectNode = usePresentationStore((s) => s.selectNode);
+  const selectedNodeId = usePresentationStore((s) => s.selectedNodeId);
   const model = useCanonicalStore((s) => s.model);
   const setModel = useCanonicalStore((s) => s.setModel);
+  const reactFlowRef = useRef<ReactFlowInstance | null>(null);
 
   useEffect(() => {
     setModel(DIAGRAMS[diagramKey]);
@@ -91,6 +115,13 @@ function App() {
   const handleNodeClick: NodeMouseHandler = (_event, node) => {
     selectNode(node.id);
   };
+
+  function handlePaneMouseMove(event: ReactMouseEvent) {
+    const instance = reactFlowRef.current;
+    if (!instance) return;
+    const flowPos = instance.screenToFlowPosition({ x: event.clientX, y: event.clientY });
+    collaboration.sendCursor(flowPos.x, flowPos.y, selectedNodeId);
+  }
 
   function handleNodesChange(changes: NodeChange[]) {
     for (const change of changes) {
@@ -131,6 +162,7 @@ function App() {
             {collaboration.status === "error" && `⚠ ${collaboration.error ?? "error"}`}
           </span>
         )}
+        {liveDiagramId && <RosterPanel />}
         {collaboration.sequenceGap && (
           <span className="app__collab-warning">
             ⚠ se perdió al menos un evento (esperaba #{collaboration.sequenceGap.esperaba}, llegó #
@@ -159,10 +191,15 @@ function App() {
             edgeTypes={edgeTypes}
             onNodeClick={handleNodeClick}
             onNodesChange={handleNodesChange}
+            onInit={(instance) => {
+              reactFlowRef.current = instance;
+            }}
+            onPaneMouseMove={handlePaneMouseMove}
             fitView
           >
             <Background />
             <Controls />
+            {liveDiagramId && <CursorOverlay />}
           </ReactFlow>
         </CollaborationActionsContext.Provider>
       </div>

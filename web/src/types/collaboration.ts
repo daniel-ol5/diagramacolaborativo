@@ -49,10 +49,44 @@ export interface LockDeniedMessage {
   expiresInMs: number;
 }
 
+/** Ojo: Participante usa "nombre" (espaniol) — CursorBroadcastMessage/LockBroadcastMessage usan "userName". */
+export interface Participante {
+  userId: string;
+  nombre: string;
+  color: string;
+}
+
+/** Lo que se manda a /app/diagram/{id}/cursor. Sin clientMutationId ni op: no es una mutacion. */
+export interface CursorMessage {
+  x: number;
+  y: number;
+  selectedId: string | null;
+}
+
+/** Lo que llega por /topic/diagrams/{id} con la posicion de un cursor ajeno. */
+export interface CursorBroadcastMessage {
+  event: "USER_CURSOR";
+  userId: string;
+  userName: string;
+  color: string;
+  x: number;
+  y: number;
+  selectedId: string | null;
+}
+
+/** El roster completo: llega por /topic/diagrams/{id} en cada alta/baja y por /user/queue/presence al pedirlo. */
+export interface PresenceMessage {
+  event: "PRESENCE";
+  participants: Participante[];
+}
+
+export type TopicEvent = LockBroadcastMessage | CursorBroadcastMessage | PresenceMessage;
+
 export function esBroadcastDeMutacion(body: unknown): body is StompBroadcastMessage {
   return typeof body === "object" && body !== null && "op" in body;
 }
 
-export function esEventoDeLock(body: unknown): body is LockBroadcastMessage {
+/** Todo lo demas del topic (locks, cursores, presencia) comparte el campo "event". */
+export function esEventoDeSala(body: unknown): body is TopicEvent {
   return typeof body === "object" && body !== null && "event" in body;
 }

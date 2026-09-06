@@ -41,6 +41,21 @@
   color: #e8590c;
 }
 
+.app__roster {
+  display: flex;
+  gap: 4px;
+}
+
+.app__roster-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  color: #fff;
+  font-weight: 600;
+}
+
 .app__session {
   margin-left: auto;
   font-size: 12px;
