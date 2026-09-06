@@ -68,6 +68,22 @@ El plan pone React Native como ruta principal y Flutter como contingencia. Se ej
 *Motivo:* la ruta RN exige Custom Dev Client vía EAS Build (cuenta Expo, compilación en la nube, 20–40 min por iteración). Flutter ya está instalado y llega a evidencia con un `flutter run`. El criterio de aceptación de B-2 no es cuál framework es superior, sino **si hay texto transcrito en modo avión**; la ruta más corta a esa evidencia es la correcta.
 *Reversibilidad:* total. Si Flutter no transcribe offline, se ejecuta la ruta RN sin haber perdido más de una hora.
 
+**D-21 · El `UNIQUE` de idempotencia es compuesto, no sobre la columna sola.**
+La deuda anotada el Día 3 decía "falta `UNIQUE` en `client_mutation_id`". Al escribir la migración `V2` apareció que eso era incorrecto: **el identificador lo genera el cliente para distinguir *su* operación dentro de *un* diagrama**, y exigirle unicidad global es pedirle una garantía que no puede dar. Dos diagramas que repitieran un identificador rompían la búsqueda de duplicados, que devolvía un único resultado.
+No era teórico: el propio script de verificación del Día 3 reutiliza `mut-add-1` en cada corrida y habría estallado la segunda vez que alguien lo ejecutara.
+*Resultado:* `UNIQUE (diagram_id, client_mutation_id)`.
+
+**D-22 · `diagram_operations` gana una columna `target_id` que §13 no define.**
+*Qué cambia:* una columna adicional, nullable, sobre el DDL de §13. El plan **no se modificó**; difiere la implementación.
+*Motivo:* sin ella la bitácora de operaciones no se puede reproducir. El payload de un `RENAME_CLASS` es `{"name": …}` y no dice **qué** clase se renombró, con lo cual el log sirve como auditoría parcial pero no como historial — y lo que necesita el cliente que reconecta ("dame todo lo que pasó desde la operación N") es exactamente poder reconstruir.
+*Argumento adicional:* §13 se escribió **antes** que D-11, el sobre del mensaje STOMP congelado el Día 2, que pone `targetId` como campo de primer nivel, hermano de `payload` y no parte de él. Darle columna propia es el mapeo fiel de ese contrato; meterlo dentro del `payload` al guardar haría que lo persistido no coincida con lo recibido.
+*Pendiente de decisión de Daniel:* enmendar §13 para que el DDL del documento y el real vuelvan a coincidir. No bloquea nada.
+
+**D-23 · Un `DELETE_*` guarda en su payload el nombre de lo que borró.**
+*Qué cambia:* el payload persistido de una operación de borrado deja de ser `{}`.
+*Motivo:* el nombre del elemento eliminado existe en **un solo instante** — el anterior a aplicar el borrado. Después no está en el estado nuevo (se borró), no está en el estado viejo (no se guarda) y no estaba en la bitácora. Una operación que registra que algo se borró pero no qué convierte el historial del diagrama en una lista de UUID sin significado.
+*Cómo se detectó:* el reporte de reconciliación del rebase seguía escupiendo identificadores donde §9.2 exige nombres legibles. El test unitario mockeaba la bitácora vacía y **pasaba igual**.
+
 ### Reparto del día
 
 | Sesión | Track | Alcance |
