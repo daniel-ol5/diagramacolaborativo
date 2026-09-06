@@ -79,6 +79,12 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     private static final Pattern DESTINO_DIAGRAMA =
             Pattern.compile("^/app/diagram/(?<diagramId>[^/]+)/.+$");
 
+    /**
+     * Destinos de diagrama que un VIEWER SI puede usar: los de presencia. Ver {@link #autorizar}.
+     */
+    private static final java.util.Set<String> SUFIJOS_DE_PRESENCIA =
+            java.util.Set.of("/cursor", "/presence");
+
     private static final String HEADER_AUTH = "Authorization";
     private static final String PREFIJO_BEARER = "Bearer ";
     private static final String COLA_ERRORES = "/queue/errors";
@@ -197,7 +203,15 @@ public class StompChannelInterceptor implements ChannelInterceptor {
         }
 
         Optional<ProjectRole> rol = rolDeLaSesion(accessor, diagramId, userId);
-        if (rol.isEmpty() || rol.get() == ProjectRole.VIEWER) {
+
+        // El cursor y el pedido de roster son presencia, no edicion: un VIEWER puede usarlos.
+        // Mirar donde apunta alguien que mira, y saber quien esta en la sala, es exactamente lo
+        // que un rol de solo lectura deberia poder hacer; sin esto los demas no verian su
+        // puntero y el no veria a nadie. La membresia si se exige igual: quien no pertenece al
+        // proyecto no entra ni a mirar.
+        boolean esPresencia = SUFIJOS_DE_PRESENCIA.stream().anyMatch(destino::endsWith);
+
+        if (rol.isEmpty() || (!esPresencia && rol.get() == ProjectRole.VIEWER)) {
             rechazar(message, destino, userId, rol);
             return null;
         }

@@ -50,7 +50,13 @@ public enum OperationType {
     UPDATE_RELATIONSHIP(Exclusion.REQUIERE_LOCK, false),
     /** Día 16: inserción atómica de un sub-grafo (visión / importación XMI). */
     BULK_MERGE(Exclusion.LOCK_DE_DIAGRAMA, false),
-    /** Día 9: canal volátil de presencia; no se persiste ni pasa por el aplicador. */
+    /**
+     * Canal volátil de presencia. Figura en el catálogo de §8.1 pero <b>no viaja por
+     * {@code /mutate}</b>: tiene su propio destino {@code /app/diagram/{id}/cursor}, no se
+     * persiste y no consume secuencia. Por eso {@code implementada = false}: el aplicador no
+     * la conoce ni debe conocerla, y si llegara por la tubería de mutaciones —o encolada en un
+     * lote offline— corresponde rechazarla.
+     */
     USER_CURSOR(Exclusion.NO_REQUIERE, false);
 
     /** Política de exclusión mutua de la cuarta columna de §8.1. */

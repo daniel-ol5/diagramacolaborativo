@@ -1,5 +1,7 @@
 package com.modelcollab.collaboration.controller;
 
+import com.modelcollab.collaboration.dto.CursorBroadcastMessage;
+import com.modelcollab.collaboration.dto.CursorMessage;
 import com.modelcollab.collaboration.dto.LockMessage;
 import com.modelcollab.collaboration.dto.Participante;
 import com.modelcollab.collaboration.dto.StompErrorMessage;
@@ -7,6 +9,7 @@ import com.modelcollab.collaboration.dto.StompMutationMessage;
 import com.modelcollab.collaboration.interceptor.StompChannelInterceptor;
 import com.modelcollab.collaboration.service.DiagramMutationService;
 import com.modelcollab.collaboration.service.LockManagerService;
+import com.modelcollab.collaboration.service.RoomManager;
 import com.modelcollab.collaboration.service.MutacionRechazadaException;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -33,14 +36,17 @@ public class CollaborationStompController {
 
     private final DiagramMutationService mutationService;
     private final LockManagerService lockManager;
+    private final RoomManager roomManager;
     private final SimpMessagingTemplate messagingTemplate;
 
     public CollaborationStompController(
             DiagramMutationService mutationService,
             LockManagerService lockManager,
+            RoomManager roomManager,
             SimpMessagingTemplate messagingTemplate) {
         this.mutationService = mutationService;
         this.lockManager = lockManager;
+        this.roomManager = roomManager;
         this.messagingTemplate = messagingTemplate;
     }
 
@@ -128,6 +134,55 @@ public class CollaborationStompController {
                             "Acción de lock desconocida: " + mensaje.action()
                                     + ". Esperaba ACQUIRE, HEARTBEAT o RELEASE"));
         }
+    }
+
+    /**
+     * Cursor de un colaborador (§8.1, "canal volátil"). Se reemite tal cual a la sala.
+     *
+     * <p>Las tres cosas que <b>no</b> hace, y que son el punto de que exista este destino aparte
+     * de {@code /mutate}:
+     *
+     * <ul>
+     *   <li><b>No persiste nada.</b> Ni en {@code current_state} ni en la bitácora. Es presencia,
+     *       no historia; guardar cursores llenaría {@code diagram_operations} de basura a veinte
+     *       mensajes por segundo por usuario.</li>
+     *   <li><b>No consume número de secuencia.</b> Si lo consumiera, un hueco en la numeración
+     *       dejaría de significar "me perdí una mutación", que es exactamente para lo que el
+     *       cliente lo usa al reconectar.</li>
+     *   <li><b>No pide lock ni bloquea nada.</b> Un {@code VIEWER} puede emitirlo: el
+     *       interceptor lo deja pasar a propósito.</li>
+     * </ul>
+     *
+     * <p>Perder un cursor no tiene consecuencias — el siguiente lo reemplaza en milisegundos —,
+     * y es justamente eso lo que permite mandarlos a la frecuencia del movimiento del mouse.
+     */
+    @MessageMapping("/diagram/{diagramId}/cursor")
+    public void cursor(
+            @DestinationVariable String diagramId,
+            CursorMessage cursor,
+            StompHeaderAccessor accessor) {
+
+        Participante quien = StompChannelInterceptor.participanteDe(accessor);
+        if (quien == null) {
+            return; // sin CONNECT autenticado no hay a quién atribuirle el cursor
+        }
+        messagingTemplate.convertAndSend(
+                "/topic/diagrams/" + diagramId, CursorBroadcastMessage.de(quien, cursor));
+    }
+
+    /**
+     * "¿Quién está en la sala?". Responde el roster al solicitante por {@code /user/queue/presence}.
+     *
+     * <p>Hace falta un pedido explícito porque el recién llegado <b>no puede confiar</b> en la
+     * difusión que lo incluye: el registro de su suscripción en el broker y el evento que
+     * dispara la difusión van por caminos distintos. El cliente lo llama una vez, cuando ya
+     * terminó de suscribirse a todo; de ahí en más las altas y bajas ajenas le llegan solas.
+     */
+    @MessageMapping("/diagram/{diagramId}/presence")
+    public void presencia(
+            @DestinationVariable String diagramId, StompHeaderAccessor accessor) {
+        roomManager.responderRoster(
+                UUID.fromString(diagramId), UUID.fromString(accessor.getUser().getName()));
     }
 
     /**

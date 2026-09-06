@@ -360,6 +360,48 @@ exactamente lo que un VIEWER sí puede hacer. `sync-offline`, en cambio, exige O
 ese control el endpoint sería la puerta de atrás por la que un VIEWER reescribe el diagrama
 entero mandando una "cola offline" por REST.
 
+---
+
+## Presencia: roster y cursores
+
+### `USER_CURSOR` tiene destino propio, no viaja por `/mutate`
+
+`/app/diagram/{id}/cursor` ← `{x, y, selectedId}` → difunde a `/topic/diagrams/{id}`
+`{event:"USER_CURSOR", userId, userName, color, x, y, selectedId}`.
+
+Tres cosas que **no** hace, y que son la razón de que exista un destino aparte:
+
+| No hace | Por qué |
+| :--- | :--- |
+| No persiste nada | Es presencia, no historia. Guardar cursores llenaría `diagram_operations` de basura a ~20 mensajes por segundo por usuario. |
+| No consume secuencia | Si consumiera, un hueco en la numeración dejaría de significar "me perdí una mutación", que es justo para lo que el cliente la usa al reconectar. |
+| No pide lock, y un **VIEWER puede emitirlo** | Mirar dónde apunta quien mira es exactamente lo que un rol de sólo lectura debe poder hacer. La membresía sí se exige: quien no está en el proyecto no entra ni a mirar. |
+
+Hacerlo pasar por la tubería de mutaciones obligaría a poner tres excepciones dentro de ella, y
+bastaría olvidar una para ensuciar la bitácora. Es más barato que no entre nunca.
+
+### El roster se difunde entero, y se pide al llegar
+
+`PRESENCE` con la **lista completa** de presentes cada vez que alguien entra o sale. No eventos
+incrementales: con "entró fulano / salió mengano", un cliente que se pierde uno queda con un
+roster equivocado para siempre y sin forma de notarlo — dibujando el cursor de alguien que ya se
+fue. La lista entera cuesta unos bytes más y deja al cliente correcto haya perdido lo que haya
+perdido.
+
+> **El recién llegado tiene que pedir el roster:** `/app/diagram/{id}/presence` → responde por
+> `/user/queue/presence`. No se le empuja automáticamente al entrar, y no por simplicidad: **se
+> intentó y no funciona**. El registro de la suscripción en el broker y el evento que dispara la
+> difusión viajan por caminos distintos, así que hay una ventana en la que el servidor ya lo
+> cuenta como presente pero el broker todavía no le entrega nada — y su canal privado tiene
+> exactamente la misma carrera. La única forma sin condiciones de carrera es que pregunte cuando
+> ya terminó de suscribirse a todo. De ahí en más, las altas y bajas ajenas le llegan solas.
+
+Cada participante trae su **color**, el mismo que usan sus locks y su cursor, para que el candado
+de una clase, el puntero y la entrada en la lista se reconozcan como la misma persona. El color
+se deriva del `userId` y no se reparte por orden de llegada: así no cambia al reconectar.
+
+Dos pestañas del mismo colaborador son dos sesiones pero **una** persona en el roster.
+
 ## Estructura
 
 Los paquetes de §6 existen desde el día 1 (los vacíos llevan `.gitkeep`) para evitar

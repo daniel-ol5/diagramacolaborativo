@@ -191,6 +191,53 @@ class StompChannelInterceptorTest {
         assertThat(errorEnviado().clientMutationId()).isNull();
     }
 
+    // ------------------------------------------------------ cursores y VIEWER
+
+    @Test
+    @DisplayName("Un VIEWER SÍ puede emitir su cursor: mirar dónde apunta quien mira es correcto")
+    void viewerPuedeMandarCursor() {
+        when(projectMemberRepository.findRoleByDiagramAndUser(diagramId, userId))
+                .thenReturn(Optional.of(ProjectRole.VIEWER));
+
+        Message<?> mensaje = frame(
+                StompCommand.SEND, "/app/diagram/" + diagramId + "/cursor",
+                "{\"x\":10.0,\"y\":20.0}", true);
+
+        // El cursor es presencia, no edición. Vetarlo dejaría a los demás sin ver el puntero de
+        // quien está siguiendo la sesión, que es justamente lo que un VIEWER viene a hacer.
+        assertThat(interceptor.preSend(mensaje, canal)).isSameAs(mensaje);
+        verify(messagingTemplate, never()).convertAndSendToUser(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Pero sin membresía tampoco se puede emitir el cursor")
+    void sinMembresiaNoHayNiCursor() {
+        when(projectMemberRepository.findRoleByDiagramAndUser(diagramId, userId))
+                .thenReturn(Optional.empty());
+
+        Message<?> mensaje = frame(
+                StompCommand.SEND, "/app/diagram/" + diagramId + "/cursor",
+                "{\"x\":10.0,\"y\":20.0}", true);
+
+        // Quien no pertenece al proyecto no entra ni a mirar.
+        assertThat(interceptor.preSend(mensaje, canal)).isNull();
+    }
+
+    @Test
+    @DisplayName("La excepción del cursor no se extiende a los demás destinos del diagrama")
+    void laExcepcionEsSoloParaElCursor() {
+        when(projectMemberRepository.findRoleByDiagramAndUser(diagramId, userId))
+                .thenReturn(Optional.of(ProjectRole.VIEWER));
+
+        // Un destino que apenas contiene la palabra no cuenta: la regla mira el sufijo exacto.
+        Message<?> mensaje = frame(
+                StompCommand.SEND, "/app/diagram/" + diagramId + "/cursor/trampa",
+                "{}", true);
+
+        assertThat(interceptor.preSend(mensaje, canal)).isNull();
+        assertThat(errorEnviado().code()).isEqualTo("FORBIDDEN_ROLE");
+    }
+
     // --------------------------------------------------------------- caché
 
     @Test
