@@ -23,6 +23,14 @@ spring:
 server:
   port: 8080
 
+# JWT. El secreto por defecto es SOLO para desarrollo local: en AWS se inyecta
+# JWT_SECRET por variable de entorno. HS256 exige una clave de al menos 32 bytes;
+# esta tiene 64 y JwtService valida el largo al arrancar en vez de fallar recien
+# al firmar el primer token.
+jwt:
+  secret: ${JWT_SECRET:modelcollab-desarrollo-local-clave-hs256-no-usar-en-produccion-64b}
+  expiration-ms: ${JWT_EXPIRATION_MS:28800000}
+
 logging:
   level:
     com.modelcollab: DEBUG
