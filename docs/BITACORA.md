@@ -5,6 +5,40 @@ Se actualiza al cierre de cada día. Es el insumo honesto para la defensa.
 
 ---
 
+## Enmiendas al plan arquitectónico (Fase 0)
+
+`PLAN_ARQUITECTONICO_FASE_0.txt` es documento entregado. Se modifica sólo con
+autorización explícita de Daniel y **toda enmienda queda registrada acá**, con fecha,
+motivo y el texto exacto antes y después. Una edición silenciosa sobre un documento
+de 83 KB es indetectable, y eso es justamente lo que esta sección impide.
+
+### E-01 · 6 de septiembre de 2026 — §7, `classes[].visibility` recibe `"default": "PUBLIC"`
+
+**Autorizada por Daniel el 6/9/2026.**
+
+| | |
+| :--- | :--- |
+| **Antes** | `"visibility": { "type": "string", "enum": ["PUBLIC", "PACKAGE", "PROTECTED", "PRIVATE"] }` |
+| **Después** | `"visibility": { "type": "string", "enum": [...], "default": "PUBLIC" }` |
+
+**Motivo.** El campo estaba declarado opcional y sin valor por defecto. La
+implementación Java lo normalizaba a `PUBLIC` en el constructor compacto de
+`ClassEntity`; la implementación TypeScript del lienzo lo dejaba ausente. Dos capas
+interpretando distinto el mismo dato faltante, sin que ninguna fallara ni avisara.
+Detectado el 6/9 al escribir los tipos del frontend contra §7 (ver D-16, guía del
+día 04).
+
+**Alcance.** Un solo campo. **No se tocó** `attributes[].visibility` ni
+`methods[].visibility`: esas dos siguen en `required` y sin default, y la asimetría es
+deliberada — son portantes para el generador (deciden si un campo sale `private` o un
+método `public`), mientras que la visibilidad de la clase no lo es, porque una entidad
+JPA generada es `public` siempre.
+
+**Verificación.** El bloque JSON de §7 se volvió a parsear completo después del cambio:
+válido, y el resto del schema intacto.
+
+---
+
 ## Día 1 — Miércoles 3 de septiembre
 
 **Objetivo del día (según `PLAN_EJECUCION.md`):** B-1 modelo canónico congelado + B-2 spike de voz.

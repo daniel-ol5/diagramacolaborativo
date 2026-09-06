@@ -402,7 +402,7 @@ Este esquema formal es la **fuente única de verdad** compartida por el lienzo w
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "name": { "type": "string" },
-          "visibility": { "type": "string", "enum": ["PUBLIC", "PACKAGE", "PROTECTED", "PRIVATE"] },
+          "visibility": { "type": "string", "enum": ["PUBLIC", "PACKAGE", "PROTECTED", "PRIVATE"], "default": "PUBLIC" },
           "isAbstract": { "type": "boolean", "default": false },
           "position": {
             "type": "object",
