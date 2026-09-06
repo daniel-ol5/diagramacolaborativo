@@ -1,4 +1,4 @@
-import type { NodeProps } from "reactflow";
+import { Handle, Position, type NodeProps } from "reactflow";
 import type { ClassEntity } from "../types/canonical";
 import { visibilitySymbol, methodSignature } from "../lib/uml";
 import "./UmlClassNode.css";
@@ -7,6 +7,12 @@ import "./UmlClassNode.css";
  * Nodo React Flow que dibuja una clase UML con su notacion estandar: tres
  * compartimentos (nombre / atributos / metodos), nombre en cursiva si es
  * abstracta, simbolos de visibilidad y atributos PK subrayados.
+ *
+ * Los Handle son invisibles y no se usan para su posicion: React Flow se
+ * niega a crear una arista si el nodo no tiene al menos un handle "source" y
+ * uno "target" (advertencia #008), aunque el path lo calcule por su cuenta
+ * `UmlRelationshipEdge` a partir de `position`/`width`/`height` del
+ * canonico. Crear conexiones arrastrando es del Dia 8, no de hoy.
  */
 export function UmlClassNode({ data, selected }: NodeProps<ClassEntity>) {
   return (
@@ -14,6 +20,8 @@ export function UmlClassNode({ data, selected }: NodeProps<ClassEntity>) {
       className="uml-class-node"
       style={selected ? { borderColor: "#3b5bdb", borderWidth: 2 } : undefined}
     >
+      <Handle type="target" position={Position.Top} className="uml-class-node__handle" />
+      <Handle type="source" position={Position.Bottom} className="uml-class-node__handle" />
       <div
         className={
           data.isAbstract

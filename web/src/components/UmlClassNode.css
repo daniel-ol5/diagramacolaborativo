@@ -50,3 +50,10 @@
   color: #999;
   font-style: italic;
 }
+
+/* Solo existen para que React Flow acepte crear aristas (ver UmlClassNode.tsx);
+   el path real lo calcula UmlRelationshipEdge, no la posicion de este handle. */
+.uml-class-node__handle {
+  opacity: 0;
+  pointer-events: none;
+}

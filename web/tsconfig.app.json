@@ -20,7 +20,7 @@
     /* Alias a los diagramas de referencia congelados (ver vite.config.ts):
        viven en backend/, no se duplican dentro de web/. */
     "paths": {
-      "@fixtures/*": ["../backend/src/test/resources/reference-diagrams/*"]
+      "@fixtures/*": ["../backend/src/test/resources/*"]
     },
 
     /* Linting */
