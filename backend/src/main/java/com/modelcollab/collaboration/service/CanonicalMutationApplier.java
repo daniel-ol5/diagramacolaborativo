@@ -13,6 +13,7 @@ import com.modelcollab.metamodel.model.Waypoint;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.UnaryOperator;
 import org.springframework.stereotype.Component;
 
@@ -98,6 +99,40 @@ public class CanonicalMutationApplier {
                     MutacionRechazadaException.OP_NO_IMPLEMENTADA, 501,
                     "La operación " + op + " no se aplica al estado canónico");
         };
+    }
+
+    /**
+     * Nombre de cualquier elemento del modelo por su id, si existe.
+     *
+     * <p>Lo usan los servicios <b>antes</b> de aplicar un borrado, para guardar en la bitácora
+     * qué se borró. Sin eso, la fila de un {@code DELETE_CLASS} queda con payload vacío y el
+     * nombre del elemento se pierde para siempre: no está en el estado nuevo, porque se borró,
+     * ni en el viejo, porque no se guarda. Es la diferencia entre un historial y una lista de
+     * identificadores.
+     */
+    public static Optional<String> nombreDe(CanonicalModel modelo, String id) {
+        if (id == null) {
+            return Optional.empty();
+        }
+        for (ClassEntity c : modelo.classes()) {
+            if (id.equals(c.id())) {
+                return Optional.of(c.name());
+            }
+            for (Attribute a : c.attributes()) {
+                if (id.equals(a.id())) {
+                    return Optional.of(a.name());
+                }
+            }
+            for (Method m : c.methods()) {
+                if (id.equals(m.id())) {
+                    return Optional.of(m.name());
+                }
+            }
+        }
+        return modelo.packages().stream()
+                .filter(pk -> id.equals(pk.id()))
+                .map(Package::name)
+                .findFirst();
     }
 
     // ------------------------------------------------------------------ clases

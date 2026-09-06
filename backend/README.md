@@ -291,6 +291,75 @@ hasta entonces se rechazan con `OP_NOT_IMPLEMENTED` en vez de aceptarse y perder
 `DELETE_CLASS` limpia las relaciones huérfanas en cascada. Sin eso el servidor fabricaría sus
 propios `invalid-cases/relacion-huerfana.json`.
 
+---
+
+## Modo offline: rebase y reconciliación (§9.2)
+
+`POST /api/v1/diagrams/{id}/sync-offline` recibe la cola que el cliente acumuló sin conexión,
+**en orden**, y devuelve qué se aplicó, qué se descartó y por qué, más el estado reconciliado.
+
+### Acá se aplican operaciones "que requieren lock" sin lock, a propósito
+
+Leído sin contexto parece un agujero; es lo contrario. §8.4: un cliente sin conexión **no puede
+adquirir locks** porque el árbitro es el servidor, así que edita optimistamente sobre su copia
+local. La exclusión mutua no desaparece — **se traslada del momento de la edición al momento del
+rebase**. El lock es *prevención* y necesita árbitro en línea; el rebase es *detección y
+resolución* y funciona sin él. Por eso `OfflineReconciliationService` no consulta el
+`LockManagerService`: las reglas de §9.2 hacen de exclusión mutua ahí.
+
+### Políticas por tipo de operación
+
+| Operación | Política |
+| :--- | :--- |
+| `MOVE_CLASS` | Idempotente: se aplican las últimas coordenadas |
+| `ADD_CLASS` / `ADD_RELATIONSHIP` / `ADD_PACKAGE` | Se descarta si el identificador ya existe |
+| `ADD_ATTRIBUTE` / `ADD_METHOD` | Sólo si la clase contenedora **sigue existiendo** |
+| `UPDATE_*` / `RENAME_*` | Se descarta si el objetivo fue eliminado durante la desconexión |
+| `DELETE_*` | **Gana siempre**, y arrastra las relaciones asociadas |
+
+El `clientTimestamp` **no es autoritativo**: sólo preserva el orden relativo de la cola. El sello
+oficial lo pone el servidor. Si se respetara el del cliente, alguien con el reloj adelantado
+podría insertar operaciones "antes" de cambios ajenos ya aplicados.
+
+### El reporte nombra las cosas, no las numera
+
+```
+ADD_ATTRIBUTE 'telefono' descartado: la clase 'Cliente' fue eliminada por otro colaborador.
+```
+
+Ese texto se le muestra al usuario, así que decir *"descartada la operación c7f3a1b2"* no sirve.
+La parte difícil es que **para cuando se arma el mensaje, la clase ya no existe** — se descartó
+justamente porque otro la borró. El nombre sale de la bitácora, y por eso:
+
+> **Un `DELETE_*` guarda en `diagram_operations` el nombre de lo que borró**, tomado del estado
+> *anterior* a aplicarlo. Es el único instante en que ese dato existe. Sin eso, el historial de
+> un borrado es un UUID sin significado y el reporte no puede explicar nada.
+
+El `ResolutorDeNombres` se construye **sólo si hay algo que descartar**: en el camino feliz no se
+lee la bitácora.
+
+### La migración `V2`
+
+| Cambio | Motivo |
+| :--- | :--- |
+| `UNIQUE (diagram_id, client_mutation_id)` | Con el rebase las operaciones llegan **en lote** y dos reintentos pueden solaparse. Un chequeo leído-antes-de-escribir no es atómico; una restricción sí. Va sobre el **par** porque el `clientMutationId` identifica una operación dentro de *un* diagrama — global, la búsqueda de duplicados estallaba si dos diagramas repetían un identificador. |
+| `target_id` en `diagram_operations` | §13 no lo define, y sin él la bitácora **no se puede reproducir**: el payload de un `RENAME_CLASS` es `{"name": …}` y no dice qué clase. Deja el log como auditoría parcial en vez de historial. |
+
+`V1__init.sql` no se toca nunca: todo cambio de esquema va en una migración nueva.
+
+### Un solo evento a la sala
+
+Terminado el rebase se difunde **un** `OFFLINE_SYNC` con el estado completo, no las N operaciones
+de la cola: reemitirlas una por una haría parpadear N veces el lienzo de todos y los pasearía por
+estados intermedios que nunca existieron. Mismo criterio que §8.1 fija para `BULK_MERGE`.
+
+### `GET /api/v1/diagrams/{id}/snapshot`
+
+Estado canónico actual (§14). Lo lee **cualquier miembro, VIEWER incluido** — mirar es
+exactamente lo que un VIEWER sí puede hacer. `sync-offline`, en cambio, exige OWNER o EDITOR: sin
+ese control el endpoint sería la puerta de atrás por la que un VIEWER reescribe el diagrama
+entero mandando una "cola offline" por REST.
+
 ## Estructura
 
 Los paquetes de §6 existen desde el día 1 (los vacíos llevan `.gitkeep`) para evitar

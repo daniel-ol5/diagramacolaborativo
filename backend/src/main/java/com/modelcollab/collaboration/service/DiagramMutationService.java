@@ -12,6 +12,7 @@ import com.modelcollab.diagram.repository.DiagramOperationRepository;
 import com.modelcollab.diagram.repository.DiagramRepository;
 import com.modelcollab.metamodel.model.CanonicalModel;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -101,7 +102,8 @@ public class DiagramMutationService {
         // historial que lee el rebase offline del Día 10.
         Optional<DiagramOperation> yaAplicada = mensaje.clientMutationId() == null
                 ? Optional.empty()
-                : operationRepository.findByClientMutationId(mensaje.clientMutationId());
+                : operationRepository.findByDiagramIdAndClientMutationId(
+                        diagramId, mensaje.clientMutationId());
         if (yaAplicada.isPresent()) {
             log.debug("Mutación {} ya aplicada en la secuencia {}; se ignora",
                     mensaje.clientMutationId(), yaAplicada.get().getSequenceNum());
@@ -140,7 +142,8 @@ public class DiagramMutationService {
                 diagrama,
                 userRepository.getReferenceById(userId),
                 op.name(),
-                escribirPayload(mensaje),
+                mensaje.targetId(),
+                escribirPayload(mensaje, estado),
                 mensaje.clientMutationId(),
                 secuencia));
 
@@ -171,12 +174,27 @@ public class DiagramMutationService {
         }
     }
 
-    /** La columna {@code payload} es NOT NULL; una operación sin payload guarda un objeto vacío. */
-    private String escribirPayload(StompMutationMessage mensaje) {
+    /**
+     * La columna {@code payload} es NOT NULL; una operación sin payload guarda un objeto vacío.
+     *
+     * <p>A los borrados se les agrega el nombre de lo que se borró, tomado del estado
+     * <b>anterior</b> a aplicar la operación. Es el único momento en que ese dato existe: después
+     * el elemento ya no está en ningún lado. Sin esto, el historial de un {@code DELETE_CLASS} es
+     * un UUID sin significado, y el reporte de reconciliación de §9.2 no puede decir "la clase
+     * 'Cliente' fue eliminada" porque no sabe cómo se llamaba.
+     */
+    private String escribirPayload(StompMutationMessage mensaje, CanonicalModel estadoPrevio) {
+        Map<String, Object> payload = mensaje.payload() == null
+                ? new java.util.LinkedHashMap<>()
+                : new java.util.LinkedHashMap<>(mensaje.payload());
+
+        if (mensaje.op() != null && mensaje.op().startsWith("DELETE_")
+                && !payload.containsKey("name")) {
+            CanonicalMutationApplier.nombreDe(estadoPrevio, mensaje.targetId())
+                    .ifPresent(nombre -> payload.put("name", nombre));
+        }
         try {
-            return mensaje.payload() == null
-                    ? "{}"
-                    : objectMapper.writeValueAsString(mensaje.payload());
+            return objectMapper.writeValueAsString(payload);
         } catch (JsonProcessingException e) {
             throw MutacionRechazadaException.payloadInvalido(
                     "El payload no se puede serializar: " + e.getMessage());

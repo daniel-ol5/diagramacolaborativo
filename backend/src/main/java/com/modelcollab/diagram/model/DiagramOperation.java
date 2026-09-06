@@ -46,6 +46,10 @@ public class DiagramOperation {
     @Column(name = "payload", nullable = false)
     private String payload;
 
+    /** Elemento sobre el que actúa; null en las operaciones contra la raíz del diagrama. */
+    @Column(name = "target_id", length = 64)
+    private String targetId;
+
     @Column(name = "client_mutation_id", length = 100)
     private String clientMutationId;
 
@@ -59,11 +63,12 @@ public class DiagramOperation {
         // requerido por JPA
     }
 
-    public DiagramOperation(Diagram diagram, User user, String operationType, String payload,
-            String clientMutationId, long sequenceNum) {
+    public DiagramOperation(Diagram diagram, User user, String operationType, String targetId,
+            String payload, String clientMutationId, long sequenceNum) {
         this.diagram = diagram;
         this.user = user;
         this.operationType = operationType;
+        this.targetId = targetId;
         this.payload = payload;
         this.clientMutationId = clientMutationId;
         this.sequenceNum = sequenceNum;
@@ -90,6 +95,10 @@ public class DiagramOperation {
 
     public String getOperationType() {
         return operationType;
+    }
+
+    public String getTargetId() {
+        return targetId;
     }
 
     public String getPayload() {

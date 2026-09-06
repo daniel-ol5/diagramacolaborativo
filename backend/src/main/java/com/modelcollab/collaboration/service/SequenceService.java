@@ -36,7 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SequenceService {
 
     private static final String INCREMENTO_ATOMICO =
-            "UPDATE diagrams SET mutation_version = mutation_version + 1 "
+            "UPDATE diagrams SET mutation_version = mutation_version + ? "
                     + "WHERE id = ? RETURNING mutation_version";
 
     @PersistenceContext private EntityManager entityManager;
@@ -51,11 +51,28 @@ public class SequenceService {
      */
     @Transactional(propagation = Propagation.MANDATORY)
     public long siguiente(UUID diagramId) {
+        return reservar(diagramId, 1);
+    }
+
+    /**
+     * Reserva {@code cantidad} numeros consecutivos de una sola vez y devuelve <b>el ultimo</b>
+     * del bloque; los reservados son {@code [devuelto - cantidad + 1 .. devuelto]}.
+     *
+     * <p>Lo usa el rebase offline, que aplica un lote entero: pedir los numeros de a uno serian
+     * N viajes a la base dentro de la misma transaccion para un resultado identico. Con un solo
+     * UPDATE el bloque queda reservado de forma atomica y nadie puede intercalarse en el medio.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public long reservar(UUID diagramId, int cantidad) {
+        if (cantidad < 1) {
+            throw new IllegalArgumentException("Hay que reservar al menos un numero");
+        }
         return entityManager
                 .unwrap(Session.class)
                 .doReturningWork(conexion -> {
                     try (PreparedStatement ps = conexion.prepareStatement(INCREMENTO_ATOMICO)) {
-                        ps.setObject(1, diagramId);
+                        ps.setInt(1, cantidad);
+                        ps.setObject(2, diagramId);
                         try (ResultSet rs = ps.executeQuery()) {
                             if (!rs.next()) {
                                 throw new MutacionRechazadaException(
