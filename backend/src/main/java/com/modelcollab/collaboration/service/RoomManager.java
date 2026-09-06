@@ -47,7 +47,7 @@ public class RoomManager {
 
         List<Participante> presentes = participantes(diagramId);
         log.debug("{} entró a la sala {} ({} presentes)",
-                quien.nombre(), diagramId, presentes.size());
+                quien.userName(), diagramId, presentes.size());
 
         difundir(diagramId, presentes);
     }

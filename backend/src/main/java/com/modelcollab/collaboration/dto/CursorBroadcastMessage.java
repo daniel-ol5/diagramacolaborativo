@@ -29,7 +29,7 @@ public record CursorBroadcastMessage(
         return new CursorBroadcastMessage(
                 USER_CURSOR,
                 quien.userId(),
-                quien.nombre(),
+                quien.userName(),
                 quien.color(),
                 cursor.x(),
                 cursor.y(),

@@ -17,7 +17,7 @@ public record LockBroadcastMessage(
     public static LockBroadcastMessage adquirido(
             String targetId, Participante quien, long ttlMs) {
         return new LockBroadcastMessage(
-                ACQUIRED, targetId, quien.userId(), quien.nombre(), quien.color(), ttlMs);
+                ACQUIRED, targetId, quien.userId(), quien.userName(), quien.color(), ttlMs);
     }
 
     public static LockBroadcastMessage liberado(String targetId) {

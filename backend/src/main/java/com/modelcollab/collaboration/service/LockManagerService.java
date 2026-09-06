@@ -115,17 +115,17 @@ public class LockManagerService {
             messagingTemplate.convertAndSendToUser(
                     quien.userId().toString(),
                     "/queue/locks",
-                    LockDeniedMessage.de(targetId, resultado.duenio().nombre(), restante));
+                    LockDeniedMessage.de(targetId, resultado.duenio().userName(), restante));
             log.debug("LOCK_DENIED {} para {}: lo tiene {}",
-                    targetId, quien.nombre(), resultado.duenio().nombre());
-            return new Resultado.Denegado(resultado.duenio().nombre(), restante);
+                    targetId, quien.userName(), resultado.duenio().userName());
+            return new Resultado.Denegado(resultado.duenio().userName(), restante);
         }
 
         // Una renovación por heartbeat no se vuelve a difundir: la sala ya pintó el candado y
         // reenviarlo cada 2 segundos por usuario sería ruido puro sobre el canal.
         if (!yaEraSuyo[0]) {
             difundir(diagramId, LockBroadcastMessage.adquirido(targetId, quien, TTL_MS));
-            log.debug("LOCK_ACQUIRED {} para {}", targetId, quien.nombre());
+            log.debug("LOCK_ACQUIRED {} para {}", targetId, quien.userName());
         }
         return new Resultado.Concedido(resultado, yaEraSuyo[0]);
     }
