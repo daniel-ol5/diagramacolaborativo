@@ -230,6 +230,67 @@ El CONNECT sí lanza: una sesión sin identidad no tiene nada que hacer abierta.
 pero **no persiste nada**. El Día 3 lo reemplazan `RoomManager`, `SequenceService` y
 `LockManagerService`.
 
+---
+
+## Colaboración: locks y persistencia (Día 3)
+
+A partir de acá el servidor **es el dueño del estado**, no un reemisor. Toda mutación se aplica
+al `current_state` JSONB, sube `mutation_version` y deja su fila en `diagram_operations`.
+
+### Reglas que no se pueden invertir
+
+| Regla | Por qué |
+| :--- | :--- |
+| **Primero se persiste, después se difunde** | Al revés, si el guardado falla los clientes quedan pintando un estado que el servidor no tiene, y nadie les va a mandar un mensaje diciendo "aquello que te mostré no pasó". La difusión ocurre fuera de la transacción, ya commiteada. |
+| **La idempotencia se comprueba ANTES que el lock** | Un reintento llega con sesión nueva y por lo tanto sin lock, que murió con la anterior. Con el orden inverso, quien reintenta algo **ya aplicado** recibe `LOCK_REQUIRED` y cree que perdió su cambio. Un duplicado no es un intento de mutar. |
+| **El contador lo incrementa PostgreSQL** | `UPDATE ... SET n = n + 1 ... RETURNING n`. Leer-y-sumar en Java da números repetidos con dos usuarios, y un `synchronized` deja de valer con dos instancias detrás del balanceador (§5.3). El lock de fila además serializa la mutación entera, no sólo el contador. |
+| **Un solo barrido de locks, no un temporizador por lock** | Con 20 personas editando serían decenas de `ScheduledFuture` vivos, cada uno reprogramándose en cada heartbeat. Un `@Scheduled(fixedRate = 1000)` sobre un mapa chico es más barato y mucho más fácil de razonar. |
+| **`@EnableScheduling` vive en `SchedulingConfig`** | Olvidarlo es un fallo mudo: los `@Scheduled` no corren, sin error. El síntoma sería candados que nunca se despintan en la pantalla de los demás. |
+
+### Locks (§8.2)
+
+Estado **en memoria**, TTL 5000 ms, heartbeat del cliente cada 2000 ms. No se persisten a
+propósito: un lock que sobrevive a un reinicio deja elementos bloqueados por alguien que ya no
+está conectado — sería un defecto disfrazado de durabilidad.
+
+**Fallo rápido, sin cola.** Si el recurso está tomado se responde `LOCK_DENIED` en el acto con
+`expiresInMs`. Nadie espera a nadie, así que no hay ciclo de espera posible: eso es lo que
+garantiza ausencia de interbloqueos e inanición.
+
+Se liberan por cuatro caminos: `RELEASE` explícito, vencimiento del TTL (barrido), confirmación
+de la operación que lo exigía (§8.3 paso 8) y desconexión de la sesión.
+
+### Dos canales privados distintos
+
+| Canal | Qué lleva |
+| :--- | :--- |
+| `/user/queue/errors` | `{status, code, destination, clientMutationId, message}` — rechazos: `FORBIDDEN_ROLE`, `LOCK_REQUIRED`, `TARGET_NOT_FOUND`, `INVALID_PAYLOAD`, `DUPLICATE_ID`, `UNKNOWN_OP`, `OP_NOT_IMPLEMENTED` |
+| `/user/queue/locks` | `{event:"LOCK_DENIED", targetId, heldBy, expiresInMs}` |
+
+**No se unifican a propósito.** Que un elemento esté tomado es operación normal y el cliente lo
+muestra como un aviso discreto; si viniera por el canal de errores, la interfaz lo trataría como
+un fallo y le enseñaría al usuario a desconfiar de una herramienta que funciona bien.
+
+### Difusión a `/topic/diagrams/{id}`
+
+Mutaciones: `{op, targetId, clientMutationId, payload, userId, serverTimestamp, sequenceNum}`.
+Eventos de lock: `{event, targetId, userId, userName, color, ttl}` y `{event, targetId}` para
+`LOCK_RELEASED`.
+
+`userId` y `serverTimestamp` salen del servidor y nunca del cuerpo del mensaje: aceptarlos del
+cliente permitiría firmar una mutación con el id de otro. `sequenceNum` es lo que le deja al
+cliente detectar que se perdió algo y lo que va a pedir el rebase offline del Día 10.
+
+### Qué operación exige lock
+
+Lo decide `collaboration/dto/OperationType`, **única fuente de verdad**, no un `if` repartido por
+los servicios. Las 22 operaciones de §8.1 con su política, y una marca de cuáles aplica hoy el
+`CanonicalMutationApplier`: `UPDATE_RELATIONSHIP` es del Día 12 y `BULK_MERGE` del Día 16, y
+hasta entonces se rechazan con `OP_NOT_IMPLEMENTED` en vez de aceptarse y perderse en silencio.
+
+`DELETE_CLASS` limpia las relaciones huérfanas en cascada. Sin eso el servidor fabricaría sus
+propios `invalid-cases/relacion-huerfana.json`.
+
 ## Estructura
 
 Los paquetes de §6 existen desde el día 1 (los vacíos llevan `.gitkeep`) para evitar

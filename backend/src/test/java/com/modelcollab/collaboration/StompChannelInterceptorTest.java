@@ -13,6 +13,8 @@ import static org.mockito.Mockito.when;
 import com.modelcollab.collaboration.dto.StompErrorMessage;
 import com.modelcollab.collaboration.interceptor.StompChannelInterceptor;
 import com.modelcollab.collaboration.interceptor.StompPrincipal;
+import com.modelcollab.auth.model.User;
+import com.modelcollab.auth.repository.UserRepository;
 import com.modelcollab.config.JacksonConfig;
 import com.modelcollab.project.model.ProjectRole;
 import com.modelcollab.project.repository.ProjectMemberRepository;
@@ -54,6 +56,7 @@ class StompChannelInterceptorTest {
     private static final String TOKEN_VALIDO = "jwt-valido";
 
     @Mock private com.modelcollab.auth.service.JwtService jwtService;
+    @Mock private UserRepository userRepository;
     @Mock private ProjectMemberRepository projectMemberRepository;
     @Mock private SimpMessagingTemplate messagingTemplate;
     @Mock private MessageChannel canal;
@@ -72,6 +75,7 @@ class StompChannelInterceptorTest {
         interceptor =
                 new StompChannelInterceptor(
                         jwtService,
+                        userRepository,
                         projectMemberRepository,
                         messagingTemplate,
                         JacksonConfig.canonicalObjectMapper());
@@ -83,6 +87,7 @@ class StompChannelInterceptorTest {
     @DisplayName("CONNECT con un JWT válido queda autenticado con el userId como Principal")
     void connectValido() {
         when(jwtService.parse(TOKEN_VALIDO)).thenReturn(userId);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(unUsuario()));
 
         Message<?> mensaje = frameConnect("Bearer " + TOKEN_VALIDO);
         Message<?> resultado = interceptor.preSend(mensaje, canal);
@@ -244,6 +249,10 @@ class StompChannelInterceptorTest {
                 .convertAndSendToUser(eq(userId.toString()), eq("/queue/errors"), cuerpo.capture());
         assertThat(cuerpo.getValue()).isInstanceOf(StompErrorMessage.class);
         return (StompErrorMessage) cuerpo.getValue();
+    }
+
+    private static User unUsuario() {
+        return new User("ana@modelcollab.dev", "$2a$10$hash", "Ana Pérez");
     }
 
     private Message<?> frameConnect(String authorization) {

@@ -2,7 +2,10 @@ package com.modelcollab.collaboration.interceptor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.modelcollab.auth.model.User;
+import com.modelcollab.auth.repository.UserRepository;
 import com.modelcollab.auth.service.JwtService;
+import com.modelcollab.collaboration.dto.Participante;
 import com.modelcollab.collaboration.dto.StompErrorMessage;
 import com.modelcollab.project.model.ProjectRole;
 import com.modelcollab.project.repository.ProjectMemberRepository;
@@ -80,14 +83,18 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     private static final String PREFIJO_BEARER = "Bearer ";
     private static final String COLA_ERRORES = "/queue/errors";
     private static final String PREFIJO_CACHE_ROL = "role:";
+    /** Clave del Participante en los atributos de la sesion; la leen locks y presencia. */
+    static final String ATRIBUTO_PARTICIPANTE = "participante";
 
     private final JwtService jwtService;
+    private final UserRepository userRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
 
     public StompChannelInterceptor(
             JwtService jwtService,
+            UserRepository userRepository,
             ProjectMemberRepository projectMemberRepository,
             // @Lazy rompe un ciclo real de beans: WebSocketConfig necesita este interceptor
             // para armar el canal entrante, y SimpMessagingTemplate lo crea la propia
@@ -95,6 +102,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
             @Lazy SimpMessagingTemplate messagingTemplate,
             ObjectMapper objectMapper) {
         this.jwtService = jwtService;
+        this.userRepository = userRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.messagingTemplate = messagingTemplate;
         this.objectMapper = objectMapper;
@@ -133,7 +141,25 @@ public class StompChannelInterceptor implements ChannelInterceptor {
             throw new MessageDeliveryException(message, "CONNECT con token inválido o vencido");
         }
         accessor.setUser(new StompPrincipal(userId));
-        log.debug("CONNECT aceptado para el usuario {}", userId);
+
+        // Se resuelve el Participante (nombre y color) una sola vez, aca, y queda en los
+        // atributos de la sesion. Los locks lo necesitan en cada LOCK_ACQUIRED para que la sala
+        // pueda pintar "Editando por Ana" con su color; volver a la base por el nombre en cada
+        // mensaje seria el mismo error que la cache del rol vino a resolver. Una consulta por
+        // sesion, no por mensaje.
+        String nombre = userRepository.findById(userId).map(User::getFullName).orElse(null);
+        if (nombre == null) {
+            // Token con firma valida pero cuyo usuario ya no existe: la cuenta se borro despues
+            // de emitirlo. El token sigue siendo criptograficamente valido y por eso hay que
+            // rechazarlo aca a mano.
+            throw new MessageDeliveryException(message, "El usuario del token ya no existe");
+        }
+        Map<String, Object> sesion = accessor.getSessionAttributes();
+        if (sesion != null) {
+            sesion.put(ATRIBUTO_PARTICIPANTE, Participante.de(userId, nombre));
+        }
+
+        log.debug("CONNECT aceptado para {} ({})", nombre, userId);
         return message;
     }
 
@@ -214,6 +240,18 @@ public class StompChannelInterceptor implements ChannelInterceptor {
             sesion.put(clave, rol);
         }
         return rol;
+    }
+
+    /**
+     * El Participante que se resolvio en el CONNECT. Lo leen el controlador de locks y el
+     * listener de presencia, que no tienen forma de recalcularlo sin volver a la base.
+     */
+    public static Participante participanteDe(StompHeaderAccessor accessor) {
+        Map<String, Object> sesion = accessor.getSessionAttributes();
+        if (sesion == null) {
+            return null;
+        }
+        return sesion.get(ATRIBUTO_PARTICIPANTE) instanceof Participante p ? p : null;
     }
 
     /**
