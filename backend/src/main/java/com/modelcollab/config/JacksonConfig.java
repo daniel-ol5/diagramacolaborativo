@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,6 +26,11 @@ public class JacksonConfig {
     public static ObjectMapper canonicalObjectMapper() {
         return JsonMapper.builder()
                 .addModule(new ParameterNamesModule())
+                // El modelo canónico de §7 no tiene fechas, pero sí las tienen los mensajes
+                // que lo transportan (serverTimestamp de la difusión STOMP) y la bitácora de
+                // diagram_operations. Sin este módulo un Instant se serializa como el volcado
+                // de sus campos internos en vez de como texto ISO-8601.
+                .addModule(new JavaTimeModule())
                 .serializationInclusion(JsonInclude.Include.NON_NULL)
                 // Estricto a propósito: un campo desconocido significa que alguien se
                 // desvió del schema canónico y queremos enterarnos en el acto.

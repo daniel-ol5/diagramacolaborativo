@@ -179,6 +179,57 @@ cuando el modelo **es rechazado**, al revés que en todos los demás.
 | `herencia-multiple.json` | `Hijo` con dos relaciones `INHERITANCE` — Java no lo soporta (§11.2.3, error bloqueante) |
 | `relacion-huerfana.json` | `sourceClassId` apuntando a un id inexistente: el residuo que deja un `DELETE_CLASS` mal aplicado |
 
+---
+
+## Autenticación y arbitraje de roles (Día 2)
+
+### ⚠️ Los despachos de error deben ir en `permitAll`
+
+`SecurityConfig` excluye `DispatcherType.ERROR` y `ASYNC` de la autorización. **No lo saques.**
+
+Desde Spring Security 6 el filtro de autorización se aplica a *todos* los tipos de despacho, no
+sólo a las peticiones del cliente. Cuando un controlador responde un error, Spring lo reenvía
+internamente a `/error`; si ese reenvío también se autoriza y `/error` no está permitido, la
+respuesta que sale al cliente es un **403 con cuerpo vacío**, sea cual fuere el error real. Se
+pierden el 409 de email repetido, el 401 de credenciales, el 400 de validación y el 405 — todos
+salen como 403.
+
+Es un fallo silencioso y engañoso: los caminos felices (200/201) funcionan perfecto, así que una
+prueba de humo que sólo registre y loguee pasa en verde. Se detectó justamente así, con un
+`register` que devolvía 403 en vez de 409. Excluir los despachos internos **no** expone `/error`:
+una petición directa a esa ruta sigue siendo un despacho `REQUEST` y sigue protegida.
+
+### Contrato congelado (D-11)
+
+| Qué | Contrato |
+| :--- | :--- |
+| `POST /api/v1/auth/register` | ← `{email, password, fullName}` · **201** `{token, tokenType, userId, email, fullName}` · email repetido → **409** |
+| `POST /api/v1/auth/login` | ← `{email, password}` · **200** mismo cuerpo · credenciales malas → **401** |
+| Ruta privada sin token | **401** (no 403: 403 significaría "sé quién sos y no te alcanza") |
+| WebSocket | `ws://localhost:8080/ws` — **nativo, sin SockJS** |
+| CONNECT | header nativo `Authorization: Bearer <jwt>`; sin token o inválido → se rechaza la conexión |
+| Destinos de aplicación | `/app/diagram/{diagramId}/mutate` · `/app/diagram/{diagramId}/lock` (Día 3) |
+| Difusión | `/topic/diagrams/{diagramId}` |
+| Errores privados | `/user/queue/errors` → `{status, code, destination, clientMutationId, message}` |
+| Mutación | `{op, targetId, clientMutationId, payload}` — `op` del catálogo de §8.1 |
+
+Los campos mutables van anidados bajo `payload` y no sueltos en la raíz como los dibuja el boceto
+de §8.3: el interceptor tiene que autorizar sin conocer los 22 conjuntos de campos, y
+`diagram_operations.payload` de §13 ya es un JSONB que espera ese sub-objeto.
+
+### Dos decisiones del `StompChannelInterceptor`
+
+| Decisión | Por qué |
+| :--- | :--- |
+| El 403 **descarta el mensaje** (`preSend` devuelve `null`), no lanza | Lanzar emite un frame ERROR y STOMP **cierra la sesión**: un VIEWER que arrastre un nodo sin querer quedaría expulsado de la sala y dejaría de ver los cambios ajenos. Descartando, la conexión sobrevive y el error llega por el canal privado. Un rol de sólo lectura no puede autodestruirse al mirar. |
+| El rol se **cachea en la sesión** (`role:{diagramId}`) | `MOVE_CLASS` viaja a ~60 mensajes/s durante un arrastre; con 20 colaboradores serían 1200 consultas por segundo para responder siempre lo mismo. **Consecuencia asumida:** un cambio de rol recién se aplica al reconectar. |
+
+El CONNECT sí lanza: una sesión sin identidad no tiene nada que hacer abierta.
+
+`CollaborationStompController` es **andamio del Día 2**: reemite con `userId` y `serverTimestamp`
+pero **no persiste nada**. El Día 3 lo reemplazan `RoomManager`, `SequenceService` y
+`LockManagerService`.
+
 ## Estructura
 
 Los paquetes de §6 existen desde el día 1 (los vacíos llevan `.gitkeep`) para evitar
