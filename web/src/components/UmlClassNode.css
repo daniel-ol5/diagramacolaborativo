@@ -1,0 +1,52 @@
+.uml-class-node {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  border: 1.5px solid #1a1a2e;
+  border-radius: 4px;
+  font-family: "Segoe UI", Roboto, sans-serif;
+  font-size: 11px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.uml-class-node__name {
+  padding: 6px 8px;
+  font-weight: 700;
+  text-align: center;
+  background: #eef0fb;
+  border-bottom: 1.5px solid #1a1a2e;
+}
+
+.uml-class-node__name--abstract {
+  font-style: italic;
+}
+
+.uml-class-node__section {
+  padding: 4px 8px;
+  border-bottom: 1px solid #c9cbe0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.uml-class-node__section:last-child {
+  border-bottom: none;
+}
+
+.uml-class-node__row {
+  white-space: normal;
+  overflow-wrap: break-word;
+  line-height: 1.4;
+}
+
+.uml-class-node__row--pk {
+  text-decoration: underline;
+}
+
+.uml-class-node__empty {
+  color: #999;
+  font-style: italic;
+}
