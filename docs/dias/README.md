@@ -8,5 +8,7 @@ Sirve para tres cosas: retomar el hilo después de un día malo, preparar la def
 | :---: | :--- | :--- | :---: |
 | [01](dia-01_2026-09-03.md) | 3 sep | Modelo canónico congelado (B-1) + esqueleto backend (B-3) + spike de voz offline (B-2) | 🟢 B-1, B-2 y B-3 cerrados |
 | [02](dia-02_2026-09-04.md) | 4 sep *(ejecutado el 6)* | Autenticación JWT + arbitraje de roles sobre STOMP (`VIEWER` → 403) | 🟢 cerrado, 11/11 verificado |
+| [03](dia-03_2026-09-05.md) | 5 sep *(ejecutado el 6)* | Salas STOMP, secuencia de operaciones y locks con TTL de 5 s — **hito H1** | 🟡 en curso |
+| [04](dia-04_2026-09-06.md) | 6 sep | El lienzo web: React Flow, `UmlClassNode` y los tres diagramas dibujados | 🟢 cerrado |
 
 **Leyenda:** 🟢 cerrado y verificado · 🟡 en curso · 🔴 bloqueado
