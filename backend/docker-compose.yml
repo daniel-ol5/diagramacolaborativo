@@ -10,7 +10,9 @@ services:
     environment:
       POSTGRES_DB: modelcollab
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-12345678}
+      # Sin valor por defecto: a proposito. La clave de desarrollo (12345678) no
+      # tiene que poder colarse en un despliegue por omision del .env.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD (ver .env, no commitear)}
     ports:
       - "5432:5432"
     volumes:
@@ -34,7 +36,10 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/modelcollab
       SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-12345678}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD (ver .env, no commitear)}
+      # application.yml cae a una clave de desarrollo si esto falta; en un
+      # despliegue real eso firmaria JWT con una clave publica en el repo.
+      JWT_SECRET: ${JWT_SECRET:?falta JWT_SECRET (ver .env, no commitear)}
     ports:
       - "8080:8080"
     healthcheck:
@@ -47,3 +52,10 @@ services:
 
 volumes:
   postgres_data:
+
+# NO EJECUTADO NUNCA (no hay Docker en la maquina de desarrollo, ver D-01).
+# Revisado contra el estado real del proyecto el 06/09/2026: nombre/ruta del
+# jar, JDK 21, Postgres 16, variables de entorno vs application.yml y
+# healthchecks estaban alineados; se corrigio que POSTGRES_PASSWORD tenia un
+# default de desarrollo hardcodeado y que faltaba JWT_SECRET. Falta la
+# primera corrida real, prevista para el despliegue en AWS del 13/09.

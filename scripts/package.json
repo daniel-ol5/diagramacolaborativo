@@ -1,0 +1,14 @@
+{
+  "name": "modelcollab-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Scripts operativos de ModelCollab (seed de datos, humo de STOMP). No es parte del backend ni del frontend.",
+  "type": "module",
+  "scripts": {
+    "smoke:stomp": "node stomp-smoke.mjs"
+  },
+  "dependencies": {
+    "@stomp/stompjs": "^7.0.0",
+    "ws": "^8.18.0"
+  }
+}

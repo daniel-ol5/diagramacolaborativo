@@ -16,3 +16,8 @@ RUN apk add --no-cache wget
 COPY --from=build /app/target/backend-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+
+# NO EJECUTADO NUNCA (no hay Docker en la maquina de desarrollo, ver D-01).
+# Revisado el 06/09/2026: nombre/ruta del jar (backend-0.0.1-SNAPSHOT.jar) y
+# JDK 21 coinciden con pom.xml. Primera corrida real prevista para el
+# despliegue en AWS del 13/09.
