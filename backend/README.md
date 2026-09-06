@@ -1,7 +1,7 @@
 # ModelCollab — Backend
 
 API Spring Boot 3 del editor colaborativo de diagramas UML. La especificación completa
-está en `../PLAN_ARQUITECTONICO_FASE_0.txt`; este README cubre sólo cómo levantarlo y las
+está en `../docs/PLAN_ARQUITECTONICO_FASE_0.txt`; este README cubre sólo cómo levantarlo y las
 trampas conocidas.
 
 ---
