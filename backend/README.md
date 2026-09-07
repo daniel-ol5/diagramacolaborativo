@@ -469,6 +469,65 @@ para `List`, `UUID` o `String` — nada impide que alguien dibuje una clase así
 | La estrategia de `@GeneratedValue` sigue al tipo de la PK | Una PK `UUID` con `IDENTITY` no arranca, y una `Long` con `GenerationType.UUID` tampoco. |
 | `COMPOSITION` propaga el borrado | Las partes no viven sin el todo. Sin `orphanRemoval`, borrar una `Cita` deja sus `Pago` huérfanos. |
 
+---
+
+## Proyectos, miembros y compartir
+
+Hasta la migración `V3` el sistema **tenía roles pero ninguna forma de otorgarlos**: la única
+manera de que dos personas trabajaran juntas era insertar una fila a mano. §14 no lo cubría.
+
+### Endpoints
+
+| Método | Ruta | Quién |
+| :--- | :--- | :--- |
+| `GET` `POST` | `/api/v1/projects` | autenticado · crear deja `OWNER` |
+| `GET` | `/api/v1/projects/{id}/members` | cualquier miembro |
+| `POST` | `/api/v1/projects/{id}/members` | sólo `OWNER` · 404 si el correo no tiene cuenta |
+| `GET` `POST` | `/api/v1/projects/{id}/diagrams` | listar: miembro · crear: `OWNER`/`EDITOR` |
+| `POST` `GET` | `/api/v1/projects/{id}/invitations` | sólo `OWNER` |
+| `DELETE` | `/api/v1/projects/{id}/invitations/{invId}` | sólo `OWNER` — revocar |
+| `GET` | `/api/v1/invitations/{token}` | **público** — mirar sin aceptar |
+| `POST` | `/api/v1/invitations/{token}/accept` | autenticado |
+
+### Compartir es una tabla, no un token firmado
+
+Firmar `{projectId, role}` y no guardar nada sería más simple y está mal: **un enlace así no se
+puede revocar**. Los enlaces se filtran —se pegan en chats, quedan en historiales, se reenvían
+sin pensar—, y con una firma válida el proyecto quedaría abierto para siempre. A la pregunta
+*"¿y si alguien filtra el enlace?"* hay que poder responder algo mejor que *"se pierde el
+proyecto"*. Una fila se revoca.
+
+El token es `SecureRandom` de 32 bytes en base64url — nunca secuencial ni derivado del id del
+proyecto, porque un token adivinable es lo mismo que no tener token. **No se registra en el
+log:** un enlace de acceso en un archivo que se rota, se copia y se manda a soporte es una
+filtración esperando ocurrir.
+
+Revocar **marca** la fila en vez de borrarla: queda el rastro de que existió, quién la creó y
+cuándo se cortó, que es justo lo que se quiere mirar cuando hubo una filtración.
+
+### ⚠️ Un rol sube o no hace nada. Nunca baja.
+
+Vive en `ProjectService.otorgar`, por donde pasan **las dos** puertas de entrada — el enlace y el
+alta por correo — para que no haya que acordarse de repetirla.
+
+> Sin esto, el dueño que prueba su propio enlace de `VIEWER` **se degrada a sí mismo**, y no hay
+> vuelta atrás: para recuperar `OWNER` hay que ser `OWNER`. Verificado de punta a punta.
+
+De la misma regla sale que aceptar sea **idempotente**: abrir el enlace tres veces deja lo mismo
+que abrirlo una.
+
+### Qué se filtra y qué no
+
+| Situación | Respuesta | Por qué |
+| :--- | :--- | :--- |
+| No sos miembro, o el proyecto no existe | **403** en los dos casos | Un 404 distinguible convierte los identificadores en un oráculo: probás y averiguás qué existe. |
+| Token inexistente, vencido o revocado | 200 con `valid:false` y `reason` distinguible | El cliente necesita decir algo útil. |
+| …pero `projectName` | **no viaja** | Si dijera el nombre, probar tokens al azar sería una forma de descubrir qué proyectos hay. |
+| Mirar un enlace | no agrega a nadie | Aceptar tiene que ser deliberado: si abrirlo diera acceso, reenviarlo por error metería gente sin que nadie lo decidiera. |
+
+Revocar comprueba que la invitación **sea de ese proyecto**: la ruta lleva tu `projectId`, pero
+el id de la invitación podría ser de cualquiera.
+
 ## Estructura
 
 Los paquetes de §6 existen desde el día 1 (los vacíos llevan `.gitkeep`) para evitar

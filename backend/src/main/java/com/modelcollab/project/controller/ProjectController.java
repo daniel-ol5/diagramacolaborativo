@@ -3,10 +3,13 @@ package com.modelcollab.project.controller;
 import com.modelcollab.diagram.dto.DiagramRequest;
 import com.modelcollab.diagram.dto.DiagramResponse;
 import com.modelcollab.diagram.service.DiagramService;
+import com.modelcollab.project.dto.InvitationRequest;
+import com.modelcollab.project.dto.InvitationResponse;
 import com.modelcollab.project.dto.MemberRequest;
 import com.modelcollab.project.dto.MemberResponse;
 import com.modelcollab.project.dto.ProjectRequest;
 import com.modelcollab.project.dto.ProjectResponse;
+import com.modelcollab.project.service.InvitationService;
 import com.modelcollab.project.service.ProjectService;
 import jakarta.validation.Valid;
 import java.security.Principal;
@@ -14,6 +17,7 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,10 +38,15 @@ public class ProjectController {
 
     private final ProjectService projectService;
     private final DiagramService diagramService;
+    private final InvitationService invitationService;
 
-    public ProjectController(ProjectService projectService, DiagramService diagramService) {
+    public ProjectController(
+            ProjectService projectService,
+            DiagramService diagramService,
+            InvitationService invitationService) {
         this.projectService = projectService;
         this.diagramService = diagramService;
+        this.invitationService = invitationService;
     }
 
     /** Los proyectos donde soy miembro, cada uno con mi rol. */
@@ -81,6 +90,35 @@ public class ProjectController {
             Principal emisor) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(diagramService.crear(projectId, userId(emisor), peticion));
+    }
+
+    // ------------------------------------------------------------ compartir
+
+    /** Genera un enlace de invitación. Sólo el dueño. */
+    @PostMapping("/{projectId}/invitations")
+    public ResponseEntity<InvitationResponse> crearInvitacion(
+            @PathVariable UUID projectId,
+            @Valid @RequestBody InvitationRequest peticion,
+            Principal emisor) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(invitationService.crear(projectId, userId(emisor), peticion));
+    }
+
+    /** Los enlaces del proyecto, vigentes y no vigentes. Sólo el dueño. */
+    @GetMapping("/{projectId}/invitations")
+    public List<InvitationResponse> invitaciones(
+            @PathVariable UUID projectId, Principal emisor) {
+        return invitationService.listar(projectId, userId(emisor));
+    }
+
+    /** Revoca un enlace. Sólo el dueño. Es la respuesta a "se me filtró el enlace". */
+    @DeleteMapping("/{projectId}/invitations/{invitationId}")
+    public ResponseEntity<Void> revocarInvitacion(
+            @PathVariable UUID projectId,
+            @PathVariable UUID invitationId,
+            Principal emisor) {
+        invitationService.revocar(projectId, invitationId, userId(emisor));
+        return ResponseEntity.noContent().build();
     }
 
     private static UUID userId(Principal emisor) {

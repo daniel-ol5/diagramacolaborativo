@@ -62,6 +62,16 @@ public class SecurityConfig {
                                         // suscribirse ni mutar nada.
                                         .requestMatchers("/ws/**")
                                         .permitAll()
+                                        // Mirar un enlace de invitacion es publico: quien lo
+                                        // recibe tiene que poder ver que es antes de decidir si
+                                        // se registra. No expone nada — sin un token valido no
+                                        // devuelve ni el nombre del proyecto. Aceptarlo, en
+                                        // cambio, exige estar autenticado: hay que saber a quien
+                                        // se agrega, y por eso el POST .../accept queda afuera
+                                        // (este patron cubre un solo segmento).
+                                        .requestMatchers(
+                                                HttpMethod.GET, "/api/v1/invitations/*")
+                                        .permitAll()
                                         .requestMatchers(HttpMethod.OPTIONS, "/**")
                                         .permitAll()
                                         .anyRequest()
