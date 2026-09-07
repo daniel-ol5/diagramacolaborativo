@@ -422,6 +422,27 @@ Compila con el `JavaCompiler` del JDK en vez de invocar Maven: no necesita red, 
 en vez de un minuto, y el classpath que le pasa es el de este proyecto, que ya trae JPA y Spring
 Data — o sea justo lo que declara el `pom.xml` generado.
 
+### …pero compilar tampoco alcanza
+
+**Hay código que compila perfecto y con el que la aplicación generada no levanta.** Los dos casos
+aparecieron escribiendo este generador: un `mappedBy` que nombra un campo inexistente, y una
+estrategia de `@GeneratedValue` incompatible con el tipo de la clave. Los dos son invisibles para
+`javac`.
+
+Por eso el test, además de compilar, **arma el metamodelo de Hibernate y la `SessionFactory`**
+sobre las clases generadas. Sin base de datos: `allow_jdbc_metadata_access = false` y el dialecto
+dado a mano. Tarda un par de segundos.
+
+Y hay un test que **rompe el `mappedBy` a propósito** y exige que el arnés lo detecte. Sin él, el
+arnés podría no estar validando nada y nadie se enteraría — un arnés que nunca falló es
+indistinguible de uno que no mira.
+
+> **Hasta dónde llega.** El arnés detecta el `mappedBy` colgado pero **no** la estrategia de clave
+> incompatible: eso no es un error de mapeo sino del motor, y aparece al generar el DDL o al
+> insertar. Hay un test que afirma ese límite —escrito al revés, para que se ponga rojo si algún
+> día Hibernate empieza a rechazarlo— y la invariante se sostiene donde de verdad vive: en el
+> generador, que elige la estrategia según el tipo de la clave.
+
 ### El proyecto generado trae su propio Maven Wrapper
 
 `mvnw`, `mvnw.cmd` y `.mvn/wrapper/`. El criterio del Día 11 es *"descargar el ZIP y compilarlo

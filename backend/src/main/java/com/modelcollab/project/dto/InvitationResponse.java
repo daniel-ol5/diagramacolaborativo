@@ -21,12 +21,19 @@ public record InvitationResponse(
         OffsetDateTime revokedAt,
         boolean active) {
 
+    /**
+     * Ruta del <b>lienzo web</b>, no de la API. Son dos cosas distintas: el enlace que se le pasa
+     * a una persona apunta a una pantalla ({@code :5173/invite/…}), y esa pantalla consulta
+     * {@code /api/v1/invitations/{token}} para mostrar a qué la invitaron. Acordada con Track Web.
+     */
+    private static final String RUTA_DEL_FRONT = "/invite/";
+
     public static InvitationResponse de(
             ProjectInvitation invitacion, String base, OffsetDateTime ahora) {
         return new InvitationResponse(
                 invitacion.getId(),
                 invitacion.getToken(),
-                base + "/invitations/" + invitacion.getToken(),
+                base + RUTA_DEL_FRONT + invitacion.getToken(),
                 invitacion.getRole(),
                 invitacion.getCreatedAt(),
                 invitacion.getExpiresAt(),

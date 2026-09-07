@@ -123,7 +123,7 @@ class InvitationServiceTest {
         InvitationResponse r = servicio.crear(
                 projectId, userId, new InvitationRequest(ProjectRole.VIEWER, 7));
 
-        assertThat(r.url()).isEqualTo("https://modelcollab.dev/invitations/" + r.token());
+        assertThat(r.url()).isEqualTo("https://modelcollab.dev/invite/" + r.token());
         assertThat(r.role()).isEqualTo(ProjectRole.VIEWER);
         assertThat(r.active()).isTrue();
         assertThat(r.expiresAt()).isEqualTo(OffsetDateTime.now(reloj).plusDays(7));

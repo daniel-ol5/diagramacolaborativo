@@ -1,6 +1,7 @@
 package com.modelcollab.generator;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.modelcollab.config.FreeMarkerConfig;
@@ -12,6 +13,7 @@ import java.io.InputStream;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -183,7 +185,156 @@ class GeneradorCompilaTest {
         assertThat(archivos.get("pom.xml")).contains("<artifactId>demo</artifactId>");
     }
 
+
+    @ParameterizedTest(name = "el mapeo JPA de {0} es valido")
+    @ValueSource(strings = {
+        "reference-diagrams/barberia.json",
+        "reference-diagrams/veterinaria.json",
+        "reference-diagrams/inventario.json",
+        "edge-cases.json",
+    })
+    @DisplayName("Que compile no alcanza: el mapeo JPA tambien tiene que ser valido")
+    void elMapeoJpaEsValido(String fixture, @TempDir Path destino) throws Exception {
+        Map<String, String> archivos =
+                generador.generar(leer(fixture), "com.empresa.app", "demo");
+        List<Path> fuentes = escribir(archivos, destino);
+        assertThat(compilar(fuentes, destino)).as("no compila").isEmpty();
+
+        // El "100% Compila" de §11.2, tomado literalmente, no alcanza: hay codigo que compila
+        // perfecto y con el que la aplicacion generada no levanta. Los dos casos aparecieron
+        // escribiendo este generador — una estrategia de @GeneratedValue incompatible con el
+        // tipo de la clave, y un mappedBy que nombra un campo inexistente — y los dos son
+        // fallos de ARRANQUE, invisibles para javac.
+        //
+        // Construir el metamodelo de Hibernate los atrapa a los dos, en segundos y sin base de
+        // datos: la validacion del mapeo ocurre antes de tocar ninguna conexion.
+        validarMapeo(destino, nombresDeEntidades(archivos));
+    }
+
+    private static List<String> nombresDeEntidades(Map<String, String> archivos) {
+        return archivos.keySet().stream()
+                .filter(r -> r.contains("/domain/model/") && r.endsWith(".java"))
+                .map(r -> "com.empresa.app.domain.model."
+                        + r.substring(r.lastIndexOf('/') + 1, r.length() - ".java".length()))
+                .toList();
+    }
+
+    /**
+     * Arma el metamodelo de Hibernate sobre las clases ya compiladas.
+     *
+     * <p>Sin base de datos: {@code allow_jdbc_metadata_access = false} le dice a Hibernate que no
+     * intente averiguar el dialecto conectandose, y el dialecto se le da a mano. Lo que se
+     * ejercita es la validacion del mapeo — que cada {@code mappedBy} apunte a un campo que
+     * existe, que las claves sean coherentes con su generador, que las dos puntas de cada
+     * relacion concuerden.
+     */
+    private static void validarMapeo(Path destino, List<String> entidades) throws Exception {
+        Path clases = destino.resolve("target/classes");
+        try (URLClassLoader cargador = new URLClassLoader(
+                new java.net.URL[] {clases.toUri().toURL()},
+                GeneradorCompilaTest.class.getClassLoader())) {
+
+            var arranque = new org.hibernate.boot.registry.BootstrapServiceRegistryBuilder()
+                    .applyClassLoader(cargador)
+                    .build();
+            var registro = new org.hibernate.boot.registry.StandardServiceRegistryBuilder(arranque)
+                    .applySetting("hibernate.dialect",
+                            "org.hibernate.dialect.PostgreSQLDialect")
+                    .applySetting("hibernate.boot.allow_jdbc_metadata_access", "false")
+                    .applySetting("hibernate.temp.use_jdbc_metadata_defaults", "false")
+                    .build();
+            try {
+                var fuentes = new org.hibernate.boot.MetadataSources(registro);
+                for (String nombre : entidades) {
+                    fuentes.addAnnotatedClass(Class.forName(nombre, false, cargador));
+                }
+                // buildMetadata() resuelve los mappedBy y la forma de las claves. Construir
+                // ademas la SessionFactory es lo que instancia los generadores de identificador,
+                // que es donde se detecta una estrategia incompatible con el tipo de la clave.
+                // Sigue sin tocar la base: solo se arma el modelo en memoria.
+                try (var factory = fuentes.buildMetadata().buildSessionFactory()) {
+                    assertThat(factory.getMetamodel().getEntities())
+                            .as("Hibernate tiene que reconocer todas las entidades")
+                            .hasSize(entidades.size());
+                }
+            } finally {
+                org.hibernate.boot.registry.StandardServiceRegistryBuilder.destroy(registro);
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("El arnes detecta un mappedBy roto: si no, no estaria probando nada")
+    void elArnesDetectaUnMappedByRoto(@TempDir Path destino) throws Exception {
+        Map<String, String> archivos = new java.util.LinkedHashMap<>(
+                generador.generar(leer("reference-diagrams/barberia.json"),
+                        "com.empresa.app", "demo"));
+
+        // Se rompe a proposito el mappedBy de Cliente para que apunte a un campo inexistente.
+        // Esto COMPILA sin una sola advertencia: es exactamente la clase de error que motivo
+        // este test, y si el arnes no lo viera, seria decorativo.
+        String clave = "src/main/java/com/empresa/app/domain/model/Cliente.java";
+        archivos.put(clave, archivos.get(clave)
+                .replace("mappedBy = \"cliente\"", "mappedBy = \"noExisteEsteCampo\""));
+
+        List<Path> fuentes = escribir(archivos, destino);
+        assertThat(compilar(fuentes, destino))
+                .as("el sabotaje tiene que seguir compilando, ese es el punto")
+                .isEmpty();
+
+        assertThatThrownBy(() -> validarMapeo(destino, nombresDeEntidades(archivos)))
+                .as("Hibernate tiene que rechazar un mappedBy colgado")
+                .isInstanceOf(Exception.class);
+    }
+
+    @Test
+    @DisplayName("HASTA DONDE LLEGA EL ARNES: una clave incompatible con su tipo NO la detecta")
+    void elLimiteDelArnes(@TempDir Path destino) throws Exception {
+        Map<String, String> archivos = new java.util.LinkedHashMap<>(
+                generador.generar(leer("reference-diagrams/barberia.json"),
+                        "com.empresa.app", "demo"));
+
+        // IDENTITY sobre una clave UUID: la otra clase de fallo que aparecio escribiendo el
+        // generador. Compila, y ademas Hibernate la acepta al armar el metamodelo — porque NO es
+        // un error de mapeo: es una incompatibilidad con el motor, que recien se manifiesta al
+        // generar el DDL o al insertar.
+        String clave = "src/main/java/com/empresa/app/domain/model/Cliente.java";
+        archivos.put(clave, archivos.get(clave)
+                .replace("GenerationType.UUID", "GenerationType.IDENTITY"));
+
+        List<Path> fuentes = escribir(archivos, destino);
+        assertThat(compilar(fuentes, destino)).isEmpty();
+
+        // Este test afirma el LIMITE, no una capacidad. Esta escrito al reves a proposito: si
+        // algun dia Hibernate empieza a rechazarlo, este test se pone rojo y nos enteramos de
+        // que la cobertura crecio, en vez de seguir creyendo que no la teniamos.
+        //
+        // Mientras tanto, la invariante se sostiene donde de verdad vive: en el generador, que
+        // elige la estrategia segun el tipo de la clave (ver estrategiaSegunElTipoDeClave).
+        validarMapeo(destino, nombresDeEntidades(archivos));
+    }
+
+    @Test
+    @DisplayName("La estrategia de la clave la decide el tipo, que es donde vive la invariante")
+    void estrategiaSegunElTipoDeClave() throws Exception {
+        // Claves UUID -> GenerationType.UUID. Una PK UUID con IDENTITY no arranca.
+        String cliente = generador.generar(leer("reference-diagrams/barberia.json"),
+                "com.empresa.app", "demo")
+                .get("src/main/java/com/empresa/app/domain/model/Cliente.java");
+        assertThat(cliente).contains("private UUID id;");
+        assertThat(cliente).contains("GenerationType.UUID");
+        assertThat(cliente).doesNotContain("GenerationType.IDENTITY");
+
+        // Clave inyectada por el generador -> Long con IDENTITY.
+        String sinPk = generador.generar(leer("edge-cases.json"), "com.empresa.app", "demo")
+                .get("src/main/java/com/empresa/app/domain/model/SinPrimaryKey.java");
+        assertThat(sinPk).contains("private Long id;");
+        assertThat(sinPk).contains("GenerationType.IDENTITY");
+        assertThat(sinPk).doesNotContain("GenerationType.UUID");
+    }
+
     // ------------------------------------------------------------------ apoyo
+
 
     private static List<Path> escribir(Map<String, String> archivos, Path destino)
             throws Exception {
