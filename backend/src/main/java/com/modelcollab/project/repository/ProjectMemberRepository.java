@@ -14,6 +14,23 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Pr
 
     List<ProjectMember> findByIdProjectId(UUID projectId);
 
+    /**
+     * Mis proyectos con mi rol en cada uno, en una sola consulta.
+     *
+     * <p>{@code join fetch} sobre el proyecto porque la relación es LAZY: sin él, listar veinte
+     * proyectos dispararía veintiuna consultas — el problema N+1 clásico, que además no se nota
+     * en desarrollo con dos proyectos de prueba.
+     */
+    @Query("select pm from ProjectMember pm join fetch pm.project where pm.id.userId = :userId")
+    List<ProjectMember> findMembresiasDelUsuario(@Param("userId") UUID userId);
+
+    /** Los miembros de un proyecto con sus datos de usuario, también sin N+1. */
+    @Query("select pm from ProjectMember pm join fetch pm.user where pm.id.projectId = :projectId")
+    List<ProjectMember> findMiembrosConUsuario(@Param("projectId") UUID projectId);
+
+    /** Cuántos OWNER quedan. Sirve para no dejar un proyecto sin dueño. */
+    long countByIdProjectIdAndRole(UUID projectId, ProjectRole role);
+
     Optional<ProjectMember> findByIdProjectIdAndIdUserId(UUID projectId, UUID userId);
 
     /**
