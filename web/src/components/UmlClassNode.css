@@ -61,6 +61,11 @@
   cursor: not-allowed;
 }
 
+.uml-class-node__edit-btn--danger:hover {
+  background: #ffe3e3;
+  color: #c92a2a;
+}
+
 .uml-class-node__name-input {
   width: 100%;
   font: inherit;
@@ -85,9 +90,55 @@
 }
 
 .uml-class-node__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
   white-space: normal;
   overflow-wrap: break-word;
   line-height: 1.4;
+}
+
+.uml-class-node__attr-text {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.uml-class-node__attr-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.uml-class-node__mini-btn {
+  border: none;
+  background: none;
+  padding: 0 2px;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  color: #888;
+  border-radius: 3px;
+}
+
+.uml-class-node__mini-btn:hover {
+  background: #d8dcf5;
+}
+
+.uml-class-node__add-attr {
+  margin-top: 2px;
+  border: 1px dashed #b0b4d8;
+  background: none;
+  color: #555;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.uml-class-node__add-attr:hover {
+  background: #eef0fb;
 }
 
 .uml-class-node__row--pk {
@@ -99,9 +150,13 @@
   font-style: italic;
 }
 
-/* Solo existen para que React Flow acepte crear aristas (ver UmlClassNode.tsx);
-   el path real lo calcula UmlRelationshipEdge, no la posicion de este handle. */
+/* De acá se arrastra una conexion nueva (ADD_RELATIONSHIP). El path que
+   efectivamente se dibuja lo calcula UmlRelationshipEdge a partir del
+   canonico, no la posicion exacta de este handle — pero tiene que ser
+   visible y clickeable para poder arrastrar desde él. */
 .uml-class-node__handle {
-  opacity: 0;
-  pointer-events: none;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border: 1.5px solid #3b5bdb;
 }

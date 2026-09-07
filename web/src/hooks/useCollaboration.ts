@@ -3,6 +3,7 @@ import { Client, type IMessage } from "@stomp/stompjs";
 import { WS_URL } from "../services/config";
 import { useCanonicalStore } from "../store/canonicalStore";
 import { useCollaborationStore } from "../store/collaborationStore";
+import type { Attribute, ClassEntity, Relationship } from "../types/canonical";
 import {
   esBroadcastDeMutacion,
   esEventoDeSala,
@@ -20,7 +21,15 @@ export interface SequenceGap {
 
 export interface UseCollaborationResult {
   status: CollaborationStatus;
+  /**
+   * Ultimo error: de conexion (onStompError/onWebSocketError) o de una
+   * mutacion rechazada (LOCK_REQUIRED, DUPLICATE_ID, etc. por
+   * /user/queue/errors). Se muestra independientemente de `status` — una
+   * mutacion puede fallar sin que la conexion se caiga.
+   */
   error: string | null;
+  /** Descarta el error mostrado (la UI lo llama con un timeout, como los demas toasts). */
+  clearError: () => void;
   sequenceGap: SequenceGap | null;
   /**
    * Mueve una clase durante el arrastre: aplica el cambio local de
@@ -52,6 +61,20 @@ export interface UseCollaborationResult {
   renameClass: (targetId: string, name: string) => void;
   /** Publica la posicion del cursor propio, con throttling. No es una mutacion: no toca el canonico. */
   sendCursor: (x: number, y: number, selectedId: string | null) => void;
+  /** ADD_CLASS. No requiere lock (§8.1: "Raiz del diagrama"). El id lo genera el llamador (UUID v4). */
+  addClass: (classEntity: ClassEntity) => void;
+  /** DELETE_CLASS. Requiere lock sobre classId, adquirido antes por el llamador. */
+  deleteClass: (classId: string) => void;
+  /** ADD_ATTRIBUTE. Requiere lock sobre classId (la clase, no el atributo todavia inexistente). */
+  addAttribute: (classId: string, attribute: Attribute) => void;
+  /** UPDATE_ATTRIBUTE. Requiere lock sobre attribute.id — reemplazo completo, no parche. */
+  updateAttribute: (attribute: Attribute) => void;
+  /** DELETE_ATTRIBUTE. Requiere lock sobre attrId. */
+  deleteAttribute: (attrId: string) => void;
+  /** ADD_RELATIONSHIP. No requiere lock. El id lo genera el llamador. */
+  addRelationship: (relationship: Relationship) => void;
+  /** DELETE_RELATIONSHIP. Requiere lock sobre relId. */
+  deleteRelationship: (relId: string) => void;
 }
 
 const THROTTLE_MS = 50; // ~20 mensajes/seg durante el arrastre (Dia 8)
@@ -79,6 +102,13 @@ export function useCollaboration(
 
   const updateClassPosition = useCanonicalStore((s) => s.updateClassPosition);
   const renameClassLocal = useCanonicalStore((s) => s.renameClass);
+  const addClassLocal = useCanonicalStore((s) => s.addClass);
+  const deleteClassLocal = useCanonicalStore((s) => s.deleteClass);
+  const addAttributeLocal = useCanonicalStore((s) => s.addAttribute);
+  const updateAttributeLocal = useCanonicalStore((s) => s.updateAttribute);
+  const deleteAttributeLocal = useCanonicalStore((s) => s.deleteAttribute);
+  const addRelationshipLocal = useCanonicalStore((s) => s.addRelationship);
+  const deleteRelationshipLocal = useCanonicalStore((s) => s.deleteRelationship);
   const setMyUserId = useCollaborationStore((s) => s.setMyUserId);
 
   useEffect(() => {
@@ -178,12 +208,36 @@ export function useCollaboration(
           return;
         }
 
-        if (body.op === "MOVE_CLASS" && body.targetId) {
-          updateClassPosition(body.targetId, Number(body.payload.x), Number(body.payload.y));
-        } else if (body.op === "RENAME_CLASS" && body.targetId) {
-          renameClassLocal(body.targetId, String(body.payload.name));
-        } else {
-          console.warn(`[colaboracion] operacion "${body.op}" ajena todavia no se aplica en este cliente`);
+        switch (body.op) {
+          case "MOVE_CLASS":
+            if (body.targetId) updateClassPosition(body.targetId, Number(body.payload.x), Number(body.payload.y));
+            break;
+          case "RENAME_CLASS":
+            if (body.targetId) renameClassLocal(body.targetId, String(body.payload.name));
+            break;
+          case "ADD_CLASS":
+            addClassLocal(body.payload as unknown as ClassEntity);
+            break;
+          case "DELETE_CLASS":
+            if (body.targetId) deleteClassLocal(body.targetId);
+            break;
+          case "ADD_ATTRIBUTE":
+            if (body.targetId) addAttributeLocal(body.targetId, body.payload as unknown as Attribute);
+            break;
+          case "UPDATE_ATTRIBUTE":
+            updateAttributeLocal(body.payload as unknown as Attribute);
+            break;
+          case "DELETE_ATTRIBUTE":
+            if (body.targetId) deleteAttributeLocal(body.targetId);
+            break;
+          case "ADD_RELATIONSHIP":
+            addRelationshipLocal(body.payload as unknown as Relationship);
+            break;
+          case "DELETE_RELATIONSHIP":
+            if (body.targetId) deleteRelationshipLocal(body.targetId);
+            break;
+          default:
+            console.warn(`[colaboracion] operacion "${body.op}" ajena todavia no se aplica en este cliente`);
         }
         return;
       }
@@ -195,7 +249,7 @@ export function useCollaboration(
             store.setLock({
               targetId: body.targetId,
               userId: body.userId ?? "",
-              userName: body.userName ?? (body as unknown as { nombre?: string }).nombre ?? "",
+              userName: body.userName ?? "",
               color: body.color ?? "#999",
               ttl: body.ttl ?? 5000,
             });
@@ -228,7 +282,7 @@ export function useCollaboration(
             if (body.userId !== store.myUserId) {
               store.setCursor({
                 userId: body.userId,
-                userName: body.userName ?? (body as unknown as { nombre?: string }).nombre ?? "Usuario",
+                userName: body.userName,
                 color: body.color,
                 x: body.x,
                 y: body.y,
@@ -272,9 +326,21 @@ export function useCollaboration(
       client.deactivate();
       clientRef.current = null;
     };
-  }, [diagramId, token, updateClassPosition, renameClassLocal]);
+  }, [
+    diagramId,
+    token,
+    updateClassPosition,
+    renameClassLocal,
+    addClassLocal,
+    deleteClassLocal,
+    addAttributeLocal,
+    updateAttributeLocal,
+    deleteAttributeLocal,
+    addRelationshipLocal,
+    deleteRelationshipLocal,
+  ]);
 
-  function publishMutate(op: string, targetId: string, payload: Record<string, unknown>) {
+  function publishMutate(op: string, targetId: string | null, payload: Record<string, unknown>) {
     const client = clientRef.current;
     if (!diagramId || !client?.connected) return;
 
@@ -340,9 +406,50 @@ export function useCollaboration(
     publishMutate("RENAME_CLASS", targetId, { name });
   }
 
+  function addClass(classEntity: ClassEntity) {
+    addClassLocal(classEntity);
+    publishMutate("ADD_CLASS", null, classEntity as unknown as Record<string, unknown>);
+  }
+
+  function deleteClass(classId: string) {
+    useCollaborationStore.getState().setEditingTargetId(null);
+    deleteClassLocal(classId);
+    publishMutate("DELETE_CLASS", classId, {});
+  }
+
+  function addAttribute(classId: string, attribute: Attribute) {
+    useCollaborationStore.getState().setEditingTargetId(null);
+    addAttributeLocal(classId, attribute);
+    publishMutate("ADD_ATTRIBUTE", classId, attribute as unknown as Record<string, unknown>);
+  }
+
+  function updateAttribute(attribute: Attribute) {
+    useCollaborationStore.getState().setEditingTargetId(null);
+    updateAttributeLocal(attribute);
+    publishMutate("UPDATE_ATTRIBUTE", attribute.id, attribute as unknown as Record<string, unknown>);
+  }
+
+  function deleteAttribute(attrId: string) {
+    useCollaborationStore.getState().setEditingTargetId(null);
+    deleteAttributeLocal(attrId);
+    publishMutate("DELETE_ATTRIBUTE", attrId, {});
+  }
+
+  function addRelationship(relationship: Relationship) {
+    addRelationshipLocal(relationship);
+    publishMutate("ADD_RELATIONSHIP", null, relationship as unknown as Record<string, unknown>);
+  }
+
+  function deleteRelationship(relId: string) {
+    useCollaborationStore.getState().setEditingTargetId(null);
+    deleteRelationshipLocal(relId);
+    publishMutate("DELETE_RELATIONSHIP", relId, {});
+  }
+
   return {
     status,
     error,
+    clearError: () => setError(null),
     sequenceGap,
     moveClass,
     flushMove,
@@ -351,5 +458,12 @@ export function useCollaboration(
     renewLock,
     renameClass,
     sendCursor,
+    addClass,
+    deleteClass,
+    addAttribute,
+    updateAttribute,
+    deleteAttribute,
+    addRelationship,
+    deleteRelationship,
   };
 }

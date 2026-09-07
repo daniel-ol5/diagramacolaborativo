@@ -1,6 +1,9 @@
+import { useEffect } from "react";
 import { BaseEdge, useStore, type EdgeProps, type ReactFlowState } from "reactflow";
 import type { ClassEntity, Relationship, RelationshipType } from "../types/canonical";
 import { centerOf, offsetToward, rectBoundaryPoint, type Box, type Point } from "../lib/edgeGeometry";
+import { useCollaborationActions } from "../hooks/collaborationActionsContext";
+import { useCollaborationStore } from "../store/collaborationStore";
 import "./UmlRelationshipEdge.css";
 
 function boxOf(classEntity: ClassEntity): Box {
@@ -65,8 +68,10 @@ function endLabel(multiplicity: string | undefined, role: string | undefined): s
 /**
  * Arista UML: dibuja el path pasando por los `waypoints` del canonico (no
  * son decoracion, sobreviven el round-trip a XMI en el Dia 13), con el
- * marcador que corresponda al tipo y las etiquetas de multiplicidad/rol
- * cerca de cada extremo.
+ * marcador que corresponda al tipo, las etiquetas de multiplicidad/rol
+ * cerca de cada extremo, y un boton para borrarla (DELETE_RELATIONSHIP,
+ * requiere lock — misma disciplina de esperar confirmacion que en
+ * UmlClassNode, ver comentario ahi).
  *
  * Lee los nodos con `useStore` (reactivo) y no con `useReactFlow().getNode`
  * (una lectura puntual de `store.getState()`, sin suscripcion): al montar
@@ -78,6 +83,18 @@ function endLabel(multiplicity: string | undefined, role: string | undefined): s
 export function UmlRelationshipEdge({ id, data, source, target, style }: EdgeProps<Relationship>) {
   const sourceNode = useStore((s: ReactFlowState) => s.nodeInternals.get(source));
   const targetNode = useStore((s: ReactFlowState) => s.nodeInternals.get(target));
+  const editingTargetId = useCollaborationStore((s) => s.editingTargetId);
+  const actions = useCollaborationActions();
+  const confirmedDelete = editingTargetId === id;
+
+  useEffect(() => {
+    if (!confirmedDelete) return;
+    const ok = window.confirm("¿Borrar esta relación?");
+    if (ok) actions?.deleteRelationship(id);
+    else actions?.releaseLock(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo cuando se confirma el lock
+  }, [confirmedDelete]);
+
   if (!data || !sourceNode || !targetNode) return null;
 
   const sourceBox = boxOf(sourceNode.data as ClassEntity);
@@ -103,6 +120,8 @@ export function UmlRelationshipEdge({ id, data, source, target, style }: EdgePro
   const sourceLabel = endLabel(data.sourceMultiplicity, data.sourceRole);
   const targetLabel = endLabel(data.targetMultiplicity, data.targetRole);
 
+  const midPoint = pathPoints[Math.floor(pathPoints.length / 2)];
+
   return (
     <>
       <BaseEdge
@@ -122,6 +141,19 @@ export function UmlRelationshipEdge({ id, data, source, target, style }: EdgePro
           {targetLabel}
         </text>
       )}
+      <foreignObject x={midPoint.x - 9} y={midPoint.y - 9} width={18} height={18} className="uml-edge-delete-fo">
+        <button
+          type="button"
+          className="uml-edge-delete-btn nodrag nopan"
+          title="Borrar relación"
+          onClick={(e) => {
+            e.stopPropagation();
+            actions?.requestLock(id);
+          }}
+        >
+          ✕
+        </button>
+      </foreignObject>
     </>
   );
 }

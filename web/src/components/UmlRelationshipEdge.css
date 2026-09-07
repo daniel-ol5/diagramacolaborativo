@@ -6,3 +6,26 @@
   stroke: #fff;
   stroke-width: 3px;
 }
+
+.uml-edge-delete-fo {
+  overflow: visible;
+}
+
+.uml-edge-delete-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid #c92a2a;
+  background: #fff;
+  color: #c92a2a;
+  font-size: 10px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.uml-edge-delete-btn:hover {
+  opacity: 1;
+  background: #ffe3e3;
+}

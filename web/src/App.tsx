@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEven
 import ReactFlow, {
   Background,
   Controls,
+  type Connection,
   type NodeChange,
   type NodeMouseHandler,
   type ReactFlowInstance,
@@ -17,6 +18,8 @@ import { UmlRelationshipEdge } from "./components/UmlRelationshipEdge";
 import { UmlMarkerDefs } from "./components/UmlMarkerDefs";
 import { CursorOverlay } from "./components/CursorOverlay";
 import { LoginScreen, type Session } from "./components/LoginScreen";
+import { NewClassModal } from "./components/NewClassModal";
+import { RelationshipFormModal } from "./components/RelationshipFormModal";
 import { toFlowNodes } from "./lib/toFlowNodes";
 import { toFlowEdges } from "./lib/toFlowEdges";
 import { useCanonicalStore } from "./store/canonicalStore";
@@ -88,9 +91,18 @@ function RosterPanel() {
   );
 }
 
+interface PendingConnection {
+  sourceId: string;
+  sourceName: string;
+  targetId: string;
+  targetName: string;
+}
+
 function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [diagramKey, setDiagramKey] = useState<keyof typeof DIAGRAMS>("barberia");
+  const [showNewClass, setShowNewClass] = useState(false);
+  const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
   const selectNode = usePresentationStore((s) => s.selectNode);
   const selectedNodeId = usePresentationStore((s) => s.selectedNodeId);
   const model = useCanonicalStore((s) => s.model);
@@ -104,6 +116,16 @@ function App() {
   const liveDiagramId =
     session && diagramKey === DIAGRAMA_EN_VIVO ? DIAGRAMA_COLABORATIVO_ID : null;
   const collaboration = useCollaboration(liveDiagramId, session?.token ?? null, session?.userId ?? null);
+
+  // El error de una mutacion rechazada (LOCK_REQUIRED, DUPLICATE_ID, etc.)
+  // se auto-descarta, igual que los demas toasts — si no, un DUPLICATE_ID
+  // de hace un minuto se queda pegado en la barra para siempre.
+  useEffect(() => {
+    if (!collaboration.error) return;
+    const timer = setTimeout(() => collaboration.clearError(), 6000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo cuando cambia el mensaje
+  }, [collaboration.error]);
 
   const nodes = useMemo(() => (model ? toFlowNodes(model) : []), [model]);
   const edges = useMemo(() => (model ? toFlowEdges(model) : []), [model]);
@@ -139,6 +161,40 @@ function App() {
     }
   }
 
+  function handleCreateClass(name: string) {
+    const instance = reactFlowRef.current;
+    const center = instance
+      ? instance.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 })
+      : { x: 200, y: 200 };
+    const jitter = () => Math.round(Math.random() * 60 - 30);
+    collaboration.addClass({
+      id: crypto.randomUUID(),
+      name,
+      visibility: "PUBLIC",
+      isAbstract: false,
+      position: { x: center.x + jitter(), y: center.y + jitter() },
+      width: 240,
+      height: 180,
+      attributes: [],
+      methods: [],
+    });
+    setShowNewClass(false);
+  }
+
+  function handleConnect(connection: Connection) {
+    if (!connection.source || !connection.target || !model) return;
+    if (connection.source === connection.target) return; // una clase no se conecta consigo misma
+    const source = model.classes.find((c) => c.id === connection.source);
+    const target = model.classes.find((c) => c.id === connection.target);
+    if (!source || !target) return;
+    setPendingConnection({
+      sourceId: source.id,
+      sourceName: source.name,
+      targetId: target.id,
+      targetName: target.name,
+    });
+  }
+
   return (
     <div className="app">
       <header className="app__toolbar">
@@ -155,11 +211,21 @@ function App() {
         </select>
 
         {liveDiagramId && (
-          <span className="app__collab-status" data-status={collaboration.status}>
-            {collaboration.status === "conectado" && "● en vivo"}
-            {collaboration.status === "conectando" && "○ conectando…"}
-            {collaboration.status === "desconectado" && "○ desconectado"}
-            {collaboration.status === "error" && `⚠ ${collaboration.error ?? "error"}`}
+          <button type="button" className="app__new-class-btn" onClick={() => setShowNewClass(true)}>
+            + Clase
+          </button>
+        )}
+
+        {liveDiagramId && (
+          <span
+            className="app__collab-status"
+            data-status={collaboration.error ? "error" : collaboration.status}
+          >
+            {collaboration.error && `⚠ ${collaboration.error}`}
+            {!collaboration.error && collaboration.status === "conectado" && "● en vivo"}
+            {!collaboration.error && collaboration.status === "conectando" && "○ conectando…"}
+            {!collaboration.error && collaboration.status === "desconectado" && "○ desconectado"}
+            {!collaboration.error && collaboration.status === "error" && "⚠ error de conexión"}
           </span>
         )}
         {liveDiagramId && <RosterPanel />}
@@ -181,6 +247,11 @@ function App() {
             releaseLock: collaboration.releaseLock,
             renewLock: collaboration.renewLock,
             renameClass: collaboration.renameClass,
+            deleteClass: collaboration.deleteClass,
+            addAttribute: collaboration.addAttribute,
+            updateAttribute: collaboration.updateAttribute,
+            deleteAttribute: collaboration.deleteAttribute,
+            deleteRelationship: collaboration.deleteRelationship,
           }}
         >
           <ReactFlow
@@ -191,6 +262,7 @@ function App() {
             edgeTypes={edgeTypes}
             onNodeClick={handleNodeClick}
             onNodesChange={handleNodesChange}
+            onConnect={handleConnect}
             onInit={(instance) => {
               reactFlowRef.current = instance;
             }}
@@ -203,6 +275,21 @@ function App() {
           </ReactFlow>
         </CollaborationActionsContext.Provider>
       </div>
+
+      {showNewClass && <NewClassModal onCreate={handleCreateClass} onClose={() => setShowNewClass(false)} />}
+      {pendingConnection && (
+        <RelationshipFormModal
+          sourceId={pendingConnection.sourceId}
+          sourceName={pendingConnection.sourceName}
+          targetId={pendingConnection.targetId}
+          targetName={pendingConnection.targetName}
+          onSubmit={(relationship) => {
+            collaboration.addRelationship(relationship);
+            setPendingConnection(null);
+          }}
+          onClose={() => setPendingConnection(null)}
+        />
+      )}
     </div>
   );
 }

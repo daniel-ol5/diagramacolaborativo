@@ -41,6 +41,16 @@
   color: #e8590c;
 }
 
+.app__new-class-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid #3b5bdb;
+  background: #3b5bdb;
+  color: #fff;
+  cursor: pointer;
+}
+
 .app__roster {
   display: flex;
   gap: 4px;
