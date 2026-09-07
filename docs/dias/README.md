@@ -13,6 +13,6 @@ Sirve para tres cosas: retomar el hilo después de un día malo, preparar la def
 | [05](dia-05_2026-09-07.md) | 7 sep *(ejecutado el 6)* | Las 6 relaciones UML distinguibles: rombos, triángulos, multiplicidades y waypoints | 🟢 cerrado, 20/20 |
 | [06](dia-06_2026-09-08.md) | 8 sep *(ejecutado el 6)* | Cliente STOMP, actualización optimista y filtrado de eco — la colaboración en vivo | 🟢 cerrado, cero parpadeo |
 | [07](dia-07_2026-09-09.md) | 9 sep *(ejecutado el 6)* | Candados en la interfaz, lista de participantes y cursores ajenos | 🟢 cerrado |
-| [08](dia-08_2026-09-10.md) | 10 sep | Modo sin internet, cola en IndexedDB y modal de reconciliación — **hito H2** | 🟡 en curso |
+| [08](dia-08_2026-09-10.md) | 10 sep | Modo sin internet, cola en IndexedDB y modal de reconciliación — **hito H2** | ⬜ no ejecutado · backend listo, falta el navegador |
 
-**Leyenda:** 🟢 cerrado y verificado · 🟡 en curso · 🔴 bloqueado
+**Leyenda:** 🟢 cerrado y verificado · 🟡 en curso · ⬜ no ejecutado · 🔴 bloqueado
