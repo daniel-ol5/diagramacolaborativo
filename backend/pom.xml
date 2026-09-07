@@ -42,6 +42,16 @@
 		</dependency>
 
 		<!--
+			FreeMarker suelto y no spring-boot-starter-freemarker: el starter configura ademas
+			un ViewResolver para renderizar vistas web, que este proyecto no tiene. Aca las
+			plantillas generan archivos .java, no paginas.
+		-->
+		<dependency>
+			<groupId>org.freemarker</groupId>
+			<artifactId>freemarker</artifactId>
+		</dependency>
+
+		<!--
 			JJWT 0.12.x se parte en tres artefactos a proposito: solo jjwt-api entra en
 			scope compile, para que el codigo de la aplicacion no pueda importar clases de
 			la implementacion. impl y jackson son runtime: hacen falta para firmar/parsear

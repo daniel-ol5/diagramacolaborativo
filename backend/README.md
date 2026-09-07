@@ -402,6 +402,73 @@ se deriva del `userId` y no se reparte por orden de llegada: así no cambia al r
 
 Dos pestañas del mismo colaborador son dos sesiones pero **una** persona en el roster.
 
+---
+
+## Generador de backend (capas 1-2)
+
+`SpringBootGeneratorService.generar(modelo, paquete, artefacto)` devuelve un mapa
+*ruta relativa → contenido*, no escribe en disco. Así el empaquetador ZIP del Día 11 y el test de
+compilación usan el mismo código: si el generador escribiera archivos por su cuenta, el test
+verificaría algo distinto de lo que el usuario descarga.
+
+### "100% Compila" es un test, no una promesa
+
+`GeneradorCompilaTest` **genera y compila** los tres diagramas de referencia más `edge-cases`. Si
+una plantilla produce código inválido, la suite se pone roja. Es el criterio que el plan pide para
+el CI del Día 12, construido desde el primer día para no llegar allá con plantillas revisadas a
+ojo.
+
+Compila con el `JavaCompiler` del JDK en vez de invocar Maven: no necesita red, tarda un segundo
+en vez de un minuto, y el classpath que le pasa es el de este proyecto, que ya trae JPA y Spring
+Data — o sea justo lo que declara el `pom.xml` generado.
+
+### El proyecto generado trae su propio Maven Wrapper
+
+`mvnw`, `mvnw.cmd` y `.mvn/wrapper/`. El criterio del Día 11 es *"descargar el ZIP y compilarlo
+con `mvn clean compile`"*, y eso da por sentado que quien lo recibe tiene Maven instalado — cosa
+que no es cierta ni en la máquina donde se desarrolla esto. Verificado: `./mvnw clean compile`
+sobre el proyecto de la barbería termina en 0 y produce los `.class`.
+
+Los archivos del wrapper se copian **sin pasar por FreeMarker**: son scripts llenos de `${...}`
+propios que la plantilla intentaría interpolar.
+
+### Las dos listas de palabras reservadas (§11.2.1)
+
+| Identificador | En Java | En SQL | Qué hace el generador |
+| :--- | :--- | :--- | :--- |
+| `Order`, `Group`, `Table` | válidos | **reservados** | La clase conserva su nombre; la tabla va escapada: `@Table(name = "\"order\"")` |
+| `class`, `public` | **reservados** | válidos | El campo pasa a `_class`; la columna conserva el nombre: `@Column(name = "class")` |
+| `int` | **reservado** | **reservado** | Cae en las dos: `private Integer _int;` con `@Column(name = "\"int\"")` |
+
+Son conjuntos distintos aplicados en capas distintas. Con una sola lista se rompe por los dos
+lados: o se rechazan nombres de clase legales, o se genera DDL que no se puede ejecutar.
+
+### ⚠️ La trampa del import que ensombrece
+
+`edge-cases.json` tiene una clase llamada **`Table`**, y eso no lo arregla ninguna lista de
+palabras reservadas:
+
+- Con `import jakarta.persistence.Table;`, ese import **ensombrece** a la entidad `Table` del
+  mismo paquete (JLS 6.4.1) y la relación `Order`–`Table` deja de compilar.
+- Sin ese import, el `@Table` de la entidad se resuelve contra la clase del diagrama y tampoco
+  compila.
+
+**No hay un orden de imports que salve los dos casos.** La salida es calcular las colisiones
+contra los nombres de clase del diagrama y usar el nombre calificado sólo para las que chocan:
+`@jakarta.persistence.Table(...)` en ese archivo, `@Table(...)` en todos los demás. Vale igual
+para `List`, `UUID` o `String` — nada impide que alguien dibuje una clase así.
+
+### Otras decisiones
+
+| Decisión | Motivo |
+| :--- | :--- |
+| Toda la lógica en `ModeloDeGeneracion`, ninguna en las plantillas | Un `.ftl` no compila, no tiene tipos y falla recién al renderizar. Las plantillas sólo interpolan cadenas ya resueltas. |
+| Los dos lados de una relación salen de un único cálculo | El `mappedBy` tiene que nombrar un campo que exista. Escritos por separado se desincronizan, y eso Hibernate lo rechaza **al arrancar**, no al compilar. |
+| La subclase no redeclara `@Id` | Lo hereda. Redeclararlo es un error de arranque, no de compilación: se escaparía del test. |
+| Las clases abstractas no llevan repositorio | No se consultan por sí solas. Sus subclases sí, con el tipo de id del padre. |
+| La estrategia de `@GeneratedValue` sigue al tipo de la PK | Una PK `UUID` con `IDENTITY` no arranca, y una `Long` con `GenerationType.UUID` tampoco. |
+| `COMPOSITION` propaga el borrado | Las partes no viven sin el todo. Sin `orphanRemoval`, borrar una `Cita` deja sus `Pago` huérfanos. |
+
 ## Estructura
 
 Los paquetes de §6 existen desde el día 1 (los vacíos llevan `.gitkeep`) para evitar
