@@ -4,6 +4,8 @@
  * congelado) — no adivinados.
  */
 
+import type { OfflineSyncBroadcast } from "./offline";
+
 export interface StompMutationMessage {
   op: string;
   targetId: string | null;
@@ -49,10 +51,10 @@ export interface LockDeniedMessage {
   expiresInMs: number;
 }
 
-/** Ojo: Participante usa "nombre" (espaniol) — CursorBroadcastMessage/LockBroadcastMessage usan "userName". */
+/** D-24: unificado a "userName" — los tres mensajes que llevan una persona usan el mismo campo. */
 export interface Participante {
   userId: string;
-  nombre: string;
+  userName: string;
   color: string;
 }
 
@@ -80,7 +82,11 @@ export interface PresenceMessage {
   participants: Participante[];
 }
 
-export type TopicEvent = LockBroadcastMessage | CursorBroadcastMessage | PresenceMessage;
+export type TopicEvent =
+  | LockBroadcastMessage
+  | CursorBroadcastMessage
+  | PresenceMessage
+  | OfflineSyncBroadcast;
 
 export function esBroadcastDeMutacion(body: unknown): body is StompBroadcastMessage {
   return typeof body === "object" && body !== null && "op" in body;

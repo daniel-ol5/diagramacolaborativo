@@ -27,7 +27,7 @@ export interface CursorInfo {
 
 export interface RosterEntry {
   userId: string;
-  nombre: string;
+  userName: string;
   color: string;
 }
 

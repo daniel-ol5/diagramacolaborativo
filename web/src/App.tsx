@@ -78,10 +78,10 @@ function RosterPanel() {
   const roster = useCollaborationStore((s) => s.roster);
   if (roster.length === 0) return null;
   return (
-    <div className="app__roster" title={roster.map((p) => p.nombre).join(", ")}>
+    <div className="app__roster" title={roster.map((p) => p.userName).join(", ")}>
       {roster.map((p) => (
         <span key={p.userId} className="app__roster-chip" style={{ background: p.color }}>
-          {p.nombre.split(" ")[0]}
+          {p.userName.split(" ")[0]}
         </span>
       ))}
     </div>

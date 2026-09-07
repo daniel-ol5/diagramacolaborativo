@@ -144,7 +144,7 @@ export function useCollaboration(
 
     function aplicarRoster(participantes: Participante[]) {
       const store = useCollaborationStore.getState();
-      store.setRoster(participantes.map((p) => ({ userId: p.userId, nombre: p.nombre, color: p.color })));
+      store.setRoster(participantes.map((p) => ({ userId: p.userId, userName: p.userName, color: p.color })));
       store.pruneCursors(new Set(participantes.map((p) => p.userId)));
     }
 
@@ -195,7 +195,7 @@ export function useCollaboration(
             store.setLock({
               targetId: body.targetId,
               userId: body.userId ?? "",
-              userName: body.userName ?? "",
+              userName: body.userName ?? (body as unknown as { nombre?: string }).nombre ?? "",
               color: body.color ?? "#999",
               ttl: body.ttl ?? 5000,
             });
@@ -228,7 +228,7 @@ export function useCollaboration(
             if (body.userId !== store.myUserId) {
               store.setCursor({
                 userId: body.userId,
-                userName: body.userName,
+                userName: body.userName ?? (body as unknown as { nombre?: string }).nombre ?? "Usuario",
                 color: body.color,
                 x: body.x,
                 y: body.y,
