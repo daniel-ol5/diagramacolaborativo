@@ -23,12 +23,18 @@ spring:
 server:
   port: 8080
 
-# JWT. El secreto por defecto es SOLO para desarrollo local: en AWS se inyecta
-# JWT_SECRET por variable de entorno. HS256 exige una clave de al menos 32 bytes;
-# esta tiene 64 y JwtService valida el largo al arrancar en vez de fallar recien
-# al firmar el primer token.
+# JWT. NO hay valor por defecto, y es deliberado: sin JWT_SECRET la aplicacion no
+# arranca. Antes habia uno y el comentario decia "no usar en produccion", pero eso
+# no lo impedia — un despliegue que se olvidara de la variable levantaba perfecto
+# firmando con una clave publicada en el repositorio, sin error y sin aviso.
+#
+# Para desarrollo local, exportala una vez:
+#   export JWT_SECRET="$(openssl rand -base64 48)"
+#
+# HS256 exige al menos 32 bytes y JwtService lo valida al arrancar, en vez de
+# fallar recien al firmar el primer token.
 jwt:
-  secret: ${JWT_SECRET:modelcollab-desarrollo-local-clave-hs256-no-usar-en-produccion-64b}
+  secret: ${JWT_SECRET:}
   expiration-ms: ${JWT_EXPIRATION_MS:28800000}
 
 # CU16. La clave NO tiene valor por defecto a proposito: sin ella la aplicacion

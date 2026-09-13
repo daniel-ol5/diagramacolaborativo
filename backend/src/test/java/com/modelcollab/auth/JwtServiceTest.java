@@ -72,6 +72,45 @@ class JwtServiceTest {
                 .hasMessageContaining("32 bytes");
     }
 
+    @Test
+    @DisplayName("SIN secreto la aplicación no arranca: antes arrancaba con una clave pública")
+    void sinSecretoNoArranca() {
+        // Este es el fallo que habia que volver ruidoso. Con un valor por defecto, un
+        // despliegue que se olvidara de inyectar JWT_SECRET levantaba perfecto y firmaba con
+        // una clave publicada en el repositorio: cualquiera que la leyera podia fabricarse un
+        // token valido para cualquier usuario. No habia error ni aviso — funcionaba.
+        //
+        // Es lo contrario de la contrasenia de la base, que si conserva su valor por defecto:
+        // esa falla CERRADA (no conecta y se nota), y esta fallaba ABIERTA.
+        for (String vacio : new String[] {null, "", "   "}) {
+            assertThatThrownBy(() -> new JwtService(vacio, OCHO_HORAS_MS))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("JWT_SECRET");
+        }
+    }
+
+    @Test
+    @DisplayName("El secreto de desarrollo publicado se rechaza aunque lo pongan a mano")
+    void secretoQuemado() {
+        // El camino que cierra: alguien clona el repositorio, ve el fallo al arrancar, busca en
+        // el historial cual era el valor por defecto y lo exporta tal cual. El mensaje tiene
+        // que explicarle por que eso no sirve, no repetirle que falta la variable.
+        assertThatThrownBy(() -> new JwtService(
+                "modelcollab-desarrollo-local-clave-hs256-no-usar-en-produccion-64b",
+                OCHO_HORAS_MS))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("publicado en el repositorio");
+    }
+
+    @Test
+    @DisplayName("El mensaje dice cómo generar uno, en vez de dejar al que despliega buscando")
+    void elMensajeEsAccionable() {
+        // Un error que dice "falta la variable" y nada mas produce un secreto elegido a mano,
+        // que es como aparece "cambiar123" en produccion.
+        assertThatThrownBy(() -> new JwtService("", OCHO_HORAS_MS))
+                .hasMessageContaining("openssl rand");
+    }
+
     private static User usuario(UUID id, String email) {
         User user = new User(email, "$2a$10$hash-irrelevante-para-este-test", "Ana Pérez");
         // El id lo asigna JPA al persistir; acá se inyecta porque el test no toca la base.

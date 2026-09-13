@@ -40,7 +40,9 @@ public record Participante(UUID userId, String userName, String color) {
      *       con visión normal: también con la protanopia y la deuteranopia simuladas
      *       (Viénot et al., 1999). Cerca del 8 % de los varones tiene alguna de las dos, así
      *       que en un tribunal de cinco personas no es una hipótesis remota.</li>
-     *   <li><b>Lejos de la tinta del lienzo.</b> ΔE ≥ 25 respecto del negro y del gris oscuro.
+     *   <li><b>Lejos de la tinta del lienzo.</b> ΔE ≥ 25 respecto de los cuatro colores con
+     *       los que el lienzo dibuja: el borde de las clases, el texto del nombre y el trazo del
+     *       conector en sus dos estados. El peor caso de esta paleta está en ΔE 39,8.
      *       Esta condición no la exige ninguna norma y la agregamos igual: un cursor del color
      *       del trazo del propio diagrama se distingue perfecto de los otros siete colores y
      *       no se ve igual. La métrica de separación entre colores no puede detectar eso

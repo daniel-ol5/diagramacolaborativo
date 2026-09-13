@@ -42,7 +42,25 @@ class ParticipantePaletaTest {
     /** Distancia mínima a la tinta del diagrama, para que el cursor no parezca un trazo más. */
     private static final double DISTANCIA_A_LA_TINTA = 25.0;
 
-    private static final List<String> TINTA_DEL_LIENZO = List.of("#000000", "#333333");
+    /**
+     * Los colores con los que el lienzo dibuja el diagrama, <b>verificados en el código del
+     * frontend</b>, no supuestos.
+     *
+     * <p>Importa que estén escritos acá con su valor y no sólo como "la tinta". Cuando se eligió
+     * la paleta, la tinta se había asumido en {@code #000000} y {@code #333333}; el borde real de
+     * las clases es {@code #1a1a2e} y el trazo del conector en reposo es un gris bastante más
+     * claro. El supuesto resultó suficientemente cerca en lo que manda —el borde y el texto, que
+     * son la tinta dominante— pero eso hay que poder comprobarlo, no recordarlo.
+     *
+     * <p><b>Si el lienzo cambia estos colores, este umbral pasa a medir contra el color
+     * equivocado.</b> El que lea esto tiene que poder darse cuenta sin reconstruir de dónde
+     * salió el número.
+     */
+    private static final List<String> TINTA_DEL_LIENZO = List.of(
+            "#1a1a2e",  // borde de las clases
+            "#000000",  // texto del nombre de clase
+            "#555555",  // trazo del conector seleccionado
+            "#b1b1b7"); // trazo del conector en reposo
 
     /** La paleta que había antes de medirla. Se conserva para el test invertido. */
     private static final List<String> PALETA_VIEJA = List.of(
