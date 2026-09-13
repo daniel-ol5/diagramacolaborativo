@@ -25,7 +25,7 @@ Donde **no** se agrupa, y el motivo:
 | CU13 Validar diagrama / **CU14 Generar backend** | Es un `«include»`, y en UML un `«include»` **es** un caso de uso propio. Además tiene valor solo: se puede validar sin descargar nada |
 | CU03 Modelar clases / **CU04 Modelar relaciones** | Las relaciones tienen semántica propia —multiplicidad, lado propietario, navegabilidad— que decide el esquema de base de datos generado |
 
-Resultado: **19 casos de uso**, de los cuales **15 entran en el parcial** (ciclos 1 a 3).
+Resultado: **19 casos de uso**, de los cuales **18 entran en el parcial** (ciclos 1 a 3). El ciclo 4 queda para el examen final.
 
 ---
 
@@ -200,7 +200,7 @@ Endpoint: `POST /api/v1/diagrams/{id}/sync-offline`.
 
 | # | Caso de uso | Actor | RF | Ciclo | Estado |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| **CU18** | Intercambiar modelos vía XMI 2.1 | Usuario | RF-09 | 4 | ⬜ |
+| **CU18** | Intercambiar modelos vía XMI 2.1 | Usuario | RF-09 | 3 | ⬜ |
 
 *Sistema de apoyo:* Sparx Enterprise Architect.
 
@@ -214,8 +214,8 @@ Architect, reimportar y no perder nada. La ida sin la vuelta no demuestra nada.
 
 | # | Caso de uso | Actor | RF | Ciclo | Estado |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| **CU16** | Modelar por comando de voz o texto | Usuario | RF-02 | 4 | ⬜ |
-| **CU17** | Importar diagrama desde foto | Usuario | RF-03 | 4 | ⬜ |
+| **CU16** | Modelar por comando de voz o texto | Usuario | RF-02 | 3 | ⬜ |
+| **CU17** | Importar diagrama desde foto | Usuario | RF-03 | 3 | ⬜ |
 
 *Sistema de apoyo:* el servicio de IA generativa (Gemini), que nunca inicia un caso de uso:
 responde a una petición del sistema.
@@ -284,11 +284,11 @@ de uso (sección 2.3).
 | :--- | :---: | :---: | :---: | :---: |
 | **Ciclo 1** | 7 | 5 | 2 | 0 |
 | **Ciclo 2** | 4 | 4 | 0 | 0 |
-| **Ciclo 3** | 4 | 0 | 2 | 2 |
-| **Ciclo 4** *(examen)* | 4 | 0 | 0 | 4 |
+| **Ciclo 3** | 7 | 0 | 2 | 5 |
+| **Ciclo 4** *(examen)* | 1 | 0 | 0 | 1 |
 | **Total** | **19** | **9** | **4** | **6** |
 
-**En el parcial: 15 casos de uso.** El núcleo colaborativo (RF-04) está completo y
+**En el parcial: 18 casos de uso.** El núcleo colaborativo (RF-04) está completo y
 verificado; lo pendiente se concentra en generación, trabajo sin conexión e IA.
 
 ---
@@ -302,5 +302,5 @@ Fuentes en [`../diagramas/`](../diagramas/):
 | Contexto general — actores y paquetes | `casos-de-uso-general.puml` |
 | Ciclo 1 — acceso, modelado y colaboración | `casos-de-uso-ciclo1.puml` |
 | Ciclo 2 — proyectos y colaboradores | `casos-de-uso-ciclo2.puml` |
-| Ciclo 3 — generación y trabajo sin conexión | `casos-de-uso-ciclo3.puml` |
-| Ciclo 4 — IA, XMI y app móvil *(examen final)* | `casos-de-uso-ciclo4.puml` |
+| Ciclo 3 — generación, trabajo sin conexión, IA e interoperabilidad | `casos-de-uso-ciclo3.puml` |
+| Ciclo 4 — app móvil generada *(examen final)* | `casos-de-uso-ciclo4.puml` |

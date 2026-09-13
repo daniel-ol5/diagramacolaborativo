@@ -48,9 +48,9 @@ visible sea bajo. Uno rutinario va después, aunque el usuario lo use todos los 
 | **CU01** | Registrarse | 🟢 | Rutinario | **1** |
 | **CU08** | Gestionar proyectos | 🟢 | Rutinario | **2** |
 | **CU09** | Gestionar diagramas | 🟢 | Rutinario, pero todo lo demás lo necesita | **2** |
-| **CU16** | Modelar por comando de voz o texto | 🟡 | Alto valor, ninguna dependencia hacia abajo | 4 |
-| **CU17** | Importar diagrama desde foto | 🟡 | Ídem | 4 |
-| **CU18** | Intercambiar modelos vía XMI | 🟡 | Ídem | 4 |
+| **CU16** | Modelar por comando de voz o texto | 🟡 | Alto valor. Depende de un servicio externo: si la respuesta no es determinista, el guardarraíl es lo que evita que la IA invente un dominio entero | **3** |
+| **CU17** | Importar diagrama desde foto | 🟡 | Alto valor, ninguna dependencia hacia abajo. **Primer candidato a recortarse** si hay atraso | **3** |
+| **CU18** | Intercambiar modelos vía XMI | 🟡 | El criterio de aceptación es el viaje de ida y vuelta contra una herramienta real, que no se controla | **3** |
 
 ---
 
@@ -136,9 +136,14 @@ solo dato insertado a mano en la base.
 
 ### CICLO 3 — Generación de código y trabajo sin conexión
 
-> **Objetivo:** cerrar la promesa del proyecto —de un diagrama sale código que compila— y
-> que la herramienta funcione sin internet.
-> **Riesgo que elimina:** la invariante "100% compila" y la resolución de conflictos.
+> **Objetivo:** cerrar la promesa del proyecto —de un diagrama sale código que compila—, que
+> la herramienta funcione sin internet, y sumar los modos de modelado asistido.
+> **Riesgo que elimina:** la invariante "100% compila", la resolución de conflictos y la
+> dependencia de servicios externos.
+>
+> **Es el ciclo más pesado y concentra todo lo que falta.** Los ciclos 1 y 2 están cerrados;
+> acá está el trabajo restante del parcial entero, y por lo tanto todo el riesgo de no
+> llegar. El orden de recorte, si hiciera falta, empieza por CU17.
 
 | # | Caso de uso | Estado |
 | :--- | :--- | :---: |
@@ -146,6 +151,9 @@ solo dato insertado a mano en la base.
 | CU13 | Validar diagrama | ⬜ |
 | CU14 | Generar backend Spring Boot | 🟡 plantillas listas, falta el empaquetado |
 | CU15 | Alternar vista UML / Entidad-Relación | ⬜ |
+| CU16 | Modelar por comando de voz o texto | ⬜ |
+| CU17 | Importar diagrama desde foto | ⬜ |
+| CU18 | Intercambiar modelos vía XMI 2.1 | ⬜ |
 
 **Resultado verificable:** cortar la red, hacer tres cambios, reconectar y obtener el
 informe de reconciliación con lo aplicado y lo descartado, **nombrando los elementos**; y
@@ -153,20 +161,22 @@ descargar el proyecto generado de un diagrama y compilarlo.
 
 ---
 
-### CICLO 4 — Fuera del parcial *(examen final)*
+### CICLO 4 — Examen final
 
-> **Objetivo:** los tres modos de modelado asistido y la app móvil generada.
+> **Objetivo:** la app móvil generada, con asistente de voz que funciona sin internet.
 
 | # | Caso de uso | Sistema de apoyo |
 | :--- | :--- | :--- |
-| CU16 | Modelar por comando de voz o texto | Servicio de IA generativa |
-| CU17 | Importar diagrama desde foto | Servicio de IA generativa |
-| CU18 | Intercambiar modelos vía XMI 2.1 | Herramienta CASE externa |
 | CU19 | Generar app móvil con asistente de voz | Motor de voz del dispositivo |
 
-Se dejan fuera del parcial **por prioridad, no por dificultad**. Ninguno es precondición de
-otro caso de uso: son hojas del árbol de dependencias. Eso los convierte en lo primero que
-se recorta si hay atraso, y en lo último que se construye si no lo hay.
+Un solo caso de uso, y aun así un ciclo entero: CU19 absorbe la derivación automática de
+intenciones desde el metamodelo, las plantillas de la app, el clasificador de intenciones y
+el extractor de datos, la base local y la sincronización. En el plan de ejecución ocupa una
+fase completa.
+
+> **Su riesgo ya está eliminado**, aunque el caso de uso sea el último. El spike del ciclo 1
+> comprobó en un teléfono real, en modo avión, que el reconocimiento de voz funciona sin
+> internet. Averiguarlo recién en este ciclo habría sido fatal.
 
 > **El riesgo de CU19 ya está eliminado**, aunque el caso de uso sea el último. El spike del
 > ciclo 1 comprobó en un teléfono real, en modo avión, que el reconocimiento de voz funciona
@@ -180,8 +190,8 @@ se recorta si hay atraso, y en lo último que se construye si no lo hay.
 | :---: | :---: | :---: | :---: | :---: |
 | **1** | 7 | 5 | 2 | 0 |
 | **2** | 4 | 4 | 0 | 0 |
-| **3** | 4 | 0 | 2 | 2 |
-| **4** *(examen)* | 4 | 0 | 0 | 4 |
+| **3** | 7 | 0 | 2 | 5 |
+| **4** *(examen)* | 1 | 0 | 0 | 1 |
 | **Total** | **19** | **9** | **4** | **6** |
 
 **Los ciclos 1 y 2 están cerrados y verificados. El ciclo 3 está en curso.**

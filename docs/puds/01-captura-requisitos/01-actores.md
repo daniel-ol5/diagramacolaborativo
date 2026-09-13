@@ -133,32 +133,35 @@ inutilizable; renombrarla sin bloqueo produciría pérdidas silenciosas.
 
 ---
 
-## Sistemas externos: por qué no figuran como actores del parcial
+## Sistemas externos: interfaces, no actores del diagrama
 
 En UML **un sistema externo sí puede ser actor**: la definición es *"alguien o algo fuera
 del sistema que interactúa con él"*. Si ModelCollab le envía una petición a un servicio de
 IA y espera su respuesta, ese servicio está fuera de la frontera y participa del caso de
 uso.
 
-La distinción que conviene manejar es otra:
+La distinción que resuelve cómo tratarlos es otra:
 
 | | |
 | :--- | :--- |
-| **Actor primario** | Inicia el caso de uso y persigue un objetivo propio |
-| **Actor de apoyo** | Sirve al caso de uso, pero nunca lo inicia |
+| **Actor primario** | **Inicia** el caso de uso y persigue un objetivo propio |
+| **Actor de apoyo** | **Sirve** al caso de uso, pero nunca lo inicia |
 
-Los tres sistemas externos de este proyecto son **de apoyo**, y todos participan
-**únicamente en casos de uso posteriores al parcial**:
+**Decisión de este documento: el modelo de casos de uso muestra sólo actores primarios.**
+Los sistemas externos se documentan como **interfaces**, acá y en el modelo de diseño, donde
+aparecen como adaptadores concretos.
 
-| Sistema | Participa en | Ciclo |
-| :--- | :--- | :---: |
-| Servicio de IA generativa (*Gemini*) | CU16 modelado por voz y texto · CU17 importación desde foto | 4 |
-| Herramienta CASE (*Sparx Enterprise Architect*) | CU18 intercambio XMI 2.1 | 4 |
-| Motor de reconocimiento de voz del dispositivo | CU19 app móvil generada | 4 |
+| Sistema externo | Interviene en | Naturaleza |
+| :--- | :--- | :--- |
+| Servicio de IA generativa | CU16 modelado por voz y texto · CU17 importación desde foto | Se le consulta y responde. Nunca inicia |
+| Herramienta CASE (*Sparx Enterprise Architect*) | CU18 intercambio XMI 2.1 | Produce y consume archivos. El sistema no le habla directamente |
+| Motor de reconocimiento de voz del dispositivo | CU19 app móvil generada | Actor del **sistema generado**, no de ModelCollab |
 
-Por eso **no aparecen en el modelo de casos de uso de los ciclos 1 a 3**. Se documentan
-acá para dejar registrada la frontera del sistema, y se incorporan al modelo cuando se
-aborden sus casos de uso.
+**El motivo de la decisión:** los tres son intercambiables sin que cambie ningún caso de
+uso. Si mañana el servicio de IA se reemplaza por otro, o la herramienta CASE por cualquier
+otra que lea XMI 2.1, **el objetivo del Usuario no cambia en absoluto** — sigue siendo
+*"dictar una orden y que aparezca en el lienzo"*. Un actor cuya sustitución no altera ningún
+caso de uso es una dependencia técnica, y su lugar natural es el modelo de diseño.
 
 > **Nota sobre el motor de voz.** Es actor del **sistema generado**, no de ModelCollab. Su
 > viabilidad ya está probada: el spike del ciclo 1 comprobó en un teléfono real, en modo
@@ -201,8 +204,8 @@ Fuente: [`../diagramas/actores.puml`](../diagramas/actores.puml)
                                                     (autorización, no actores)
 ```
 
-**Dos actores en todo el parcial.** Los sistemas externos y el evento temporal quedan fuera
-por los motivos de arriba.
+**Dos actores en todo el modelo de casos de uso.** Los sistemas externos se documentan como
+interfaces y el vencimiento del bloqueo como evento temporal, por los motivos de arriba.
 
 ---
 
@@ -212,10 +215,10 @@ por los motivos de arriba.
 | :--- | :--- | :---: |
 | **Visitante** | Ciclos 1–3 *(parcial)* | 🟢 |
 | **Usuario** | Ciclos 1–3 *(parcial)* | 🟢 |
-| *Gemini* | Ciclo 4, actor de apoyo | ⬜ |
-| *Enterprise Architect* | Ciclo 4, actor de apoyo | ⬜ |
-| *Motor STT del dispositivo* | Ciclo 4, actor del sistema generado | 🟡 viabilidad probada |
+| *Servicio de IA generativa* | Interfaz externa — CU16, CU17 (ciclo 3) | ⬜ |
+| *Herramienta CASE* | Interfaz externa — CU18 (ciclo 3) | ⬜ |
+| *Motor de voz del dispositivo* | Interfaz del **sistema generado** — CU19 (ciclo 4) | 🟡 viabilidad probada |
 
-**El modelo de casos de uso del parcial tiene dos actores: Visitante y Usuario.**
+**El modelo de casos de uso tiene dos actores, los dos humanos: Visitante y Usuario.**
 
 **Leyenda:** 🟢 implementado y verificado · 🟡 parcial · ⬜ no implementado
