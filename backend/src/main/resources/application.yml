@@ -31,6 +31,16 @@ jwt:
   secret: ${JWT_SECRET:modelcollab-desarrollo-local-clave-hs256-no-usar-en-produccion-64b}
   expiration-ms: ${JWT_EXPIRATION_MS:28800000}
 
+# CU16. La clave NO tiene valor por defecto a proposito: sin ella la aplicacion
+# arranca igual, en modo simulado, y lo dice en el log de arranque. Si no arrancara,
+# el backend entero quedaria rehen de un servicio de terceros.
+modelcollab:
+  ai:
+    api-key: ${GEMINI_API_KEY:}
+    model: ${GEMINI_MODEL:gemini-2.0-flash}
+    endpoint: ${GEMINI_ENDPOINT:https://generativelanguage.googleapis.com/v1beta}
+    timeout-ms: ${GEMINI_TIMEOUT_MS:8000}
+
 logging:
   level:
     com.modelcollab: DEBUG
