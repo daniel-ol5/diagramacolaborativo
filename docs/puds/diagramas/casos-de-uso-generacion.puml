@@ -1,0 +1,50 @@
+@startuml casos-de-uso-generacion
+' Paquetes F, G y H - Generacion, interoperabilidad e IA
+left to right direction
+
+actor "Colaborador" as C
+actor "Editor" as ED
+actor "Gemini" as G
+actor "Enterprise Architect" as EA
+actor "Motor STT\ndel dispositivo" as STT
+
+rectangle "F. Generacion de codigo" {
+  usecase "CU-25 Validar diagrama\nantes de generar" as CU25
+  usecase "CU-26 Generar backend\nSpring Boot" as CU26
+  usecase "CU-27 Generar app movil\ncon asistente de voz" as CU27
+}
+
+rectangle "G. Interoperabilidad" {
+  usecase "CU-28 Exportar a XMI 2.1" as CU28
+  usecase "CU-29 Importar desde XMI 2.1" as CU29
+}
+
+rectangle "H. Asistencia por IA" {
+  usecase "CU-30 Modelar por\ncomando de texto" as CU30
+  usecase "CU-31 Modelar por\ncomando de voz" as CU31
+  usecase "CU-32 Importar diagrama\ndesde foto" as CU32
+}
+
+C --> CU25
+C --> CU26
+C --> CU27
+C --> CU28
+C --> CU29
+EA --> CU29
+ED --> CU30
+ED --> CU31
+ED --> CU32
+G --> CU30
+G --> CU31
+G --> CU32
+STT --> CU27
+
+CU26 ..> CU25 : <<include>>
+
+note bottom of CU25
+  Precondicion real, no adorno: si hay errores
+  bloqueantes la descarga se impide.
+  Generar un ZIP que no compila es peor
+  que no generarlo
+end note
+@enduml

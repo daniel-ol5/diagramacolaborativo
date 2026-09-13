@@ -1,0 +1,43 @@
+@startuml casos-de-uso-general
+' ModelCollab - Diagrama de contexto: actores y paquetes de casos de uso
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Visitante" as V
+actor "Colaborador" as C
+actor "Propietario" as OW
+actor "Editor" as ED
+actor "Lector" as VI
+actor "Tiempo" as T
+actor "Gemini" as G
+actor "Enterprise Architect" as EA
+
+C <|-- OW
+C <|-- ED
+C <|-- VI
+
+rectangle "ModelCollab" {
+  usecase "A. Gestion de acceso" as A
+  usecase "B. Proyectos y diagramas" as B
+  usecase "C. Colaboracion en tiempo real" as CC
+  usecase "D. Modelado" as D
+  usecase "E. Trabajo sin conexion" as E
+  usecase "F. Generacion de codigo" as F
+  usecase "G. Interoperabilidad XMI" as GG
+  usecase "H. Asistencia por IA" as H
+}
+
+V --> A
+C --> B
+OW --> CC
+ED --> CC
+VI --> CC
+T --> CC
+ED --> D
+ED --> E
+C --> F
+C --> GG
+EA --> GG
+ED --> H
+G --> H
+@enduml

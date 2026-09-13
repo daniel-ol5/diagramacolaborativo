@@ -1,0 +1,38 @@
+@startuml actores
+' ModelCollab - Actores del sistema (PUDS, modelo de casos de uso)
+left to right direction
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+
+actor "Visitante" as V
+actor "Colaborador" as C <<abstracto>>
+actor "Propietario\n(OWNER)" as OW
+actor "Editor\n(EDITOR)" as ED
+actor "Lector\n(VIEWER)" as VI
+
+C <|-- OW
+C <|-- ED
+C <|-- VI
+
+note right of C
+  El rol es **por proyecto**, no por usuario.
+  La misma persona puede ser Propietario
+  de un proyecto y Lector de otro.
+  Origen: tabla project_members
+end note
+
+package "Actores no humanos" {
+  actor "Tiempo" as T <<sistema>>
+  actor "Gemini" as G <<sistema externo>>
+  actor "Enterprise Architect" as EA <<sistema externo>>
+  actor "Motor STT\ndel dispositivo" as STT <<sistema externo>>
+}
+
+note bottom of T
+  Dispara la expiracion de bloqueos (TTL 5 s)
+  y la caducidad de invitaciones.
+  Nadie pulsa nada: el sistema actua solo.
+end note
+
+V ..> C : se registra\ne inicia sesion
+@enduml
