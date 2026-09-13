@@ -23,6 +23,15 @@
 -- (scripts/seed-dev.sql lo documenta como tal), no una forma de "arreglar"
 -- datos de produccion -- para eso, cualquier mutacion tiene que pasar por
 -- el pipeline real (STOMP), nunca por SQL de mano.
+--
+-- CORRERLO CON NADIE CONECTADO. Esto escribe por SQL directo, no por el
+-- pipeline de mutaciones: no hay ninguna difusion que le avise a un cliente
+-- ya conectado. Si alguien tiene el diagrama abierto, su sesion se queda en
+-- el mutationVersion viejo (47, digamos) mientras el servidor vuelve a 1 --
+-- su detector de huecos de secuencia ve el numero ir HACIA ATRAS, un caso
+-- que el protocolo no contempla en ningun lado, y lo que muestre desde ahi
+-- no es predecible. Es tentador correr esto justo antes de una demo con la
+-- app ya abierta en dos navegadores -- ese es exactamente el peor momento.
 
 BEGIN;
 
