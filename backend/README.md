@@ -605,6 +605,71 @@ lector en flujo sólo ve las cabeceras locales, y los permisos viven en el direc
 el lector equivocado, `getUnixMode()` devuelve siempre 0 y el test diría "no hay permiso" aunque
 el ZIP estuviera perfecto.
 
+---
+
+## CU18: interoperabilidad XMI 2.1
+
+| Método | Ruta | Quién |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/diagrams/{id}/export-xmi` | cualquier miembro, **VIEWER incluido** (exportar es leer) |
+| `POST` | `/api/v1/projects/{pId}/import-xmi` (multipart `file`) | **OWNER o EDITOR** (importar crea contenido) |
+
+### Dos capas en un mismo archivo
+
+El documento tiene **UML estándar** —paquetes, clases, atributos, operaciones, asociaciones,
+generalizaciones— y una **`xmi:Extension`** propia, en su namespace. No es un atajo: es la única
+forma de cumplir los dos objetivos a la vez.
+
+- La parte estándar es lo que **otra herramienta sabe leer**: no depende de nada nuestro.
+- La extensión es lo que hace que **el viaje de ida y vuelta no pierda nada**. UML no tiene dónde
+  guardar la posición de una clase, los waypoints de un conector, si un atributo es clave
+  primaria, de qué lado va la FK, ni **el orden de las listas**.
+
+Es el mismo mecanismo que usa Enterprise Architect para sus datos de diagrama, así que no es una
+rareza: es para lo que existe el elemento.
+
+> **Fidelidad declarada.** Importar *nuestro* XMI es sin pérdida. Importar el de otra herramienta
+> recupera la estructura estándar y aplica los defaults de §7 al resto: las clases entran en una
+> grilla, y un `MANY_TO_MANY` ajeno llega como `ASSOCIATION` porque UML les da la misma
+> agregación (`none`) y son indistinguibles sin extensión. Prometer más sería mentir.
+
+### El criterio es el viaje, no la exportación
+
+Un exportador que tira la mitad de los datos produce un archivo perfectamente válido. `XmiRoundTripTest`
+exporta, reimporta y compara **el modelo canónico entero**: los cuatro fixtures tienen que volver
+idénticos. Además comprueba la forma que otra herramienta espera — namespaces, `xmi:version`,
+`xmi:id` únicos, clases anidadas en su paquete, y que **toda referencia resuelva** a un id que
+existe.
+
+> **Lo que NO se pudo verificar:** validación contra el XSD oficial de XMI 2.1. La URL de OMG
+> redirige a un 404 (`/spec/spec/...`), así que el esquema no es alcanzable. Validar contra un XSD
+> escrito por nosotros no probaría nada sobre otras herramientas, así que no se hizo. **La única
+> prueba real es abrir el archivo en Enterprise Architect**; los `.xmi` de la barbería y el
+> inventario están en `evidencias/` para eso.
+
+### La importación es un `BULK_MERGE`
+
+Una sola transacción, un solo número de secuencia y **un único evento** a la sala (§8.1). Emitir
+las N clases por separado haría parpadear N veces el lienzo de cada colaborador.
+
+Es un **reemplazo** y no una fusión elemento por elemento: importar trae un modelo completo con
+sus propios identificadores, y mezclarlo dejaría dos jerarquías que nadie dibujó.
+
+**Se valida antes de aplicar**, y se crea un diagrama *nuevo*: si el XMI trae algo que el
+metamodelo no acepta —herencia múltiple, por ejemplo— se responde 422 con el informe de CU13 y
+**no se crea nada**. Rechazarlo después de crear dejaría un diagrama inválido que alguien tiene
+que ir a borrar a mano.
+
+> Un `BULK_MERGE` **no se puede reconciliar offline**: reemplaza el diagrama entero, así que
+> aplicarlo al reconectar borraría de un saque lo que los demás hicieron mientras tanto, sin que
+> ninguna regla de §9.2 pudiera detectarlo. El rebase lo descarta con ese motivo.
+
+### XXE
+
+El importador acepta archivos de cualquiera, así que deshabilita DTDs y entidades externas. Sin
+eso, un XMI con una entidad externa haría que el servidor leyera archivos suyos y los devolviera
+dentro del diagrama. Hay un test que lo comprueba.
+
 ## Estructura
 
 Los paquetes de §6 existen desde el día 1 (los vacíos llevan `.gitkeep`) para evitar

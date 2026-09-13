@@ -131,6 +131,18 @@ public class OfflineReconciliationService {
                 continue;
             }
 
+            if (op == OperationType.BULK_MERGE) {
+                // Un BULK_MERGE reemplaza el diagrama ENTERO. Encolarlo sin conexión y aplicarlo
+                // al reconectar borraría de un saque todo lo que los demás hicieron mientras
+                // tanto, sin que ninguna regla de §9.2 pudiera detectarlo: no es un conflicto
+                // sobre un elemento, es el modelo completo pisando al modelo completo.
+                descartes.add(descripcion(operacion, nombres.get())
+                        + " descartado: una importación no se puede reconciliar offline, "
+                        + "porque reemplaza el diagrama entero. Importá de nuevo estando "
+                        + "conectado.");
+                continue;
+            }
+
             String motivo = motivoDeDescarte(op, operacion, estado, nombres);
             if (motivo != null) {
                 descartes.add(descripcion(operacion, nombres.get()) + " descartado: " + motivo);

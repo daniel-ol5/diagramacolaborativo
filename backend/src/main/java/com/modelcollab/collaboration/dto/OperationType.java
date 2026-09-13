@@ -48,8 +48,13 @@ public enum OperationType {
     // --- Agendadas por el plan para más adelante -------------------------------------------
     /** Día 12: modifica la relación sin destruirla, conservando waypoints e identidad. */
     UPDATE_RELATIONSHIP(Exclusion.REQUIERE_LOCK, false),
-    /** Día 16: inserción atómica de un sub-grafo (visión / importación XMI). */
-    BULK_MERGE(Exclusion.LOCK_DE_DIAGRAMA, false),
+    /**
+     * Inserción atómica de un sub-grafo completo: importación XMI (CU18) y, más adelante, visión
+     * por foto. Toma el lock del diagrama entero, se aplica en una sola transacción y se difunde
+     * como un ÚNICO evento — veinte parpadeos en el lienzo de cada colaborador mientras entra un
+     * diagrama importado sería inaceptable.
+     */
+    BULK_MERGE(Exclusion.LOCK_DE_DIAGRAMA, true),
     /**
      * Canal volátil de presencia. Figura en el catálogo de §8.1 pero <b>no viaja por
      * {@code /mutate}</b>: tiene su propio destino {@code /app/diagram/{id}/cursor}, no se

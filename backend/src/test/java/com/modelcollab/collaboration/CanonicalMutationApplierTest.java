@@ -282,13 +282,45 @@ class CanonicalMutationApplierTest {
 
     @ParameterizedTest(name = "{0} se rechaza con OP_NOT_IMPLEMENTED")
     @EnumSource(value = OperationType.class,
-            names = {"UPDATE_RELATIONSHIP", "BULK_MERGE", "USER_CURSOR"})
+            names = {"UPDATE_RELATIONSHIP", "USER_CURSOR"})
     @DisplayName("Lo que el plan agenda para más adelante se rechaza explícito, no en silencio")
     void loNoImplementadoAvisa(OperationType op) throws Exception {
         assertThatThrownBy(() -> applier.apply(barberia(), op, "algo", Map.of()))
                 .isInstanceOf(MutacionRechazadaException.class)
                 .extracting(e -> ((MutacionRechazadaException) e).getCode())
                 .isEqualTo(MutacionRechazadaException.OP_NO_IMPLEMENTADA);
+    }
+
+    @Test
+    @DisplayName("BULK_MERGE reemplaza el diagrama entero con el sub-grafo recibido")
+    void bulkMergeReemplazaElDiagrama() throws Exception {
+        CanonicalModel antes = barberia();
+        CanonicalModel entrante = mapper.readValue("""
+                {"schemaVersion":"1.0.0","mutationVersion":1,"packages":[],"relationships":[],
+                 "classes":[{"id":"nueva","name":"Importada","position":{"x":1.0,"y":2.0},
+                   "attributes":[{"id":"a","name":"id","type":"UUID","isPrimaryKey":true}]}]}
+                """, CanonicalModel.class);
+
+        CanonicalModel despues = applier.apply(antes, OperationType.BULK_MERGE, null,
+                mapper.convertValue(entrante, new com.fasterxml.jackson.core.type.TypeReference<
+                        java.util.Map<String, Object>>() {}));
+
+        // Es un REEMPLAZO y no una fusion elemento por elemento: importar trae un modelo
+        // completo con sus propios ids, y mezclarlo dejaria dos jerarquias que nadie dibujo.
+        assertThat(despues.classes()).singleElement()
+                .satisfies(c -> assertThat(c.name()).isEqualTo("Importada"));
+        assertThat(despues.relationships()).isEmpty();
+        // La version la asigna el servicio, no el payload.
+        assertThat(despues.mutationVersion()).isEqualTo(antes.mutationVersion());
+    }
+
+    @Test
+    @DisplayName("Un BULK_MERGE vacio se rechaza: dejaria el diagrama sin nada")
+    void bulkMergeVacio() throws Exception {
+        assertThatThrownBy(() -> applier.apply(barberia(), OperationType.BULK_MERGE, null,
+                java.util.Map.of("schemaVersion", "1.0.0", "mutationVersion", 1,
+                        "classes", java.util.List.of())))
+                .isInstanceOf(MutacionRechazadaException.class);
     }
 
     @Test

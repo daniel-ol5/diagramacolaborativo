@@ -95,6 +95,8 @@ public class CanonicalMutationApplier {
             case DELETE_PACKAGE -> conPaquetes(
                     modelo, quitar(modelo.packages(), targetId, Package::id, "El paquete"));
 
+            case BULK_MERGE -> fusionar(modelo, datos);
+
             default -> throw new MutacionRechazadaException(
                     MutacionRechazadaException.OP_NO_IMPLEMENTADA, 501,
                     "La operación " + op + " no se aplica al estado canónico");
@@ -133,6 +135,31 @@ public class CanonicalMutationApplier {
                 .filter(pk -> id.equals(pk.id()))
                 .map(Package::name)
                 .findFirst();
+    }
+
+    /**
+     * Reemplaza el diagrama entero por el sub-grafo recibido (§8.1, {@code BULK_MERGE}).
+     *
+     * <p>Es un <b>reemplazo</b> y no una fusión elemento por elemento, y la diferencia importa:
+     * importar un XMI trae un modelo completo con sus propios identificadores, y mezclarlo con lo
+     * que ya había produciría un diagrama con dos jerarquías que nadie dibujó. El caso de uso es
+     * "traé este diagrama", no "agregá estas clases a lo que tengo".
+     *
+     * <p>Se conserva la {@code mutationVersion} de quien llama: el número de secuencia lo asigna
+     * el servicio, no el payload.
+     */
+    private CanonicalModel fusionar(CanonicalModel modelo, Map<String, Object> datos) {
+        CanonicalModel entrante = convertir(datos, CanonicalModel.class);
+        if (entrante.classes().isEmpty()) {
+            throw MutacionRechazadaException.payloadInvalido(
+                    "Un BULK_MERGE sin ninguna clase dejaría el diagrama vacío");
+        }
+        return new CanonicalModel(
+                modelo.schemaVersion(),
+                modelo.mutationVersion(),
+                entrante.packages(),
+                entrante.classes(),
+                entrante.relationships());
     }
 
     // ------------------------------------------------------------------ clases

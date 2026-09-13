@@ -261,8 +261,13 @@ class OfflineReconciliationServiceTest {
                 op("INVENTADA", null, "m2", Map.of()));
 
         assertThat(reporte.discardedCount()).isEqualTo(2);
+        // Una operación inventada: el servidor no la conoce.
         assertThat(reporte.discardedDetails())
-                .allMatch(d -> d.contains("el servidor no soporta esa operación"));
+                .anyMatch(d -> d.contains("el servidor no soporta esa operación"));
+        // Un BULK_MERGE sí existe, pero NO se puede reconciliar: reemplaza el diagrama entero,
+        // así que aplicarlo al reconectar borraría todo lo que los demás hicieron mientras tanto.
+        assertThat(reporte.discardedDetails())
+                .anyMatch(d -> d.contains("reemplaza el diagrama entero"));
     }
 
     // ------------------------------------------------------------ idempotencia
