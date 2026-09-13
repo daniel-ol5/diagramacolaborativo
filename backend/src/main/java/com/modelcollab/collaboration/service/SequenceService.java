@@ -67,6 +67,35 @@ public class SequenceService {
         if (cantidad < 1) {
             throw new IllegalArgumentException("Hay que reservar al menos un numero");
         }
+        return incrementar(diagramId, cantidad);
+    }
+
+    /**
+     * Toma el lock de fila del diagrama <b>sin consumir ningun numero</b>, y devuelve la version
+     * actual.
+     *
+     * <p>Existe por una carrera concreta. Casi todas las mutaciones describen un cambio
+     * relativo ("agrega este atributo"), asi que al aplicador le alcanza con leer el estado
+     * despues de tomar el lock, que es lo que ya hace. Pero un {@code BULK_MERGE} lleva en el
+     * payload el <b>modelo resultante completo</b>, y ese modelo hay que calcularlo leyendo el
+     * estado actual <i>antes</i> de llamar al aplicador.
+     *
+     * <p>Si esa lectura ocurre fuera del lock, entre ella y la aplicacion cabe la mutacion de
+     * otro colaborador: el payload se calculo sobre un estado viejo y, como el BULK_MERGE
+     * reemplaza, el cambio ajeno desaparece sin dejar rastro. No es un conflicto que alguien
+     * pueda notar — es trabajo que se borra en silencio.
+     *
+     * <p>{@code SET n = n + 0} parece un no-operativo y no lo es: PostgreSQL toma igual el lock
+     * de fila y lo sostiene hasta el commit. A partir de ahi la lectura del estado y la
+     * aplicacion ocurren sobre el mismo diagrama quieto. No consume numero, asi que tampoco deja
+     * el hueco en la secuencia que romperia al cliente offline.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public long tomarElDiagrama(UUID diagramId) {
+        return incrementar(diagramId, 0);
+    }
+
+    private long incrementar(UUID diagramId, int cantidad) {
         return entityManager
                 .unwrap(Session.class)
                 .doReturningWork(conexion -> {

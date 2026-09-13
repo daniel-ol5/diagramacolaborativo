@@ -63,7 +63,7 @@ public class AiPlanParser {
 
         AiPlan plan;
         try {
-            plan = objectMapper.readValue(desenvolver(crudo), AiPlan.class);
+            plan = objectMapper.readValue(desenvolverBloqueDeCodigo(crudo), AiPlan.class);
         } catch (JsonProcessingException e) {
             // El mapper canónico tiene FAIL_ON_UNKNOWN_PROPERTIES: un campo de más entra por
             // acá, igual que un JSON que directamente no parsea. Las dos cosas significan lo
@@ -110,6 +110,10 @@ public class AiPlanParser {
     /**
      * La única normalización que se le permite al texto del modelo: sacarle el bloque de código.
      *
+     * <p>Es publica y la comparte CU17: tiene que haber <b>un solo lugar</b> donde el sistema
+     * afloje con el texto de un modelo. Con una copia por caso de uso, alguien relaja una y la
+     * otra queda distinta sin que nadie se entere.
+     *
      * <p>Los modelos devuelven a veces el JSON envuelto en ```json … ``` aunque se les pida sólo
      * JSON. Es una peculiaridad conocida del formato de salida, no un desvío del contenido, así
      * que se destapa y listo. <b>Nada más se tolera</b>: no se intenta reparar comillas, ni
@@ -117,7 +121,7 @@ public class AiPlanParser {
      * la basura termina interpretando basura, y acá lo que se interpreta se escribe en el
      * modelo canónico.
      */
-    private static String desenvolver(String crudo) {
+    public static String desenvolverBloqueDeCodigo(String crudo) {
         String texto = crudo.strip();
         if (!texto.startsWith("```")) {
             return texto;
