@@ -119,10 +119,10 @@ recibe el rechazo y **su sesión sobrevive**.
 
 | # | Caso de uso | Estado |
 | :--- | :--- | :---: |
-| CU08 | Gestionar proyectos | 🟢 |
-| CU09 | Gestionar diagramas | 🟢 |
-| CU10 | Gestionar colaboradores del proyecto | 🟢 |
-| CU11 | Aceptar invitación | 🟢 |
+| CU08 | Gestionar proyectos | 🟡 servidor listo, falta la interfaz |
+| CU09 | Gestionar diagramas | 🟡 servidor listo, falta la interfaz |
+| CU10 | Gestionar colaboradores del proyecto | 🟡 servidor listo, falta la interfaz |
+| CU11 | Aceptar invitación | 🟡 servidor listo, falta la interfaz |
 
 **Resultado verificable:** desde cero, un usuario crea un proyecto, crea un diagrama, genera
 un enlace de invitación, y **otro usuario distinto lo abre, entra y edita en vivo** — sin un
@@ -189,9 +189,16 @@ fase completa.
 | Ciclo | Casos de uso | 🟢 | 🟡 | ⬜ |
 | :---: | :---: | :---: | :---: | :---: |
 | **1** | 7 | 5 | 2 | 0 |
-| **2** | 4 | 4 | 0 | 0 |
-| **3** | 7 | 0 | 2 | 5 |
+| **2** | 4 | 0 | 4 | 0 |
+| **3** | 7 | 1 | 3 | 3 |
 | **4** *(examen)* | 1 | 0 | 0 | 1 |
-| **Total** | **19** | **9** | **4** | **6** |
+| **Total** | **19** | **6** | **9** | **4** |
 
-**Los ciclos 1 y 2 están cerrados y verificados. El ciclo 3 está en curso.**
+**El ciclo 1 está cerrado. El ciclo 2 tiene todo el servidor construido y probado y ninguna
+interfaz** — corregido el 13/09 al probar la aplicación: se había dado por cerrado
+verificando sólo el backend. El ciclo 3 está en curso y avanza por el mismo camino: el
+generador, el validador y el intercambio XMI funcionan y todavía no tienen pantalla.
+
+> **La lección, que vale anotarla:** verificar un caso de uso contra su endpoint demuestra
+> que el servidor lo resuelve, no que el sistema lo ofrece. El criterio de aceptación de un
+> caso de uso **se comprueba desde donde lo ejecuta el usuario**, o no se comprobó.

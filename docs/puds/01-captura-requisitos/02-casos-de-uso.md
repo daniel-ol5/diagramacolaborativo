@@ -72,10 +72,10 @@ requisitos.
 
 | # | Caso de uso | Actor | RF | Ciclo | Estado |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| **CU08** | Gestionar proyectos | Usuario | RF-04 | 2 | 🟢 |
-| **CU09** | Gestionar diagramas | Usuario | RF-01 | 2 | 🟢 |
-| **CU10** | Gestionar colaboradores del proyecto | Usuario | RF-04 | 2 | 🟢 |
-| **CU11** | Aceptar invitación | Visitante, Usuario | RF-04 | 2 | 🟢 |
+| **CU08** | Gestionar proyectos | Usuario | RF-04 | 2 | 🟡 |
+| **CU09** | Gestionar diagramas | Usuario | RF-01 | 2 | 🟡 |
+| **CU10** | Gestionar colaboradores del proyecto | Usuario | RF-04 | 2 | 🟡 |
+| **CU11** | Aceptar invitación | Visitante, Usuario | RF-04 | 2 | 🟡 |
 
 | # | Operaciones que absorbe | Endpoints |
 | :--- | :--- | :--- |
@@ -83,6 +83,12 @@ requisitos.
 | CU09 | Crear diagrama · Consultar diagramas · Abrir diagrama | `POST` y `GET /api/v1/projects/{id}/diagrams`, `GET /api/v1/diagrams/{id}/snapshot` |
 | CU10 | Generar enlace de invitación · Consultar invitaciones · Revocar invitación · Agregar miembro por correo · Consultar miembros | `POST`/`GET`/`DELETE …/invitations`, `POST`/`GET …/members` |
 | CU11 | Consultar una invitación · Aceptarla | `GET /api/v1/invitations/{token}`, `POST …/accept` |
+
+> **Los cuatro están a medio camino: servidor sí, interfaz no.** Los endpoints existen,
+> están probados y responden; pero la aplicación web todavía no tiene pantalla de proyectos,
+> ni de diagramas, ni modal de compartir, ni la ruta que recibe una invitación. **Un caso de
+> uso que no se puede ejecutar desde la interfaz es invisible para el usuario, y eso equivale
+> a no existir.** Detectado el 13/09 al probar la aplicación; es la prioridad siguiente.
 
 > **CU10 y CU11 no estaban en la especificación original.** §14 lista crear y listar
 > proyectos, pero **ningún endpoint para otorgar un rol**. El sistema tenía tres roles
@@ -283,10 +289,15 @@ de uso (sección 2.3).
 | | Total | 🟢 | 🟡 | ⬜ |
 | :--- | :---: | :---: | :---: | :---: |
 | **Ciclo 1** | 7 | 5 | 2 | 0 |
-| **Ciclo 2** | 4 | 4 | 0 | 0 |
-| **Ciclo 3** | 7 | 0 | 2 | 5 |
+| **Ciclo 2** | 4 | 0 | 4 | 0 |
+| **Ciclo 3** | 7 | 1 | 3 | 3 |
 | **Ciclo 4** *(examen)* | 1 | 0 | 0 | 1 |
-| **Total** | **19** | **9** | **4** | **6** |
+| **Total** | **19** | **6** | **9** | **4** |
+
+> **Criterio del estado, para que la tabla no engañe:** 🟢 significa **ejecutable por un
+> usuario de punta a punta**, no "el servidor lo resuelve". Nueve casos de uso tienen el
+> backend construido y probado y les falta interfaz — son los 🟡. Es una distinción que
+> cuesta admitir y que evita el error de creer terminado lo que todavía no se puede usar.
 
 **En el parcial: 18 casos de uso.** El núcleo colaborativo (RF-04) está completo y
 verificado; lo pendiente se concentra en generación, trabajo sin conexión e IA.
