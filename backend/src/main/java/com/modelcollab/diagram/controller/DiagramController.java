@@ -6,10 +6,15 @@ import com.modelcollab.diagram.dto.DiagramSnapshotResponse;
 import com.modelcollab.diagram.dto.OfflineSyncBroadcast;
 import com.modelcollab.diagram.dto.OfflineSyncRequest;
 import com.modelcollab.diagram.dto.ReconciliationReport;
+import com.modelcollab.diagram.dto.ValidationReportDTO;
 import com.modelcollab.diagram.model.Diagram;
 import com.modelcollab.diagram.repository.DiagramRepository;
 import com.modelcollab.diagram.service.OfflineReconciliationService;
+import com.modelcollab.diagram.service.PreGenerationValidatorService;
+import com.modelcollab.generator.service.SpringBootGeneratorService;
+import com.modelcollab.generator.service.ZipPackagingService;
 import com.modelcollab.metamodel.model.CanonicalModel;
+import com.modelcollab.metamodel.service.IdentifierSanitizer;
 import com.modelcollab.project.model.ProjectRole;
 import com.modelcollab.project.repository.ProjectMemberRepository;
 import jakarta.validation.Valid;
@@ -18,17 +23,21 @@ import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-/** Endpoints REST del diagrama (§14): snapshot del estado y rebase de la cola offline. */
+/** Endpoints REST del diagrama (§14): snapshot, rebase offline, validación y generación. */
 @RestController
 @RequestMapping("/api/v1/diagrams")
 public class DiagramController {
@@ -36,6 +45,10 @@ public class DiagramController {
     private static final Logger log = LoggerFactory.getLogger(DiagramController.class);
 
     private final OfflineReconciliationService reconciliationService;
+    private final PreGenerationValidatorService validatorService;
+    private final SpringBootGeneratorService generatorService;
+    private final ZipPackagingService zipService;
+    private final IdentifierSanitizer sanitizer;
     private final DiagramRepository diagramRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final SimpMessagingTemplate messagingTemplate;
@@ -43,11 +56,19 @@ public class DiagramController {
 
     public DiagramController(
             OfflineReconciliationService reconciliationService,
+            PreGenerationValidatorService validatorService,
+            SpringBootGeneratorService generatorService,
+            ZipPackagingService zipService,
+            IdentifierSanitizer sanitizer,
             DiagramRepository diagramRepository,
             ProjectMemberRepository projectMemberRepository,
             SimpMessagingTemplate messagingTemplate,
             ObjectMapper objectMapper) {
         this.reconciliationService = reconciliationService;
+        this.validatorService = validatorService;
+        this.generatorService = generatorService;
+        this.zipService = zipService;
+        this.sanitizer = sanitizer;
         this.diagramRepository = diagramRepository;
         this.projectMemberRepository = projectMemberRepository;
         this.messagingTemplate = messagingTemplate;
@@ -59,23 +80,11 @@ public class DiagramController {
      *
      * <p>Lo lee <b>cualquier miembro del proyecto, VIEWER incluido</b>: mirar es precisamente lo
      * que un VIEWER sí puede hacer. Quien no es miembro no.
-     *
-     * <p>Es la pieza que le falta al cliente para no depender de un fixture local: sin esto,
-     * recargar la página después de cualquier mutación muestra el estado viejo. Y después de un
-     * rebase es obligatorio, porque el cliente necesita recargar el estado ya reconciliado.
      */
     @GetMapping("/{diagramId}/snapshot")
-    public DiagramSnapshotResponse snapshot(
-            @PathVariable UUID diagramId, Principal emisor) {
-
-        UUID userId = UUID.fromString(emisor.getName());
-        if (projectMemberRepository.findRoleByDiagramAndUser(diagramId, userId).isEmpty()) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN, "No sos miembro del proyecto de este diagrama");
-        }
-        Diagram diagrama = diagramRepository.findById(diagramId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "El diagrama no existe"));
+    public DiagramSnapshotResponse snapshot(@PathVariable UUID diagramId, Principal emisor) {
+        exigirMembresia(diagramId, userId(emisor));
+        Diagram diagrama = traer(diagramId);
         try {
             return new DiagramSnapshotResponse(
                     diagrama.getId(),
@@ -86,6 +95,62 @@ public class DiagramController {
             throw new IllegalStateException(
                     "El current_state almacenado no es un modelo canónico válido", e);
         }
+    }
+
+    // -------------------------------------------------- CU13: validar diagrama
+
+    /**
+     * Informe de validación pre-generación (§11.2.6).
+     *
+     * <p>Lo puede pedir <b>cualquier miembro, VIEWER incluido</b>: validar es leer. Y es útil
+     * poder consultarlo sin intención de generar, para ir corrigiendo el diagrama mientras se
+     * modela en vez de descubrir los problemas recién al pedir el ZIP.
+     */
+    @GetMapping("/{diagramId}/validate")
+    public ValidationReportDTO validar(@PathVariable UUID diagramId, Principal emisor) {
+        exigirMembresia(diagramId, userId(emisor));
+        return validatorService.validar(diagramId);
+    }
+
+    // --------------------------------------------- CU14: generar backend (ZIP)
+
+    /**
+     * Genera el proyecto Spring Boot completo y lo devuelve como ZIP.
+     *
+     * <p><b>La validación corre primero y puede impedir la descarga.</b> Con errores bloqueantes
+     * se responde <b>422</b> con el informe y no se genera nada: entregar un ZIP que no compila es
+     * peor que no entregarlo, porque el usuario lo descubre después de descomprimir y sin ninguna
+     * pista de qué estaba mal en su diagrama. Las advertencias, en cambio, no impiden nada —
+     * describen decisiones que el generador toma solo.
+     *
+     * <p>Lo puede pedir cualquier miembro, <b>VIEWER incluido</b>: generar no modifica el
+     * diagrama, es una lectura que produce un archivo. Prohibírselo no protegería nada.
+     */
+    @PostMapping("/{diagramId}/generate-backend")
+    public ResponseEntity<?> generarBackend(
+            @PathVariable UUID diagramId,
+            @RequestParam(defaultValue = "com.empresa.app") String basePackage,
+            Principal emisor) {
+
+        exigirMembresia(diagramId, userId(emisor));
+
+        ValidationReportDTO informe = validatorService.validar(diagramId);
+        if (!informe.valid()) {
+            log.debug("Generación de {} rechazada: {} error(es) bloqueante(s)",
+                    diagramId, informe.errors().size());
+            return ResponseEntity.unprocessableEntity().body(informe);
+        }
+
+        String artefacto = artefactoDe(traer(diagramId).getName());
+        byte[] zip = zipService.empaquetar(generatorService.generar(
+                validatorService.estadoDe(diagramId), basePackage, artefacto));
+
+        log.debug("ZIP de {} generado: {} bytes", diagramId, zip.length);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + artefacto + ".zip\"")
+                .body(zip);
     }
 
     /**
@@ -101,7 +166,7 @@ public class DiagramController {
             @Valid @RequestBody OfflineSyncRequest peticion,
             Principal emisor) {
 
-        UUID userId = UUID.fromString(emisor.getName());
+        UUID userId = userId(emisor);
         exigirPermisoDeEscritura(diagramId, userId);
 
         ReconciliationReport reporte =
@@ -117,6 +182,38 @@ public class DiagramController {
         log.debug("Rebase de {} por {}: {} aplicadas, {} descartadas",
                 diagramId, userId, reporte.appliedCount(), reporte.discardedCount());
         return reporte;
+    }
+
+    // ------------------------------------------------------------- utilitarios
+
+    /**
+     * Nombre del artefacto Maven a partir del nombre del diagrama. Pasa por el saneador y baja a
+     * minúsculas porque un {@code artifactId} con mayúsculas o espacios no es válido, y el nombre
+     * del diagrama lo escribe una persona: "Diagrama de Clases" tiene que dar algo instalable.
+     */
+    private String artefactoDe(String nombreDelDiagrama) {
+        String limpio = sanitizer.nombreDeTabla(nombreDelDiagrama)
+                .replace("\"", "")
+                .replace('_', '-');
+        return limpio.isBlank() ? "backend-generado" : limpio;
+    }
+
+    private Diagram traer(UUID diagramId) {
+        return diagramRepository.findById(diagramId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "El diagrama no existe"));
+    }
+
+    private static UUID userId(Principal emisor) {
+        return UUID.fromString(emisor.getName());
+    }
+
+    /** Leer exige pertenecer al proyecto; el rol da igual. */
+    private void exigirMembresia(UUID diagramId, UUID userId) {
+        if (projectMemberRepository.findRoleByDiagramAndUser(diagramId, userId).isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "No sos miembro del proyecto de este diagrama");
+        }
     }
 
     /**

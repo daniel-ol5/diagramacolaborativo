@@ -17,6 +17,8 @@
 	<properties>
 		<java.version>21</java.version>
 		<jjwt.version>0.12.6</jjwt.version>
+		<!-- Boot 3.5 no gestiona commons-compress, asi que la version va fijada a mano. -->
+		<commons-compress.version>1.27.1</commons-compress.version>
 	</properties>
 
 	<dependencies>
@@ -49,6 +51,19 @@
 		<dependency>
 			<groupId>org.freemarker</groupId>
 			<artifactId>freemarker</artifactId>
+		</dependency>
+
+		<!--
+			Commons Compress y no java.util.zip por una sola razon: java.util.zip no sabe
+			escribir los permisos POSIX de una entrada. Sin el bit de ejecucion, quien
+			descomprima el ZIP en Linux o macOS se encuentra con "./mvnw: Permission denied"
+			en el primer comando del README, y enviar el wrapper queda a medias justo en la
+			plataforma donde mas importa.
+		-->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-compress</artifactId>
+			<version>${commons-compress.version}</version>
 		</dependency>
 
 		<!--

@@ -549,6 +549,62 @@ que abrirlo una.
 Revocar comprueba que la invitación **sea de ese proyecto**: la ruta lleva tu `projectId`, pero
 el id de la invitación podría ser de cualquiera.
 
+---
+
+## CU13 y CU14: validar y generar
+
+| Método | Ruta | Quién |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/diagrams/{id}/validate` | cualquier miembro, **VIEWER incluido** |
+| `POST` | `/api/v1/diagrams/{id}/generate-backend` | cualquier miembro, **VIEWER incluido** |
+
+Generar no modifica el diagrama: es una lectura que produce un archivo. Prohibírselo a un VIEWER
+no protegería nada.
+
+### La validación puede impedir la descarga
+
+Con **errores bloqueantes**, `generate-backend` responde **422 con el informe** y no genera nada.
+Entregar un ZIP que no compila es peor que no entregarlo: el usuario lo descubre después de
+descomprimir y sin ninguna pista de qué estaba mal en su diagrama.
+
+### Error bloqueante ≠ advertencia
+
+| | Qué describe | Ejemplos |
+| :--- | :--- | :--- |
+| **Error** | Algo que **no puede existir** en Java o en el esquema | Herencia múltiple, relación huérfana, jerarquía circular, dos clases que generan el mismo nombre Java, dos atributos que generan el mismo campo |
+| **Advertencia** | Algo que el generador **resuelve solo** | Clave primaria inyectada, lado de la FK elegido en una relación simétrica, palabra reservada renombrada, tipo de método desconocido |
+
+Mezclarlas tiene una de dos consecuencias, las dos malas: o se bloquea por cosas que funcionan y
+la herramienta se vuelve insufrible, o se deja pasar lo que no compila y la promesa del
+"100% Compila" se rompe en la demo.
+
+`{code, elementId, elementName, message}`: el id para que la interfaz resalte el elemento en el
+lienzo, el nombre para que el mensaje se pueda leer. *"La clase c7f3a1b2 tiene dos padres"* no le
+sirve a nadie.
+
+### Un validador probado en una sola dirección no se probó
+
+`MetamodelValidatorTest` comprueba **las dos**: que los tres dominios y `edge-cases` pasen sin un
+solo error, y que `invalid-cases/` se rechace con el código correcto. Un validador que devuelve
+"siempre válido" pasaría media suite; uno que rechaza todo, la otra mitad.
+
+Los datos existen desde el ciclo 1 y se escribieron para esto.
+
+### El ZIP
+
+`ZipPackagingService` empaqueta en memoria — un proyecto generado son decenas de archivos de
+texto, y un temporal sólo agregaría limpieza que hacer y un modo de fallo nuevo.
+
+> Usa **Commons Compress** y no `java.util.zip` por una sola razón: `java.util.zip` no sabe
+> escribir los permisos POSIX. Sin el bit de ejecución en `mvnw`, quien descomprima en Linux o
+> macOS se topa con `Permission denied` en el primer comando del README — y enviar el wrapper
+> para que no haga falta instalar Maven queda a medias justo donde más importa.
+
+Hay un test que lo verifica, y **se lee con `ZipFile` y no con `ZipArchiveInputStream`**: el
+lector en flujo sólo ve las cabeceras locales, y los permisos viven en el directorio central. Con
+el lector equivocado, `getUnixMode()` devuelve siempre 0 y el test diría "no hay permiso" aunque
+el ZIP estuviera perfecto.
+
 ## Estructura
 
 Los paquetes de §6 existen desde el día 1 (los vacíos llevan `.gitkeep`) para evitar
