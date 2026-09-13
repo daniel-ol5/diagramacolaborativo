@@ -10,15 +10,15 @@ actor "Lector" as VI
 actor "Tiempo" as T
 
 rectangle "C. Colaboracion en tiempo real" {
-  usecase "CU-08 Compartir proyecto\npor enlace" as CU08
-  usecase "CU-09 Consultar invitacion" as CU09
-  usecase "CU-10 Aceptar invitacion" as CU10
-  usecase "CU-11 Agregar miembro\npor correo" as CU11
-  usecase "CU-12 Revocar invitacion" as CU12
-  usecase "CU-13 Editar el diagrama\nen tiempo real" as CU13
-  usecase "CU-14 Bloquear elemento\npara edicion exclusiva" as CU14
-  usecase "CU-15 Liberar bloqueo\nvencido" as CU15
-  usecase "CU-16 Mostrar presencia\ny cursores" as CU16
+  usecase "CU08 Compartir proyecto\npor enlace" as CU08
+  usecase "CU09 Consultar invitacion" as CU09
+  usecase "CU10 Aceptar invitacion" as CU10
+  usecase "CU11 Agregar miembro\npor correo" as CU11
+  usecase "CU12 Revocar invitacion" as CU12
+  usecase "CU13 Editar el diagrama\nen tiempo real" as CU13
+  usecase "CU14 Bloquear elemento\npara edicion exclusiva" as CU14
+  usecase "CU15 Liberar bloqueo\nvencido" as CU15
+  usecase "CU16 Mostrar presencia\ny cursores" as CU16
 }
 
 OW --> CU08

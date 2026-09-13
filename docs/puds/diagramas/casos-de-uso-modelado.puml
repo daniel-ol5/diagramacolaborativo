@@ -7,17 +7,17 @@ actor "Editor" as ED
 actor "Propietario" as OW
 
 rectangle "D. Modelado" {
-  usecase "CU-17 Modelar clases" as CU17
-  usecase "CU-18 Modelar atributos" as CU18
-  usecase "CU-19 Modelar metodos" as CU19
-  usecase "CU-20 Modelar relaciones" as CU20
-  usecase "CU-21 Organizar en paquetes" as CU21
-  usecase "CU-22 Alternar vista UML / ER" as CU22
+  usecase "CU17 Modelar clases" as CU17
+  usecase "CU18 Modelar atributos" as CU18
+  usecase "CU19 Modelar metodos" as CU19
+  usecase "CU20 Modelar relaciones" as CU20
+  usecase "CU21 Organizar en paquetes" as CU21
+  usecase "CU22 Alternar vista UML / ER" as CU22
 }
 
 rectangle "E. Trabajo sin conexion" {
-  usecase "CU-23 Modelar sin conexion" as CU23
-  usecase "CU-24 Sincronizar y\nreconciliar al reconectar" as CU24
+  usecase "CU23 Modelar sin conexion" as CU23
+  usecase "CU24 Sincronizar y\nreconciliar al reconectar" as CU24
 }
 
 ED --> CU17

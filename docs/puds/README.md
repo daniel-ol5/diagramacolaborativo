@@ -48,8 +48,10 @@ Requisito (RF-nn)  →  Caso de uso (CU-nn)  →  Realización  →  Clases  →
 | :---: | :--- | :--- |
 | 1 | [Actores del sistema](01-captura-requisitos/01-actores.md) | 🟢 |
 | 2 | [Casos de uso](01-captura-requisitos/02-casos-de-uso.md) | 🟢 |
-| 3 | Especificación detallada de casos de uso | ⬜ siguiente |
-| 4 | Requisitos no funcionales | ⬜ |
+| 3 | [Priorización y ciclos](01-captura-requisitos/03-priorizacion-y-ciclos.md) | 🟢 |
+| 4 | Especificación detallada de casos de uso (2.3) | ⬜ siguiente |
+| 5 | Prototipos de interfaz (2.4) | ⬜ |
+| 6 | Estructurar el modelo de casos de uso (2.5) | ⬜ |
 | 5 | Paquetes de análisis | ⬜ |
 | 6 | Clases de análisis | ⬜ |
 | 7 | Realizaciones de casos de uso | ⬜ |

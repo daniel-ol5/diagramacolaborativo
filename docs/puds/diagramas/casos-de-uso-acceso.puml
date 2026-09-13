@@ -11,16 +11,16 @@ C <|-- OW
 C <|-- ED
 
 rectangle "A. Gestion de acceso" {
-  usecase "CU-01 Registrar usuario" as CU01
-  usecase "CU-02 Iniciar sesion" as CU02
+  usecase "CU01 Registrar usuario" as CU01
+  usecase "CU02 Iniciar sesion" as CU02
 }
 
 rectangle "B. Proyectos y diagramas" {
-  usecase "CU-03 Crear proyecto" as CU03
-  usecase "CU-04 Consultar mis proyectos" as CU04
-  usecase "CU-05 Crear diagrama" as CU05
-  usecase "CU-06 Consultar diagramas" as CU06
-  usecase "CU-07 Abrir diagrama" as CU07
+  usecase "CU03 Crear proyecto" as CU03
+  usecase "CU04 Consultar mis proyectos" as CU04
+  usecase "CU05 Crear diagrama" as CU05
+  usecase "CU06 Consultar diagramas" as CU06
+  usecase "CU07 Abrir diagrama" as CU07
 }
 
 V --> CU01
