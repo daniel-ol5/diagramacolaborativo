@@ -1,0 +1,234 @@
+{
+  "schemaVersion": "1.0.0",
+  "mutationVersion": 1,
+  "packages": [],
+  "classes": [
+    {
+      "id": "c-pedido",
+      "name": "Pedido",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 60.0,
+        "y": 60.0
+      },
+      "width": 240.0,
+      "height": 200.0,
+      "attributes": [
+        {
+          "id": "a-p1",
+          "name": "id",
+          "type": "UUID",
+          "length": 100,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "a-p2",
+          "name": "numero",
+          "type": "VARCHAR",
+          "length": 100,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        },
+        {
+          "id": "a-p3",
+          "name": "fecha",
+          "type": "DATE",
+          "length": 100,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        }
+      ],
+      "methods": []
+    },
+    {
+      "id": "c-item",
+      "name": "ItemPedido",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 400.0,
+        "y": 60.0
+      },
+      "width": 240.0,
+      "height": 200.0,
+      "attributes": [
+        {
+          "id": "a-i1",
+          "name": "id",
+          "type": "UUID",
+          "length": 100,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "a-i2",
+          "name": "cantidad",
+          "type": "INTEGER",
+          "length": 100,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        },
+        {
+          "id": "a-i3",
+          "name": "precioUnitario",
+          "type": "DECIMAL",
+          "length": 100,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        }
+      ],
+      "methods": []
+    },
+    {
+      "id": "c-producto",
+      "name": "Producto",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 60.0,
+        "y": 320.0
+      },
+      "width": 240.0,
+      "height": 200.0,
+      "attributes": [
+        {
+          "id": "a-r1",
+          "name": "id",
+          "type": "UUID",
+          "length": 100,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "a-r2",
+          "name": "nombre",
+          "type": "VARCHAR",
+          "length": 100,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        },
+        {
+          "id": "a-r3",
+          "name": "stock",
+          "type": "INTEGER",
+          "length": 100,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        }
+      ],
+      "methods": []
+    },
+    {
+      "id": "c-deposito",
+      "name": "Deposito",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": {
+        "x": 400.0,
+        "y": 320.0
+      },
+      "width": 240.0,
+      "height": 200.0,
+      "attributes": [
+        {
+          "id": "a-d1",
+          "name": "id",
+          "type": "UUID",
+          "length": 100,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": true
+        },
+        {
+          "id": "a-d2",
+          "name": "ubicacion",
+          "type": "VARCHAR",
+          "length": 100,
+          "precision": 10,
+          "scale": 2,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": true,
+          "isUnique": false
+        }
+      ],
+      "methods": []
+    }
+  ],
+  "relationships": [
+    {
+      "id": "r-1",
+      "sourceClassId": "c-pedido",
+      "targetClassId": "c-item",
+      "type": "COMPOSITION",
+      "owningSide": "SOURCE",
+      "sourceMultiplicity": "1..1",
+      "targetMultiplicity": "1..*",
+      "isNavigable": true,
+      "waypoints": []
+    },
+    {
+      "id": "r-2",
+      "sourceClassId": "c-producto",
+      "targetClassId": "c-deposito",
+      "type": "ASSOCIATION",
+      "owningSide": "TARGET",
+      "sourceMultiplicity": "0..*",
+      "targetMultiplicity": "1..1",
+      "isNavigable": true,
+      "waypoints": []
+    },
+    {
+      "id": "r-3",
+      "sourceClassId": "c-deposito",
+      "targetClassId": "c-pedido",
+      "type": "ASSOCIATION",
+      "owningSide": "TARGET",
+      "sourceMultiplicity": "0..1",
+      "targetMultiplicity": "1..1",
+      "isNavigable": true,
+      "waypoints": []
+    }
+  ]
+}

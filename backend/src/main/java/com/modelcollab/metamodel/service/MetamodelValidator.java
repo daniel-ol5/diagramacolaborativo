@@ -325,9 +325,8 @@ public class MetamodelValidator {
 
         Multiplicity sm = r.sourceMultiplicity();
         Multiplicity tm = r.targetMultiplicity();
-        boolean colecciones = esColeccion(sm) || esColeccion(tm);
 
-        if (!colecciones && sm == tm) {
+        if (!OwningSideRule.esDerivable(r)) {
             // Caso 3: ambos extremos escalares e IGUALES. No hay respuesta mecánica, así que el
             // campo decide el esquema sin que nadie pueda verificarlo — y como el constructor
             // compacto ya normalizó el default, no se distingue "vino ausente" de "lo eligieron".
@@ -341,11 +340,10 @@ public class MetamodelValidator {
             return;
         }
 
-        // Ojo: un M2M 0..* ↔ 0..* también tiene los dos extremos iguales, pero ahí hay colección
-        // y manda la regla 4. Por eso la condición del caso 3 es "escalares E iguales".
-        String derivado = colecciones
-                ? (esColeccion(sm) ? "SOURCE" : "TARGET")
-                : (sm == Multiplicity.ZERO_ONE ? "SOURCE" : "TARGET");
+        // La misma regla que aplica el generador, no una copia: si fueran dos, este aviso
+        // podria volver a prometer algo que el generador no hace. Ya paso, y el sintoma fue un
+        // ZIP que no compilaba.
+        String derivado = OwningSideRule.efectivo(r).name();
 
         if (!derivado.equals(r.owningSide().name())) {
             advertencias.add(new ValidationIssue(OWNING_SIDE_CONTRADICE, r.id(), null,

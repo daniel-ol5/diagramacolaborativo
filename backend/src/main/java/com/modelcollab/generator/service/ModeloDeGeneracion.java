@@ -11,6 +11,7 @@ import com.modelcollab.metamodel.model.OwningSide;
 import com.modelcollab.metamodel.model.Relationship;
 import com.modelcollab.metamodel.model.RelationshipType;
 import com.modelcollab.metamodel.service.IdentifierSanitizer;
+import com.modelcollab.metamodel.service.OwningSideRule;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -610,7 +611,14 @@ class ModeloDeGeneracion {
             return Optional.empty();
         }
 
-        boolean duenioEsOrigen = r.owningSide() == OwningSide.SOURCE;
+        // D-08: NO se lee r.owningSide() directo. Cuando las multiplicidades deciden donde va
+        // la clave foranea, mandan ellas — el campo del diagrama puede contradecirlas, y de
+        // hecho lo hace cada vez que nadie lo toco, porque el default de §7 es SOURCE.
+        //
+        // Creerle al campo producia @ManyToOne(mappedBy = "..."), que no existe en JPA: el ZIP
+        // no compilaba. La regla vive en OwningSideRule y la comparte el validador, para que el
+        // aviso que le damos al modelador y lo que hace el generador no puedan separarse.
+        boolean duenioEsOrigen = OwningSideRule.efectivo(r) == OwningSide.SOURCE;
         boolean soyDuenio = soyOrigen == duenioEsOrigen;
 
         String idDelOtro = soyOrigen ? r.targetClassId() : r.sourceClassId();
