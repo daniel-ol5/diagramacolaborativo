@@ -21,6 +21,7 @@ import {
   type QueuedOperation,
 } from "../services/offlineQueue";
 import { syncOffline } from "../services/offlineApi";
+import { fetchDiagramSnapshot } from "../services/diagramApi";
 
 /** Tope por lote que exige el servidor (§9.2) — un lote mas grande se manda en varias tandas sucesivas. */
 const MAX_OPERATIONS_PER_BATCH = 500;
@@ -424,6 +425,24 @@ export function useCollaboration(
       }
     }
 
+    // Cuando el servidor rechaza una mutacion (LOCK_REQUIRED, DUPLICATE_ID,
+    // TARGET_NOT_FOUND, etc.) el emisor ya la aplico de forma optimista y
+    // se quedaria mirando un estado que el servidor nunca tuvo. No se
+    // deshace localmente (una mutacion ajena pudo llegar en el medio y
+    // deshacer la instantanea previa se la llevaria puesta sin avisar):
+    // se vuelve a pedir el snapshot real, que queda correcto pase lo que
+    // pase mientras tanto, y de paso resincroniza mutationVersion.
+    async function resincronizarTrasRechazo() {
+      if (!diagramId || !token) return;
+      try {
+        const snapshot = await fetchDiagramSnapshot(diagramId, token);
+        setModel(snapshot);
+        lastSequenceNum.current = snapshot.mutationVersion;
+      } catch (e) {
+        console.error("[colaboracion] no se pudo resincronizar tras un rechazo:", e);
+      }
+    }
+
     function handleError(message: IMessage) {
       try {
         const body = JSON.parse(message.body) as StompErrorMessage;
@@ -432,6 +451,7 @@ export function useCollaboration(
       } catch {
         setError(message.body);
       }
+      void resincronizarTrasRechazo();
     }
 
     function handleLockDenied(message: IMessage) {
