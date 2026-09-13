@@ -3,9 +3,7 @@
 left to right direction
 
 actor "Visitante" as V
-actor "Editor" as ED
-actor "Propietario" as OW
-actor "Lector" as VI
+actor "Usuario" as U
 actor "Tiempo" as T
 
 rectangle "CICLO 1 - Nucleo colaborativo" {
@@ -20,28 +18,24 @@ rectangle "CICLO 1 - Nucleo colaborativo" {
 
 V --> CU01
 V --> CU02
-ED --> CU03
-OW --> CU03
-ED --> CU04
-OW --> CU04
-ED --> CU05
-OW --> CU05
-ED --> CU06
-OW --> CU06
+U --> CU03
+U --> CU04
+U --> CU05
+U --> CU06
 T --> CU06
-ED --> CU07
-VI --> CU07
+U --> CU07
 
 CU03 ..> CU05 : <<include>>
 CU04 ..> CU05 : <<include>>
 CU05 ..> CU06 : <<include>>
 
 note right of CU05
-  El <<include>> hacia CU06 es **condicional
-  segun la operacion**: renombrar, borrar y
-  editar miembros exigen bloqueo; mover y
-  redimensionar no (politica LWW).
-  Declarado en OperationType, un solo lugar.
+  Precondicion: rol OWNER o EDITOR.
+  Un VIEWER recibe 403 y **su sesion sobrevive**.
+  El <<include>> hacia CU06 es condicional segun
+  la operacion: renombrar, borrar y editar
+  miembros exigen bloqueo; mover y redimensionar
+  no (politica LWW). Declarado en OperationType.
 end note
 
 note bottom of CU06
@@ -52,8 +46,9 @@ note bottom of CU06
 end note
 
 note bottom of CU07
-  El Lector SI emite cursor y SI consulta
-  participantes: si no pudiera, entraria a una
-  sala colaborativa y no veria a nadie.
+  Sin restriccion de rol: un VIEWER tambien
+  emite cursor y consulta participantes.
+  Si no pudiera, entraria a una sala
+  colaborativa y no veria a nadie.
 end note
 @enduml

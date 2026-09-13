@@ -2,9 +2,7 @@
 ' CICLO 3 - Generacion de codigo y trabajo sin conexion
 left to right direction
 
-actor "Colaborador" as C
-actor "Editor" as ED
-actor "Propietario" as OW
+actor "Usuario" as U
 
 rectangle "CICLO 3 - Generacion y trabajo sin conexion" {
   usecase "CU12 Trabajar sin conexion\ny sincronizar" as CU12
@@ -13,11 +11,10 @@ rectangle "CICLO 3 - Generacion y trabajo sin conexion" {
   usecase "CU15 Alternar vista\nUML / Entidad-Relacion" as CU15
 }
 
-ED --> CU12
-OW --> CU12
-C --> CU13
-C --> CU14
-C --> CU15
+U --> CU12
+U --> CU13
+U --> CU14
+U --> CU15
 
 CU14 ..> CU13 : <<include>>
 
@@ -29,11 +26,17 @@ note bottom of CU13
 end note
 
 note right of CU12
-  Sin conexion el cliente **omite** la
-  adquisicion de bloqueo: la exclusion mutua
-  no desaparece, se traslada del momento de
-  la edicion al de la reconciliacion.
-  Prevencion cuando hay arbitro en linea,
-  resolucion cuando no lo hay.
+  Precondicion: rol OWNER o EDITOR.
+  Sin conexion el cliente **omite** la adquisicion
+  de bloqueo: la exclusion mutua no desaparece,
+  se traslada del momento de la edicion al de la
+  reconciliacion. Prevencion cuando hay arbitro
+  en linea, resolucion cuando no lo hay.
+end note
+
+note bottom of CU14
+  Sin restriccion de rol: generar no modifica
+  el diagrama, es una lectura que produce
+  un archivo.
 end note
 @enduml

@@ -4,18 +4,13 @@ left to right direction
 skinparam packageStyle rectangle
 
 actor "Visitante" as V
-actor "Colaborador" as C
-actor "Propietario" as OW
-actor "Editor" as ED
-actor "Lector" as VI
+actor "Usuario" as U
 actor "Tiempo" as T
 actor "Gemini" as G
 actor "Enterprise Architect" as EA
 actor "Motor STT" as STT
 
-C <|-- OW
-C <|-- ED
-C <|-- VI
+V --> U : se registra
 
 rectangle "ModelCollab" {
   usecase "A. Gestion de acceso" as A
@@ -29,16 +24,15 @@ rectangle "ModelCollab" {
 }
 
 V --> A
-C --> B
-ED --> CC
-ED --> D
-VI --> D
+U --> B
+U --> CC
+U --> D
 T --> D
-ED --> E
-C --> F
+U --> E
+U --> F
 STT --> F
-C --> GG
+U --> GG
 EA --> GG
-ED --> H
+U --> H
 G --> H
 @enduml

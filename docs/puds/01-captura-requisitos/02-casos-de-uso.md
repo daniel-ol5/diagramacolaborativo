@@ -21,7 +21,7 @@ Donde **no** se agrupa, y el motivo:
 
 | Caso | Por qué queda separado |
 | :--- | :--- |
-| CU10 Gestionar colaboradores / **CU11 Aceptar invitación** | **Actores distintos**: el propietario invita, el invitado acepta. Dos objetivos, dos actores |
+| CU10 Gestionar colaboradores / **CU11 Aceptar invitación** | **Objetivos opuestos**: uno otorga acceso, el otro lo recibe — y en CU11 el iniciador puede ser un Visitante que todavía no tiene cuenta |
 | CU13 Validar diagrama / **CU14 Generar backend** | Es un `«include»`, y en UML un `«include»` **es** un caso de uso propio. Además tiene valor solo: se puede validar sin descargar nada |
 | CU03 Modelar clases / **CU04 Modelar relaciones** | Las relaciones tienen semántica propia —multiplicidad, lado propietario, navegabilidad— que decide el esquema de base de datos generado |
 
@@ -54,7 +54,7 @@ requisitos.
 
 ### Paquete A — Gestión de acceso
 
-| # | Caso de uso | Actor principal | RF | Ciclo | Estado |
+| # | Caso de uso | Actor | RF | Ciclo | Estado |
 | :--- | :--- | :--- | :---: | :---: | :---: |
 | **CU01** | Registrarse | Visitante | derivado | 1 | 🟢 |
 | **CU02** | Iniciar sesión | Visitante | derivado | 1 | 🟢 |
@@ -70,12 +70,12 @@ requisitos.
 
 ### Paquete B — Gestión de proyectos
 
-| # | Caso de uso | Actor principal | RF | Ciclo | Estado |
+| # | Caso de uso | Actor | RF | Ciclo | Estado |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| **CU08** | Gestionar proyectos | Colaborador | RF-04 | 2 | 🟢 |
-| **CU09** | Gestionar diagramas | Propietario, Editor | RF-01 | 2 | 🟢 |
-| **CU10** | Gestionar colaboradores del proyecto | Propietario | RF-04 | 2 | 🟢 |
-| **CU11** | Aceptar invitación | Visitante, Colaborador | RF-04 | 2 | 🟢 |
+| **CU08** | Gestionar proyectos | Usuario | RF-04 | 2 | 🟢 |
+| **CU09** | Gestionar diagramas | Usuario | RF-01 | 2 | 🟢 |
+| **CU10** | Gestionar colaboradores del proyecto | Usuario | RF-04 | 2 | 🟢 |
+| **CU11** | Aceptar invitación | Visitante, Usuario | RF-04 | 2 | 🟢 |
 
 | # | Operaciones que absorbe | Endpoints |
 | :--- | :--- | :--- |
@@ -101,11 +101,11 @@ requisitos.
 
 ### Paquete C — Modelado
 
-| # | Caso de uso | Actor principal | RF | Ciclo | Estado |
+| # | Caso de uso | Actor | RF | Ciclo | Estado |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| **CU03** | Modelar clases y sus miembros | Editor, Propietario | RF-01 | 1 | 🟡 |
-| **CU04** | Modelar relaciones | Editor, Propietario | RF-01 | 1 | 🟡 |
-| **CU15** | Alternar vista UML / Entidad-Relación | Colaborador | RF-01 | 3 | ⬜ |
+| **CU03** | Modelar clases y sus miembros | Usuario | RF-01 | 1 | 🟡 |
+| **CU04** | Modelar relaciones | Usuario | RF-01 | 1 | 🟡 |
+| **CU15** | Alternar vista UML / Entidad-Relación | Usuario | RF-01 | 3 | ⬜ |
 
 | # | Operaciones que absorbe | Estado por operación |
 | :--- | :--- | :--- |
@@ -132,11 +132,11 @@ requisitos.
 
 ### Paquete D — Colaboración en tiempo real
 
-| # | Caso de uso | Actor principal | RF | Ciclo | Estado |
+| # | Caso de uso | Actor | RF | Ciclo | Estado |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| **CU05** | Editar el diagrama en colaboración | Editor, Propietario | RF-04 | 1 | 🟢 |
-| **CU06** | Gestionar bloqueo de elemento | Editor, Propietario, **Tiempo** | RF-04 | 1 | 🟢 |
-| **CU07** | Visualizar presencia y cursores | Colaborador | RF-04 | 1 | 🟢 |
+| **CU05** | Editar el diagrama en colaboración | Usuario | RF-04 | 1 | 🟢 |
+| **CU06** | Gestionar bloqueo de elemento | Usuario, **Tiempo** | RF-04 | 1 | 🟢 |
+| **CU07** | Visualizar presencia y cursores | Usuario | RF-04 | 1 | 🟢 |
 
 | # | Operaciones que absorbe | Destino |
 | :--- | :--- | :--- |
@@ -157,9 +157,9 @@ requisitos.
 
 ### Paquete E — Trabajo sin conexión
 
-| # | Caso de uso | Actor principal | RF | Ciclo | Estado |
+| # | Caso de uso | Actor | RF | Ciclo | Estado |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| **CU12** | Trabajar sin conexión y sincronizar | Editor, Propietario | RF-05 | 3 | 🟡 |
+| **CU12** | Trabajar sin conexión y sincronizar | Usuario | RF-05 | 3 | 🟡 |
 
 Absorbe: modelar con la red caída · encolar las operaciones · detectar la reconexión ·
 enviar el lote · **reconciliar contra el estado actual** · mostrar el informe.
@@ -179,11 +179,11 @@ Endpoint: `POST /api/v1/diagrams/{id}/sync-offline`.
 
 ### Paquete F — Generación de código
 
-| # | Caso de uso | Actor principal | RF | Ciclo | Estado |
+| # | Caso de uso | Actor | RF | Ciclo | Estado |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| **CU13** | Validar diagrama | Colaborador | RF-06 | 3 | ⬜ |
-| **CU14** | Generar backend Spring Boot | Colaborador | RF-06 | 3 | 🟡 |
-| **CU19** | Generar app móvil con asistente de voz | Colaborador, *Motor STT* | RF-07, RF-08 | 5 | ⬜ |
+| **CU13** | Validar diagrama | Usuario | RF-06 | 3 | ⬜ |
+| **CU14** | Generar backend Spring Boot | Usuario | RF-06 | 3 | 🟡 |
+| **CU19** | Generar app móvil con asistente de voz | Usuario, *Motor STT* | RF-07, RF-08 | 5 | ⬜ |
 
 > **CU13 es precondición de CU14 y no un adorno.** El botón de descarga ejecuta primero la
 > validación y, si hay errores bloqueantes —una relación huérfana, herencia múltiple—
@@ -198,9 +198,9 @@ Endpoint: `POST /api/v1/diagrams/{id}/sync-offline`.
 
 ### Paquete G — Interoperabilidad
 
-| # | Caso de uso | Actor principal | RF | Ciclo | Estado |
+| # | Caso de uso | Actor | RF | Ciclo | Estado |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| **CU18** | Intercambiar modelos vía XMI 2.1 | Colaborador, *Enterprise Architect* | RF-09 | 4 | ⬜ |
+| **CU18** | Intercambiar modelos vía XMI 2.1 | Usuario, *Enterprise Architect* | RF-09 | 4 | ⬜ |
 
 Absorbe exportar e importar. Se agrupa porque el objetivo es uno —**interoperar con una
 herramienta CASE**— y el criterio de aceptación también: exportar, abrir en Enterprise
@@ -210,10 +210,10 @@ Architect, reimportar y no perder nada. La ida sin la vuelta no demuestra nada.
 
 ### Paquete H — Asistencia por IA
 
-| # | Caso de uso | Actor principal | RF | Ciclo | Estado |
+| # | Caso de uso | Actor | RF | Ciclo | Estado |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| **CU16** | Modelar por comando de voz o texto | Editor, Propietario, *Gemini* | RF-02 | 4 | ⬜ |
-| **CU17** | Importar diagrama desde foto | Editor, Propietario, *Gemini* | RF-03 | 4 | ⬜ |
+| **CU16** | Modelar por comando de voz o texto | Usuario, *Gemini* | RF-02 | 4 | ⬜ |
+| **CU17** | Importar diagrama desde foto | Usuario, *Gemini* | RF-03 | 4 | ⬜ |
 
 CU16 agrupa voz y texto porque **son el mismo caso de uso con distinto dispositivo de
 entrada**: la voz se transcribe en el navegador y entra por el mismo endpoint que el texto.
@@ -244,10 +244,15 @@ El dictado es un flujo alternativo, no un objetivo distinto.
 | **CU12** Trabajar sin conexión | **CU05** Editar en colaboración | Sólo si se pierde la conexión con cambios pendientes |
 | **CU11** Aceptar invitación | **CU02** Iniciar sesión | Si el invitado no tiene sesión, entra y **vuelve al enlace** |
 
-### Generalización de actores
+### Los roles no aparecen como actores
 
-Propietario, Editor y Lector **son** Colaboradores, y heredan CU02, CU08 y CU09 sin
-repetirlos.
+`OWNER`, `EDITOR` y `VIEWER` **no se modelan como actores**: son niveles de autorización
+sobre los mismos objetivos, no roles con objetivos propios. El criterio y la **matriz de
+permisos completa** están en [2.1.1 Actores](01-actores.md).
+
+En este catálogo, la columna *Actor* dice **quién persigue el objetivo**; **qué rol hace
+falta** para alcanzarlo es una precondición, y se detalla en la especificación de cada caso
+de uso (sección 2.3).
 
 ---
 

@@ -1,26 +1,25 @@
-# 1. Actores del sistema
+# 2.1.1 Actores del sistema
 
-> Modelo de casos de uso — PUDS, fase de Inicio.
+> Modelo de casos de uso — PUDS.
 > Fuente: `PLAN_ARQUITECTONICO_FASE_0.txt` §3 (RF-01…RF-09) y el código de
 > `backend/src/main/java/com/modelcollab/`.
 
 ---
 
-## 1.1 Qué es un actor, y por qué importa distinguirlo bien
+## Qué es un actor
 
-Un **actor** no es una persona: es un **rol** que algo o alguien juega al interactuar con
-el sistema. Tres consecuencias que se aplican en este documento:
+Un **actor** no es una persona: es un **rol externo al sistema** que interactúa con él para
+alcanzar un objetivo. De ahí tres consecuencias:
 
-1. **Una misma persona puede ser varios actores.** Daniel es *Propietario* del proyecto
-   que creó y *Lector* de uno al que lo invitaron. No son dos usuarios: son dos roles.
-2. **Un actor puede no ser humano.** Un sistema externo o un temporizador que dispara algo
-   por sí solo también son actores.
+1. **Una misma persona puede ser varios actores**, en momentos distintos.
+2. **Un actor puede no ser humano.** Un sistema externo, o un temporizador que dispara algo
+   por su cuenta, también lo son.
 3. **Lo que está adentro del sistema no es actor.** La base de datos no es un actor: es
    parte del sistema.
 
 ---
 
-## 1.2 Actores humanos
+## Actores humanos
 
 ### Visitante
 
@@ -29,101 +28,132 @@ que haya una cuenta.
 
 | | |
 | :--- | :--- |
-| **Puede** | Registrarse, iniciar sesión, y **consultar una invitación** para ver a qué proyecto lo invitan antes de aceptar |
-| **No puede** | Ver ningún diagrama ni proyecto |
-| **En el código** | `auth/controller/AuthController`, y `GET /api/v1/invitations/{token}`, que es el único endpoint público fuera de autenticación |
+| **Objetivos** | Registrarse · Iniciar sesión · **Consultar una invitación** para saber a qué proyecto lo invitan antes de aceptar |
+| **No puede** | Ver ningún proyecto ni diagrama |
+| **En el código** | `auth/controller/AuthController`, y `GET /api/v1/invitations/{token}` — el único endpoint público fuera de autenticación |
 
-> **Por qué la consulta de invitación es pública.** Si exigiera sesión, el invitado vería
-> un formulario de acceso sin saber a qué lo invitaron ni quién. La consulta devuelve sólo
-> el nombre del proyecto y el rol ofrecido — nunca su contenido.
+> **Por qué consultar una invitación es público.** Si exigiera sesión, el invitado vería un
+> formulario de acceso sin saber a qué lo invitan ni quién. La consulta devuelve sólo el
+> nombre del proyecto y el rol ofrecido — **nunca su contenido**.
 
 ---
 
-### Colaborador *(actor abstracto)*
+### Usuario
 
-Usuario autenticado. **No se instancia directamente**: siempre actúa con uno de los tres
-roles de abajo. Se modela como actor abstracto porque hay casos de uso que valen para los
-tres y repetirlos tres veces ensucia el diagrama.
+Persona autenticada. Es el actor principal del sistema: modela diagramas, gestiona sus
+proyectos e invita a otros a colaborar.
 
 | | |
 | :--- | :--- |
-| **Puede** | Iniciar sesión, ver sus proyectos, crear proyectos propios, aceptar invitaciones |
-| **En el código** | Cualquier petición con `Authorization: Bearer`, validada por `config/JwtAuthenticationFilter` |
-
-**El rol es por proyecto, no por usuario.** Esto es central y conviene decirlo explícito:
-la tabla `project_members` asocia `(proyecto, usuario) → rol`. No existe un "usuario
-editor" en el sistema; existe "editor **de este proyecto**". Quien crea un proyecto es su
-Propietario, y en otro puede ser Lector.
+| **Objetivos** | Crear y abrir proyectos y diagramas · Modelar clases, atributos, métodos y relaciones · Colaborar en tiempo real · Invitar colaboradores · Generar código |
+| **En el código** | Cualquier petición con `Authorization: Bearer`, validada por `config/JwtAuthenticationFilter` y, sobre WebSocket, por `collaboration/interceptor/StompChannelInterceptor` |
 
 ---
 
-### Propietario — `OWNER`
+## Por qué `OWNER`, `EDITOR` y `VIEWER` **no** son actores
 
-Quien creó el proyecto, o quien recibió ese rol.
+El sistema define tres roles y los arbitra estrictamente. Sin embargo **no se modelan como
+actores**, y conviene dejar escrito el criterio porque es una decisión de método:
 
-| | |
+> Un actor se separa de otro cuando persigue **objetivos distintos**, no cuando tiene
+> **permisos distintos** sobre los mismos objetivos.
+
+Aplicado a este sistema:
+
+| Rol | ¿Tiene algún caso de uso propio? | Conclusión |
+| :--- | :--- | :--- |
+| `OWNER` | Sí: gestionar colaboradores. Pero es *administrar un proyecto*, no un oficio distinto | Mismo actor, más permisos |
+| `EDITOR` | No. Persigue exactamente lo mismo que el lector: abrir el diagrama y trabajarlo | Mismo actor |
+| `VIEWER` | **Ninguno.** Se define enteramente por lo que *no* puede hacer | Nivel de autorización |
+
+Un rol que sólo existe **por negación** no es un actor: es un nivel de autorización.
+
+### Dónde queda entonces esa información
+
+No se pierde — **se muda a un lugar más preciso**. Un diagrama de casos de uso no puede
+expresar que *mover* una clase no requiere bloqueo pero *renombrarla* sí; una tabla sí
+puede. Los roles se documentan en tres lugares:
+
+1. La **precondición** de cada caso de uso (sección 2.3)
+2. La **matriz de permisos** de acá abajo
+3. El **modelo de análisis y diseño**, donde el arbitraje aparece como clase de control
+
+### El rol es por proyecto, no por usuario
+
+Esto es central: la tabla `project_members` asocia **`(proyecto, usuario) → rol`**. No
+existe "un usuario editor" en el sistema; existe "editor **de este proyecto**". El mismo
+Usuario es `OWNER` del proyecto que creó y `VIEWER` de otro al que lo invitaron.
+
+---
+
+## Matriz de permisos
+
+| Caso de uso | `OWNER` | `EDITOR` | `VIEWER` |
+| :--- | :---: | :---: | :---: |
+| CU07 Visualizar presencia y cursores | ✅ | ✅ | ✅ |
+| CU08 Gestionar proyectos *(los propios)* | ✅ | ✅ | ✅ |
+| CU09 Gestionar diagramas — consultar y abrir | ✅ | ✅ | ✅ |
+| CU09 Gestionar diagramas — crear | ✅ | ✅ | ❌ |
+| CU03 Modelar clases y sus miembros | ✅ | ✅ | ❌ |
+| CU04 Modelar relaciones | ✅ | ✅ | ❌ |
+| CU05 Editar el diagrama en colaboración | ✅ | ✅ | ❌ |
+| CU06 Gestionar bloqueo de elemento | ✅ | ✅ | ❌ |
+| CU12 Trabajar sin conexión y sincronizar | ✅ | ✅ | ❌ |
+| CU10 Gestionar colaboradores del proyecto | ✅ | ❌ | ❌ |
+| CU13 Validar diagrama | ✅ | ✅ | ✅ |
+| CU14 Generar backend Spring Boot | ✅ | ✅ | ✅ |
+| CU15 Alternar vista UML / ER | ✅ | ✅ | ✅ |
+
+**Tres filas que hay que saber explicar:**
+
+- **El `VIEWER` sí emite cursor y sí consulta la lista de participantes** (CU07). Si no
+  pudiera, entraría a una sala colaborativa y no vería a nadie. Mirar dónde está mirando
+  alguien que mira es correcto.
+- **El `VIEWER` sí puede generar código** (CU14). Generar no modifica el diagrama: es una
+  lectura que produce un archivo. Prohibírselo no protegería nada.
+- **Rechazar a un `VIEWER` no lo desconecta.** El servidor descarta la mutación, le responde
+  `403 FORBIDDEN_ROLE` por su canal privado y **mantiene la sesión abierta**. Si la cerrara,
+  dejaría de ver el trabajo de los demás — que es exactamente lo único que sí tiene
+  permitido.
+
+### Granularidad que la matriz no alcanza a mostrar
+
+Dentro de CU05, no todas las operaciones tienen el mismo régimen de exclusión mutua:
+
+| Régimen | Operaciones |
 | :--- | :--- |
-| **Puede** | Todo lo de Editor, **más** compartir por enlace, agregar miembros por correo, revocar invitaciones |
-| **En el código** | `project/service/ProjectService`, donde las operaciones de otorgamiento exigen `OWNER` |
+| **No requiere bloqueo** | `ADD_CLASS`, `ADD_RELATIONSHIP`, `ADD_PACKAGE` |
+| **Libre, gana el último** | `MOVE_CLASS`, `RESIZE_CLASS`, `UPDATE_WAYPOINTS` |
+| **Requiere bloqueo** | `RENAME_CLASS`, `DELETE_*`, `ADD_ATTRIBUTE`, `UPDATE_*` |
+| **Bloqueo del diagrama entero** | `BULK_MERGE` |
+
+Está declarado en un solo lugar del código —el enumerado `OperationType`— y no repartido en
+condicionales. Arrastrar una clase a 60 cuadros por segundo pidiendo bloqueo sería
+inutilizable; renombrarla sin bloqueo produciría pérdidas silenciosas.
 
 ---
 
-### Editor — `EDITOR`
-
-| | |
-| :--- | :--- |
-| **Puede** | Todo lo de Lector, **más** modelar: crear, mover, renombrar y borrar clases, atributos, métodos y relaciones; tomar bloqueos; crear diagramas |
-| **No puede** | Invitar ni revocar |
-| **En el código** | `collaboration/interceptor/StompChannelInterceptor` deja pasar sus mutaciones |
-
----
-
-### Lector — `VIEWER`
-
-| | |
-| :--- | :--- |
-| **Puede** | Abrir el diagrama, ver los cambios de los demás **en vivo**, ver los bloqueos ajenos, ver quién está en la sala, **y emitir su propio cursor** |
-| **No puede** | Ninguna mutación. El servidor la descarta y le responde `403 FORBIDDEN_ROLE` por su canal privado |
-| **En el código** | `StompChannelInterceptor`, verificado por `StompChannelInterceptorTest` |
-
-> **Dos decisiones sobre el Lector que se defienden y no son obvias.**
->
-> **Rechazar no lo desconecta.** El servidor descarta la mutación y le avisa por un canal
-> privado, pero **mantiene la sesión abierta**. Si la cerrara, el Lector dejaría de ver el
-> trabajo de los demás — que es exactamente lo único que sí tiene permitido.
->
-> **Un Lector sí emite cursor y sí pide la lista de participantes.** Mirar dónde está
-> mirando alguien que mira es correcto. Si no pudiera, entraría a una sala colaborativa y
-> no vería a nadie.
-
----
-
-## 1.3 Actores no humanos
+## Actores no humanos
 
 ### Tiempo *(temporizador del sistema)*
-
-Actor que dispara casos de uso sin que nadie lo pida.
 
 | | |
 | :--- | :--- |
 | **Dispara** | La expiración de un bloqueo con TTL de 5 s, y la caducidad de una invitación |
 | **En el código** | El barrido periódico de `collaboration/service/LockManagerService` |
 
-> Se modela como actor porque **inicia** un caso de uso: nadie pulsa nada y el sistema
-> libera el bloqueo y se lo notifica a toda la sala. Sin este actor, el caso de uso
-> "liberar bloqueo vencido" no tendría quién lo empiece, y es el que garantiza que un
-> usuario que cierra el navegador no deje un elemento bloqueado para siempre.
+> Es actor porque **inicia** un caso de uso: nadie pulsa nada y el sistema libera el bloqueo
+> y se lo notifica a toda la sala. Sin él, el flujo "liberar bloqueo vencido" no tendría
+> quién lo empiece — y un usuario que cierra el navegador dejaría un elemento bloqueado
+> para siempre.
 
 ---
 
 ### Servicio de IA generativa — *Gemini*
 
-Sistema externo consultado para interpretar órdenes en lenguaje natural y para leer fotos
-de pizarra.
-
 | | |
 | :--- | :--- |
-| **Participa en** | Modelado por texto y voz (RF-02), importación desde foto (RF-03) |
+| **Participa en** | CU16 modelado por voz y texto (RF-02), CU17 importación desde foto (RF-03) |
 | **Estado** | ⬜ **No integrado.** Los paquetes `ai/` y `vision/` existen en la estructura, vacíos |
 
 ---
@@ -132,10 +162,10 @@ de pizarra.
 
 | | |
 | :--- | :--- |
-| **Participa en** | Exportación e importación XMI 2.1 (RF-09) |
+| **Participa en** | CU18 intercambio XMI 2.1 (RF-09) |
 | **Estado** | ⬜ **No implementado.** El paquete `xmi/` existe vacío |
 
-> Es actor y no simple formato de archivo porque **el intercambio es bidireccional**: el
+> Es actor y no un simple formato de archivo porque **el intercambio es bidireccional**: el
 > sistema exporta para que la herramienta lea, e importa lo que la herramienta produjo. Un
 > formato que sólo se escribe no necesita actor; uno que se negocia con otro sistema, sí.
 
@@ -145,56 +175,37 @@ de pizarra.
 
 | | |
 | :--- | :--- |
-| **Participa en** | El asistente por voz de la **app móvil generada** (RF-07, RF-08) |
-| **Estado** | 🟡 **Validado, no integrado.** El spike del Día 1 comprobó en un teléfono real, en modo avión, que transcribe sin internet — evidencia en `evidencias/spike-voz-modo-avion.png` |
+| **Participa en** | CU19, el asistente por voz de la **app móvil generada** (RF-07, RF-08) |
+| **Estado** | 🟡 **Validado, no integrado.** El spike del ciclo 1 comprobó en un teléfono real, en modo avión, que transcribe sin internet — evidencia en `evidencias/spike-voz-modo-avion.png` |
 
-> Es actor del **sistema generado**, no de ModelCollab. Aparece acá porque el caso de uso
-> "generar app móvil" tiene que producir código que hable con él.
+> Es actor del **sistema generado**, no de ModelCollab. Aparece acá porque CU19 tiene que
+> producir código que hable con él.
 
 ---
 
-## 1.4 Diagrama de actores
+## Diagrama de actores
 
 Fuente: [`../diagramas/actores.puml`](../diagramas/actores.puml)
 
 ```
-                    ┌──────────────┐
-                    │  Visitante   │
-                    └──────┬───────┘
-                           │ (se registra / inicia sesión)
-                           ▼
-                    ┌──────────────┐
-                    │ Colaborador  │  «abstracto»
-                    └──────┬───────┘
-             ┌─────────────┼─────────────┐
-             ▲             ▲             ▲
-      ┌──────┴─────┐ ┌─────┴──────┐ ┌────┴───────┐
-      │ Propietario│ │   Editor   │ │   Lector   │
-      │   OWNER    │ │   EDITOR   │ │   VIEWER   │
-      └────────────┘ └────────────┘ └────────────┘
+        ┌──────────────┐        se registra        ┌──────────────┐
+        │  Visitante   │ ────── e inicia ─────────▶│   Usuario    │
+        └──────────────┘         sesión            └──────────────┘
+                                                    rol por proyecto:
+                                                    OWNER · EDITOR · VIEWER
+                                                    (autorización, no actores)
 
-   NO HUMANOS:   [Tiempo]   [Gemini]   [Enterprise Architect]   [Motor STT]
+   NO HUMANOS:   [ Tiempo ]   [ Gemini ]   [ Enterprise Architect ]   [ Motor STT ]
 ```
-
-La flecha de generalización se lee **"es un"**: un Propietario *es un* Colaborador, así que
-hereda todos sus casos de uso. Eso evita repetir *"ver mis proyectos"* tres veces.
-
-**Ojo con un error frecuente:** la generalización entre Propietario, Editor y Lector
-**no** es una jerarquía de permisos acumulativos declarada en el diagrama. El diagrama
-dice que los tres son Colaboradores. Que un Propietario pueda hacer todo lo de un Editor
-es una decisión del sistema, escrita en `ProjectService`, no algo que el diagrama imponga.
 
 ---
 
-## 1.5 Resumen
+## Resumen
 
-| Actor | Tipo | Estado en el código |
+| Actor | Tipo | Estado |
 | :--- | :--- | :---: |
 | Visitante | Humano | 🟢 |
-| Colaborador | Humano, abstracto | 🟢 |
-| Propietario (`OWNER`) | Humano | 🟢 |
-| Editor (`EDITOR`) | Humano | 🟢 |
-| Lector (`VIEWER`) | Humano | 🟢 |
+| Usuario | Humano | 🟢 |
 | Tiempo | Sistema | 🟢 |
 | Gemini | Sistema externo | ⬜ |
 | Enterprise Architect | Sistema externo | ⬜ |

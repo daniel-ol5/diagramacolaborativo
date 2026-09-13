@@ -3,12 +3,7 @@
 left to right direction
 
 actor "Visitante" as V
-actor "Colaborador" as C
-actor "Propietario" as OW
-actor "Editor" as ED
-
-C <|-- OW
-C <|-- ED
+actor "Usuario" as U
 
 rectangle "CICLO 2 - Proyectos y colaboradores" {
   usecase "CU08 Gestionar proyectos" as CU08
@@ -17,25 +12,29 @@ rectangle "CICLO 2 - Proyectos y colaboradores" {
   usecase "CU11 Aceptar invitacion" as CU11
 }
 
-C --> CU08
-OW --> CU09
-ED --> CU09
-OW --> CU10
+U --> CU08
+U --> CU09
+U --> CU10
 V --> CU11
-C --> CU11
+U --> CU11
 
 note bottom of CU10
-  No estaba en la especificacion original:
-  el sistema tenia tres roles arbitrados
-  y ninguna forma de otorgarlos.
-  Hallazgo de la captura de requisitos.
+  Precondicion: rol OWNER en el proyecto.
+  No estaba en la especificacion original: el
+  sistema tenia tres roles arbitrados y ninguna
+  forma de otorgarlos. Hallazgo de la captura
+  de requisitos.
 end note
 
 note right of CU11
-  Aceptar **nunca baja** un rol existente:
-  el propietario que abre su propio enlace
-  de lector sigue siendo propietario.
-  Y es idempotente: abrirlo tres veces
-  no agrega tres miembros.
+  Aceptar **nunca baja** un rol existente: el
+  propietario que abre su propio enlace de lector
+  sigue siendo propietario. Y es idempotente:
+  abrirlo tres veces no agrega tres miembros.
+end note
+
+note bottom of CU09
+  Crear exige OWNER o EDITOR.
+  Consultar y abrir, cualquier miembro.
 end note
 @enduml

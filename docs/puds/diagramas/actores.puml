@@ -5,20 +5,17 @@ skinparam actorStyle awesome
 skinparam packageStyle rectangle
 
 actor "Visitante" as V
-actor "Colaborador" as C <<abstracto>>
-actor "Propietario\n(OWNER)" as OW
-actor "Editor\n(EDITOR)" as ED
-actor "Lector\n(VIEWER)" as VI
+actor "Usuario" as U
 
-C <|-- OW
-C <|-- ED
-C <|-- VI
+V --> U : se registra e inicia sesion
 
-note right of C
-  El rol es **por proyecto**, no por usuario.
-  La misma persona puede ser Propietario
-  de un proyecto y Lector de otro.
-  Origen: tabla project_members
+note right of U
+  **OWNER / EDITOR / VIEWER no son actores.**
+  Son niveles de autorizacion sobre los mismos
+  objetivos, asignados **por proyecto**
+  (tabla project_members).
+  Se documentan en la matriz de permisos y en
+  las precondiciones de cada caso de uso.
 end note
 
 package "Actores no humanos" {
@@ -33,6 +30,4 @@ note bottom of T
   y la caducidad de invitaciones.
   Nadie pulsa nada: el sistema actua solo.
 end note
-
-V ..> C : se registra\ne inicia sesion
 @enduml

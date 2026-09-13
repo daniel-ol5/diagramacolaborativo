@@ -2,8 +2,7 @@
 ' CICLOS 4 y 5 - Fuera del parcial
 left to right direction
 
-actor "Colaborador" as C
-actor "Editor" as ED
+actor "Usuario" as U
 actor "Gemini" as G
 actor "Enterprise Architect" as EA
 actor "Motor STT\ndel dispositivo" as STT
@@ -18,10 +17,10 @@ rectangle "CICLO 5" {
   usecase "CU19 Generar app movil\ncon asistente de voz" as CU19
 }
 
-ED --> CU16
-ED --> CU17
-C --> CU18
-C --> CU19
+U --> CU16
+U --> CU17
+U --> CU18
+U --> CU19
 G --> CU16
 G --> CU17
 EA --> CU18
