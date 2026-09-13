@@ -1,0 +1,59 @@
+@startuml casos-de-uso-ciclo1
+' CICLO 1 - Nucleo colaborativo
+left to right direction
+
+actor "Visitante" as V
+actor "Editor" as ED
+actor "Propietario" as OW
+actor "Lector" as VI
+actor "Tiempo" as T
+
+rectangle "CICLO 1 - Nucleo colaborativo" {
+  usecase "CU01 Registrarse" as CU01
+  usecase "CU02 Iniciar sesion" as CU02
+  usecase "CU03 Modelar clases\ny sus miembros" as CU03
+  usecase "CU04 Modelar relaciones" as CU04
+  usecase "CU05 Editar el diagrama\nen colaboracion" as CU05
+  usecase "CU06 Gestionar bloqueo\nde elemento" as CU06
+  usecase "CU07 Visualizar presencia\ny cursores" as CU07
+}
+
+V --> CU01
+V --> CU02
+ED --> CU03
+OW --> CU03
+ED --> CU04
+OW --> CU04
+ED --> CU05
+OW --> CU05
+ED --> CU06
+OW --> CU06
+T --> CU06
+ED --> CU07
+VI --> CU07
+
+CU03 ..> CU05 : <<include>>
+CU04 ..> CU05 : <<include>>
+CU05 ..> CU06 : <<include>>
+
+note right of CU05
+  El <<include>> hacia CU06 es **condicional
+  segun la operacion**: renombrar, borrar y
+  editar miembros exigen bloqueo; mover y
+  redimensionar no (politica LWW).
+  Declarado en OperationType, un solo lugar.
+end note
+
+note bottom of CU06
+  Flujo alternativo disparado por Tiempo:
+  el bloqueo vence a los 5 s si nadie lo renueva.
+  Sin eso, cerrar el navegador dejaria un
+  elemento bloqueado para siempre.
+end note
+
+note bottom of CU07
+  El Lector SI emite cursor y SI consulta
+  participantes: si no pudiera, entraria a una
+  sala colaborativa y no veria a nadie.
+end note
+@enduml

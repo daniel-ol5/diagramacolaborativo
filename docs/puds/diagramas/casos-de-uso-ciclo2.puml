@@ -1,0 +1,41 @@
+@startuml casos-de-uso-ciclo2
+' CICLO 2 - Gestion de proyectos y colaboracion entre personas
+left to right direction
+
+actor "Visitante" as V
+actor "Colaborador" as C
+actor "Propietario" as OW
+actor "Editor" as ED
+
+C <|-- OW
+C <|-- ED
+
+rectangle "CICLO 2 - Proyectos y colaboradores" {
+  usecase "CU08 Gestionar proyectos" as CU08
+  usecase "CU09 Gestionar diagramas" as CU09
+  usecase "CU10 Gestionar colaboradores\ndel proyecto" as CU10
+  usecase "CU11 Aceptar invitacion" as CU11
+}
+
+C --> CU08
+OW --> CU09
+ED --> CU09
+OW --> CU10
+V --> CU11
+C --> CU11
+
+note bottom of CU10
+  No estaba en la especificacion original:
+  el sistema tenia tres roles arbitrados
+  y ninguna forma de otorgarlos.
+  Hallazgo de la captura de requisitos.
+end note
+
+note right of CU11
+  Aceptar **nunca baja** un rol existente:
+  el propietario que abre su propio enlace
+  de lector sigue siendo propietario.
+  Y es idempotente: abrirlo tres veces
+  no agrega tres miembros.
+end note
+@enduml

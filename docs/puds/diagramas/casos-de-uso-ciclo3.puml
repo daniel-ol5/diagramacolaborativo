@@ -1,0 +1,39 @@
+@startuml casos-de-uso-ciclo3
+' CICLO 3 - Generacion de codigo y trabajo sin conexion
+left to right direction
+
+actor "Colaborador" as C
+actor "Editor" as ED
+actor "Propietario" as OW
+
+rectangle "CICLO 3 - Generacion y trabajo sin conexion" {
+  usecase "CU12 Trabajar sin conexion\ny sincronizar" as CU12
+  usecase "CU13 Validar diagrama" as CU13
+  usecase "CU14 Generar backend\nSpring Boot" as CU14
+  usecase "CU15 Alternar vista\nUML / Entidad-Relacion" as CU15
+}
+
+ED --> CU12
+OW --> CU12
+C --> CU13
+C --> CU14
+C --> CU15
+
+CU14 ..> CU13 : <<include>>
+
+note bottom of CU13
+  Precondicion real, no adorno: si hay errores
+  bloqueantes la descarga se impide.
+  Generar un paquete que no compila
+  es peor que no generarlo.
+end note
+
+note right of CU12
+  Sin conexion el cliente **omite** la
+  adquisicion de bloqueo: la exclusion mutua
+  no desaparece, se traslada del momento de
+  la edicion al de la reconciliacion.
+  Prevencion cuando hay arbitro en linea,
+  resolucion cuando no lo hay.
+end note
+@enduml

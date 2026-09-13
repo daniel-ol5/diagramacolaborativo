@@ -1,244 +1,296 @@
-# 2. Casos de uso
+# 2.1.2 Casos de uso
 
-> Modelo de casos de uso — PUDS, fase de Inicio/Elaboración.
-> Este documento identifica **qué casos de uso existen** y a qué requisito y a qué código
-> corresponde cada uno. La especificación detallada de flujos es el documento siguiente.
+> Modelo de casos de uso — PUDS.
+> Identifica **qué casos de uso existen**, a qué requisito responde cada uno y en qué parte
+> del código vive. La especificación detallada de flujos es la sección 2.3.
 
 ---
 
-## 2.1 Cómo se agruparon
+## Criterio de granularidad
 
-Los casos de uso se organizan en **paquetes de casos de uso**, que no son carpetas del
-código: son agrupaciones por objetivo del usuario. Se eligieron de modo que cada paquete
-responda a una pregunta completa del negocio, y **coinciden casi uno a uno con los
-paquetes del backend** — lo cual no es casualidad, sino consecuencia de que la estructura
-modular de §6 se derivó de los mismos requisitos.
+Un caso de uso es **un objetivo de un actor**, no una operación técnica. `POST /projects` y
+`GET /projects` no son dos casos de uso: son dos pasos del mismo objetivo — *gestionar mis
+proyectos*.
 
-| Paquete de casos de uso | Paquete Java correspondiente |
+Por eso el catálogo agrupa las operaciones de alta, consulta, modificación y baja de un
+mismo concepto en **un solo caso de uso**, y el detalle de cada operación aparece como
+**flujo alternativo** dentro de su especificación (sección 2.3), que es donde el Proceso
+Unificado espera encontrarlo.
+
+Donde **no** se agrupa, y el motivo:
+
+| Caso | Por qué queda separado |
 | :--- | :--- |
-| Gestión de acceso | `auth/` |
-| Gestión de proyectos y diagramas | `project/`, `diagram/` |
-| Colaboración en tiempo real | `collaboration/` |
-| Modelado | `metamodel/` + la interfaz web |
-| Trabajo sin conexión | `diagram/service/OfflineReconciliationService` |
-| Generación de código | `generator/` |
-| Interoperabilidad | `xmi/` |
-| Asistencia por IA | `ai/`, `vision/` |
+| CU10 Gestionar colaboradores / **CU11 Aceptar invitación** | **Actores distintos**: el propietario invita, el invitado acepta. Dos objetivos, dos actores |
+| CU13 Validar diagrama / **CU14 Generar backend** | Es un `«include»`, y en UML un `«include»` **es** un caso de uso propio. Además tiene valor solo: se puede validar sin descargar nada |
+| CU03 Modelar clases / **CU04 Modelar relaciones** | Las relaciones tienen semántica propia —multiplicidad, lado propietario, navegabilidad— que decide el esquema de base de datos generado |
+
+Resultado: **19 casos de uso**, de los cuales **15 entran en el parcial** (ciclos 1 a 3).
 
 ---
 
-## 2.2 Catálogo de casos de uso
+## Paquetes de casos de uso
 
-**Leyenda de estado:** 🟢 implementado y verificado · 🟡 parcial · ⬜ no implementado
+Agrupaciones por objetivo del usuario. **Coinciden casi uno a uno con los paquetes del
+backend**, y eso no es casualidad: la estructura modular de §6 se derivó de los mismos
+requisitos.
+
+| Paquete | Casos de uso | Paquete Java |
+| :--- | :--- | :--- |
+| **A.** Gestión de acceso | CU01, CU02 | `auth/` |
+| **B.** Gestión de proyectos | CU08, CU09, CU10, CU11 | `project/`, `diagram/` |
+| **C.** Modelado | CU03, CU04, CU15 | `metamodel/` + interfaz web |
+| **D.** Colaboración en tiempo real | CU05, CU06, CU07 | `collaboration/` |
+| **E.** Trabajo sin conexión | CU12 | `diagram/service/` |
+| **F.** Generación de código | CU13, CU14, CU19 | `generator/` |
+| **G.** Interoperabilidad | CU18 | `xmi/` |
+| **H.** Asistencia por IA | CU16, CU17 | `ai/`, `vision/` |
+
+---
+
+## Catálogo
+
+**Estado:** 🟢 implementado y verificado · 🟡 parcial · ⬜ no implementado
 
 ### Paquete A — Gestión de acceso
 
-| # | Caso de uso | Actor principal | RF | Dónde vive | Estado |
-| :--- | :--- | :--- | :---: | :--- | :---: |
-| **CU01** | Registrar usuario | Visitante | — | `POST /api/v1/auth/register` | 🟢 |
-| **CU02** | Iniciar sesión | Visitante | — | `POST /api/v1/auth/login` | 🟢 |
+| # | Caso de uso | Actor principal | RF | Ciclo | Estado |
+| :--- | :--- | :--- | :---: | :---: | :---: |
+| **CU01** | Registrarse | Visitante | derivado | 1 | 🟢 |
+| **CU02** | Iniciar sesión | Visitante | derivado | 1 | 🟢 |
 
-> CU01 y CU02 no trazan a ningún RF: son **requisitos derivados**. Aparecen porque RF-04
-> exige roles por colaborador, y no hay roles sin identidad. Vale decirlo en la defensa: no
-> se agregaron "porque toda aplicación tiene login", sino porque otro requisito los obliga.
+**Implementación:** `POST /api/v1/auth/register`, `POST /api/v1/auth/login` —
+`auth/controller/AuthController`.
 
----
-
-### Paquete B — Gestión de proyectos y diagramas
-
-| # | Caso de uso | Actor principal | RF | Dónde vive | Estado |
-| :--- | :--- | :--- | :---: | :--- | :---: |
-| **CU03** | Crear proyecto | Colaborador | RF-04 | `POST /api/v1/projects` | 🟢 |
-| **CU04** | Consultar mis proyectos | Colaborador | RF-04 | `GET /api/v1/projects` | 🟢 |
-| **CU05** | Crear diagrama | Propietario, Editor | RF-01 | `POST /api/v1/projects/{id}/diagrams` | 🟢 |
-| **CU06** | Consultar diagramas del proyecto | Colaborador | RF-01 | `GET /api/v1/projects/{id}/diagrams` | 🟢 |
-| **CU07** | Abrir diagrama | Colaborador | RF-01 | `GET /api/v1/diagrams/{id}/snapshot` | 🟢 |
-
-> **CU04 devuelve el rol propio en cada proyecto.** Es un detalle de diseño con
-> consecuencia funcional: sin él, la interfaz tendría que preguntar por separado qué puede
-> hacer en cada proyecto antes de dibujar un botón.
+> **No trazan a ningún RF, y hay que saber explicarlo.** Son **requisitos derivados**:
+> aparecen porque RF-04 exige roles por colaborador, y no hay roles sin identidad. No se
+> agregaron "porque toda aplicación tiene login", sino porque otro requisito los obliga.
 
 ---
 
-### Paquete C — Colaboración en tiempo real
+### Paquete B — Gestión de proyectos
 
-| # | Caso de uso | Actor principal | RF | Dónde vive | Estado |
-| :--- | :--- | :--- | :---: | :--- | :---: |
-| **CU08** | Compartir proyecto por enlace | Propietario | RF-04 | `POST /api/v1/projects/{id}/invitations` | 🟢 |
-| **CU09** | Consultar invitación | Visitante, Colaborador | RF-04 | `GET /api/v1/invitations/{token}` | 🟢 |
-| **CU10** | Aceptar invitación | Colaborador | RF-04 | `POST /api/v1/invitations/{token}/accept` | 🟢 |
-| **CU11** | Agregar miembro por correo | Propietario | RF-04 | `POST /api/v1/projects/{id}/members` | 🟢 |
-| **CU12** | Revocar invitación | Propietario | RF-04 | `DELETE …/invitations/{invId}` | 🟢 |
-| **CU13** | Editar el diagrama en tiempo real | Editor, Propietario | RF-04 | STOMP `/app/diagram/{id}/mutate` | 🟢 |
-| **CU14** | Bloquear elemento para edición exclusiva | Editor, Propietario | RF-04 | STOMP `/app/diagram/{id}/lock` | 🟢 |
-| **CU15** | Liberar bloqueo vencido | **Tiempo** | RF-04 | `LockManagerService` (barrido periódico) | 🟢 |
-| **CU16** | Mostrar presencia y cursores | Colaborador | RF-04 | STOMP `/app/diagram/{id}/cursor` y `/presence` | 🟢 |
+| # | Caso de uso | Actor principal | RF | Ciclo | Estado |
+| :--- | :--- | :--- | :---: | :---: | :---: |
+| **CU08** | Gestionar proyectos | Colaborador | RF-04 | 2 | 🟢 |
+| **CU09** | Gestionar diagramas | Propietario, Editor | RF-01 | 2 | 🟢 |
+| **CU10** | Gestionar colaboradores del proyecto | Propietario | RF-04 | 2 | 🟢 |
+| **CU11** | Aceptar invitación | Visitante, Colaborador | RF-04 | 2 | 🟢 |
 
-> **CU08 a CU12 no estaban en la especificación original.** §14 lista crear y listar
-> proyectos, pero **ningún endpoint para otorgar un rol**. O sea que el sistema tenía roles
-> y ninguna forma de concederlos: la única manera de que dos personas colaboraran era
-> insertar una fila a mano en la base de datos.
+| # | Operaciones que absorbe | Endpoints |
+| :--- | :--- | :--- |
+| CU08 | Crear proyecto · Consultar mis proyectos | `POST` y `GET /api/v1/projects` |
+| CU09 | Crear diagrama · Consultar diagramas · Abrir diagrama | `POST` y `GET /api/v1/projects/{id}/diagrams`, `GET /api/v1/diagrams/{id}/snapshot` |
+| CU10 | Generar enlace de invitación · Consultar invitaciones · Revocar invitación · Agregar miembro por correo · Consultar miembros | `POST`/`GET`/`DELETE …/invitations`, `POST`/`GET …/members` |
+| CU11 | Consultar una invitación · Aceptarla | `GET /api/v1/invitations/{token}`, `POST …/accept` |
+
+> **CU10 y CU11 no estaban en la especificación original.** §14 lista crear y listar
+> proyectos, pero **ningún endpoint para otorgar un rol**. El sistema tenía tres roles
+> definidos, arbitrados y probados… y ninguna forma de asignarlos salvo escribir una fila en
+> la base de datos a mano.
 >
-> Detectado el 6 de septiembre y resuelto con la migración `V3`. Queda anotado acá porque
-> **es un hallazgo de la captura de requisitos, y ése es exactamente el trabajo de este
-> documento**: recorrer los casos de uso completos revela los que faltan.
+> El hueco apareció **al recorrer el catálogo completo de casos de uso**, que es exactamente
+> para lo que sirve esta etapa del proceso. Resuelto con la migración `V3`.
+
+> **Dos reglas de CU11 que se defienden.** Aceptar una invitación **nunca baja** un rol
+> existente: si el propietario abre su propio enlace de lector, sigue siendo propietario —
+> si no, se degradaría a sí mismo sin poder recuperarse. Y aceptar es **idempotente**: abrir
+> el enlace tres veces no agrega tres miembros.
 
 ---
 
-### Paquete D — Modelado
+### Paquete C — Modelado
 
-| # | Caso de uso | Actor principal | RF | Dónde vive | Estado |
-| :--- | :--- | :--- | :---: | :--- | :---: |
-| **CU17** | Modelar clases | Editor, Propietario | RF-01 | `ADD_CLASS`, `MOVE_CLASS`, `RESIZE_CLASS`, `RENAME_CLASS`, `DELETE_CLASS` | 🟢 |
-| **CU18** | Modelar atributos | Editor, Propietario | RF-01 | `ADD_ATTRIBUTE`, `UPDATE_ATTRIBUTE`, `DELETE_ATTRIBUTE` | 🟢 |
-| **CU19** | Modelar métodos | Editor, Propietario | RF-01 | `ADD_METHOD`, `UPDATE_METHOD`, `DELETE_METHOD` | 🟡 servidor sí, interfaz no |
-| **CU20** | Modelar relaciones | Editor, Propietario | RF-01 | `ADD_RELATIONSHIP`, `DELETE_RELATIONSHIP`, `UPDATE_WAYPOINTS` | 🟢 |
-| **CU21** | Organizar en paquetes | Editor, Propietario | RF-01 | `ADD_PACKAGE`, `UPDATE_PACKAGE`, `DELETE_PACKAGE` | 🟡 servidor sí, interfaz no |
-| **CU22** | Alternar vista UML / Entidad-Relación | Colaborador | RF-01 | — | ⬜ |
+| # | Caso de uso | Actor principal | RF | Ciclo | Estado |
+| :--- | :--- | :--- | :---: | :---: | :---: |
+| **CU03** | Modelar clases y sus miembros | Editor, Propietario | RF-01 | 1 | 🟡 |
+| **CU04** | Modelar relaciones | Editor, Propietario | RF-01 | 1 | 🟡 |
+| **CU15** | Alternar vista UML / Entidad-Relación | Colaborador | RF-01 | 3 | ⬜ |
 
-> El servidor implementa **18 de las 22 operaciones** del catálogo §8.1; la interfaz web
-> emite **9**. Las cuatro operaciones del servidor que faltan se rechazan con un código
-> explícito (`OP_NOT_IMPLEMENTED`) en vez de fallar en silencio, y cada una está asociada
-> al caso de uso que la necesita: `UPDATE_RELATIONSHIP` (CU20 avanzado), `BULK_MERGE`
-> (CU30, importación desde foto y XMI) y `USER_CURSOR` — que **sí** está implementada
-> (CU16).
+| # | Operaciones que absorbe | Estado por operación |
+| :--- | :--- | :--- |
+| CU03 | `ADD_CLASS`, `MOVE_CLASS`, `RESIZE_CLASS`, `RENAME_CLASS`, `DELETE_CLASS` | 🟢 |
+| | `ADD_ATTRIBUTE`, `UPDATE_ATTRIBUTE`, `DELETE_ATTRIBUTE` | 🟢 |
+| | `ADD_METHOD`, `UPDATE_METHOD`, `DELETE_METHOD` | 🟡 servidor sí, interfaz no |
+| | `ADD_PACKAGE`, `UPDATE_PACKAGE`, `DELETE_PACKAGE` | 🟡 servidor sí, interfaz no |
+| CU04 | `ADD_RELATIONSHIP`, `DELETE_RELATIONSHIP`, `UPDATE_WAYPOINTS` | 🟢 |
+| | `UPDATE_RELATIONSHIP` | ⬜ |
+
+> **La agrupación reveló algo que el catálogo anterior escondía.** Separados, "modelar
+> clases" y "modelar atributos" figuraban completos y "modelar métodos" figuraba aparte como
+> pendiente. Juntos en un solo objetivo, **CU03 queda como parcial** — que es la verdad: un
+> usuario que quiere modelar una clase completa todavía no puede agregarle métodos desde la
+> interfaz.
+
+> **El detalle de CU04 que decide el código generado:** el **lado propietario** de la
+> relación determina en qué tabla va la clave foránea. La interfaz lo deriva de las
+> multiplicidades —manda el extremo que no es `1..1`— y permite cambiarlo, pero no obliga al
+> usuario a entenderlo para dibujar. Si tuviera que elegirlo a mano, la mitad de los
+> diagramas saldrían con el esquema invertido.
+
+---
+
+### Paquete D — Colaboración en tiempo real
+
+| # | Caso de uso | Actor principal | RF | Ciclo | Estado |
+| :--- | :--- | :--- | :---: | :---: | :---: |
+| **CU05** | Editar el diagrama en colaboración | Editor, Propietario | RF-04 | 1 | 🟢 |
+| **CU06** | Gestionar bloqueo de elemento | Editor, Propietario, **Tiempo** | RF-04 | 1 | 🟢 |
+| **CU07** | Visualizar presencia y cursores | Colaborador | RF-04 | 1 | 🟢 |
+
+| # | Operaciones que absorbe | Destino |
+| :--- | :--- | :--- |
+| CU05 | Enviar mutación · Difundir a la sala · Rechazar por rol · Descartar duplicados | `/app/diagram/{id}/mutate` → `/topic/diagrams/{id}` |
+| CU06 | Adquirir bloqueo · Renovar · Liberar explícitamente · **Expirar por tiempo** · Liberar por desconexión | `/app/diagram/{id}/lock`, `LockManagerService` |
+| CU07 | Emitir cursor · Consultar participantes · Alta y baja de la sala | `/app/diagram/{id}/cursor` y `/presence` |
+
+> **La expiración del bloqueo es un flujo alternativo de CU06, no un caso de uso aparte.**
+> El disparador es el actor **Tiempo** —nadie pulsa nada— pero el objetivo es el mismo:
+> que el elemento quede libre. Sin ese flujo, un usuario que cierra el navegador dejaría un
+> elemento bloqueado para siempre.
+
+> **Política de fallo rápido sin cola.** Si el elemento está tomado, el solicitante recibe
+> el rechazo y **no espera**: no hay cola ni reintento automático. Es lo que garantiza
+> ausencia de interbloqueo e inanición, porque ningún cliente queda nunca esperando a otro.
 
 ---
 
 ### Paquete E — Trabajo sin conexión
 
-| # | Caso de uso | Actor principal | RF | Dónde vive | Estado |
-| :--- | :--- | :--- | :---: | :--- | :---: |
-| **CU23** | Modelar sin conexión | Editor, Propietario | RF-05 | Cola en IndexedDB (navegador) | ⬜ |
-| **CU24** | Sincronizar y reconciliar al reconectar | Editor, Propietario | RF-05 | `POST /api/v1/diagrams/{id}/sync-offline` | 🟡 servidor sí, interfaz no |
+| # | Caso de uso | Actor principal | RF | Ciclo | Estado |
+| :--- | :--- | :--- | :---: | :---: | :---: |
+| **CU12** | Trabajar sin conexión y sincronizar | Editor, Propietario | RF-05 | 3 | 🟡 |
 
-> CU24 es el caso más interesante del sistema y **el servidor ya lo resuelve completo**:
-> aplica lo que puede, descarta lo que colisiona y devuelve un informe legible que nombra
-> los elementos por su nombre, no por identificador. Falta la mitad del navegador: la cola
-> y el diálogo que muestra el informe.
+Absorbe: modelar con la red caída · encolar las operaciones · detectar la reconexión ·
+enviar el lote · **reconciliar contra el estado actual** · mostrar el informe.
+Endpoint: `POST /api/v1/diagrams/{id}/sync-offline`.
+
+> **El servidor ya lo resuelve completo**: aplica lo que puede, descarta lo que colisiona y
+> devuelve un informe que nombra los elementos **por su nombre**, no por identificador —
+> *"se descartó el atributo 'teléfono' porque otro colaborador eliminó la clase 'Cliente'"*.
+> Falta la mitad del navegador: la cola y el diálogo.
+
+> **Sin conexión, el cliente omite la adquisición de bloqueo** y aplica todo de forma
+> optimista. No es un agujero: la exclusión mutua no desaparece, **se traslada del momento
+> de la edición al momento de la reconciliación**. El sistema usa prevención cuando hay
+> árbitro en línea y resolución cuando no lo hay.
 
 ---
 
 ### Paquete F — Generación de código
 
-| # | Caso de uso | Actor principal | RF | Dónde vive | Estado |
-| :--- | :--- | :--- | :---: | :--- | :---: |
-| **CU25** | Validar diagrama antes de generar | Colaborador | RF-06 | `GET /api/v1/diagrams/{id}/validate` | ⬜ |
-| **CU26** | Generar backend Spring Boot | Colaborador | RF-06 | `POST …/generate-backend` | 🟡 plantillas sí, endpoint no |
-| **CU27** | Generar app móvil con asistente de voz | Colaborador | RF-07, RF-08 | `POST …/generate-mobile` | ⬜ |
+| # | Caso de uso | Actor principal | RF | Ciclo | Estado |
+| :--- | :--- | :--- | :---: | :---: | :---: |
+| **CU13** | Validar diagrama | Colaborador | RF-06 | 3 | ⬜ |
+| **CU14** | Generar backend Spring Boot | Colaborador | RF-06 | 3 | 🟡 |
+| **CU19** | Generar app móvil con asistente de voz | Colaborador, *Motor STT* | RF-07, RF-08 | 5 | ⬜ |
 
-> **CU25 es precondición de CU26 y no un adorno.** El plan lo declara: el botón de
-> descarga ejecuta primero la validación y, si hay errores bloqueantes —una relación
-> huérfana, herencia múltiple— muestra el diálogo e **impide la descarga**. Generar un ZIP
-> que no compila es peor que no generarlo.
+> **CU13 es precondición de CU14 y no un adorno.** El botón de descarga ejecuta primero la
+> validación y, si hay errores bloqueantes —una relación huérfana, herencia múltiple—
+> muestra el diálogo e **impide la descarga**. Generar un paquete que no compila es peor que
+> no generarlo.
+
+> **Estado real de CU14:** las plantillas de las cinco capas están escritas y hay un arnés
+> que **genera y compila** los cuatro diagramas de prueba. Falta el empaquetado en ZIP y el
+> endpoint que lo entrega.
 
 ---
 
 ### Paquete G — Interoperabilidad
 
-| # | Caso de uso | Actor principal | RF | Dónde vive | Estado |
-| :--- | :--- | :--- | :---: | :--- | :---: |
-| **CU28** | Exportar a XMI 2.1 | Colaborador | RF-09 | `GET …/export-xmi` | ⬜ |
-| **CU29** | Importar desde XMI 2.1 | Colaborador, *Enterprise Architect* | RF-09 | `POST …/import-xmi` | ⬜ |
+| # | Caso de uso | Actor principal | RF | Ciclo | Estado |
+| :--- | :--- | :--- | :---: | :---: | :---: |
+| **CU18** | Intercambiar modelos vía XMI 2.1 | Colaborador, *Enterprise Architect* | RF-09 | 4 | ⬜ |
+
+Absorbe exportar e importar. Se agrupa porque el objetivo es uno —**interoperar con una
+herramienta CASE**— y el criterio de aceptación también: exportar, abrir en Enterprise
+Architect, reimportar y no perder nada. La ida sin la vuelta no demuestra nada.
 
 ---
 
 ### Paquete H — Asistencia por IA
 
-| # | Caso de uso | Actor principal | RF | Dónde vive | Estado |
-| :--- | :--- | :--- | :---: | :--- | :---: |
-| **CU30** | Modelar por comando de texto | Editor, Propietario, *Gemini* | RF-02 | `POST …/ai-command` | ⬜ |
-| **CU31** | Modelar por comando de voz | Editor, Propietario, *Gemini* | RF-02 | mismo endpoint, con Web Speech API | ⬜ |
-| **CU32** | Importar diagrama desde foto | Editor, Propietario, *Gemini* | RF-03 | `POST …/vision-import` | ⬜ |
+| # | Caso de uso | Actor principal | RF | Ciclo | Estado |
+| :--- | :--- | :--- | :---: | :---: | :---: |
+| **CU16** | Modelar por comando de voz o texto | Editor, Propietario, *Gemini* | RF-02 | 4 | ⬜ |
+| **CU17** | Importar diagrama desde foto | Editor, Propietario, *Gemini* | RF-03 | 4 | ⬜ |
+
+CU16 agrupa voz y texto porque **son el mismo caso de uso con distinto dispositivo de
+entrada**: la voz se transcribe en el navegador y entra por el mismo endpoint que el texto.
+El dictado es un flujo alternativo, no un objetivo distinto.
 
 ---
 
-## 2.3 Relaciones entre casos de uso
-
-Tres relaciones que no son decorativas: cada una registra una decisión.
+## Relaciones entre casos de uso
 
 ### «include» — lo obligatorio
 
 | Caso base | incluye | Por qué |
 | :--- | :--- | :--- |
-| CU13 Editar en tiempo real | **CU14** Bloquear elemento | Renombrar, borrar o tocar atributos exige poseer el bloqueo. Mover y redimensionar **no** |
-| CU26 Generar backend | **CU25** Validar diagrama | La validación corre siempre antes de empaquetar |
-| CU32 Importar desde foto | **CU13** Editar | La propuesta aceptada entra como una mutación atómica |
+| **CU05** Editar en colaboración | **CU06** Gestionar bloqueo | Renombrar, borrar o editar miembros exige poseer el bloqueo. Mover y redimensionar **no** |
+| **CU14** Generar backend | **CU13** Validar diagrama | La validación corre siempre antes de empaquetar |
+| **CU17** Importar desde foto | **CU05** Editar en colaboración | La propuesta aceptada entra como una mutación atómica |
 
-> El `include` de CU13 → CU14 es **condicional según la operación**, y eso no se puede
-> dibujar. Está resuelto en el código en un solo lugar, `OperationType`, donde cada
-> operación declara su régimen de exclusión: `NO_REQUIERE`, `LWW_LIBRE`, `REQUIERE_LOCK`,
-> `LOCK_DE_DIAGRAMA`. Es la clase de detalle que el diagrama pierde y el documento debe
-> recuperar.
+> El `«include»` de CU05 → CU06 es **condicional según la operación**, y eso un diagrama no
+> lo puede expresar. Está resuelto en el código en un solo lugar, el enumerado
+> `OperationType`, donde cada operación declara su régimen: `NO_REQUIERE`, `LWW_LIBRE`,
+> `REQUIERE_LOCK` o `LOCK_DE_DIAGRAMA`. Es la clase de detalle que el diagrama pierde y el
+> documento tiene que recuperar.
 
 ### «extend» — lo opcional
 
 | Caso extensión | extiende a | Cuándo |
 | :--- | :--- | :--- |
-| CU24 Reconciliar | CU13 Editar en tiempo real | Sólo si hubo desconexión con cambios encolados |
-| CU15 Liberar bloqueo vencido | CU14 Bloquear elemento | Sólo si el poseedor deja de renovar el bloqueo |
+| **CU12** Trabajar sin conexión | **CU05** Editar en colaboración | Sólo si se pierde la conexión con cambios pendientes |
+| **CU11** Aceptar invitación | **CU02** Iniciar sesión | Si el invitado no tiene sesión, entra y **vuelve al enlace** |
 
 ### Generalización de actores
 
-Propietario, Editor y Lector **son** Colaboradores, y por eso heredan CU02, CU04, CU07
-y CU10 sin que haya que repetirlos.
+Propietario, Editor y Lector **son** Colaboradores, y heredan CU02, CU08 y CU09 sin
+repetirlos.
 
 ---
 
-## 2.4 Matriz de trazabilidad: requisito → casos de uso
-
-Esta tabla es la que responde *"¿dónde está implementado el requisito RF-nn?"*, y también
-la que deja ver, sin discusión, qué falta.
+## Matriz de trazabilidad: requisito → casos de uso
 
 | RF | Requisito | Casos de uso | Estado |
 | :---: | :--- | :--- | :---: |
-| **RF-01** | Modelado visual manual (UML y ER) | CU05 a CU07, CU17 a CU22 | 🟡 falta la vista ER y la interfaz de métodos y paquetes |
-| **RF-02** | Modelado por voz y texto en la web | CU30, CU31 | ⬜ |
-| **RF-03** | Modelado por visión (fotos) | CU32 | ⬜ |
-| **RF-04** | Colaboración en tiempo real y exclusión mutua | CU03, CU04, CU08 a CU16 | 🟢 |
-| **RF-05** | Modo sin conexión y rebase | CU23, CU24 | 🟡 sólo el servidor |
-| **RF-06** | Generador de backend Spring Boot | CU25, CU26 | 🟡 plantillas parciales |
-| **RF-07** | App móvil generada con asistente de voz | CU27 | ⬜ |
-| **RF-08** | IA local en el dispositivo, sin internet | CU27 | 🟡 viabilidad probada en el spike |
-| **RF-09** | Interoperabilidad XMI 2.1 | CU28, CU29 | ⬜ |
-
-**Estado global: 16 de 32 casos de uso implementados y verificados; 6 parciales; 10 sin
-empezar.** El núcleo colaborativo (RF-04) está completo; lo pendiente se concentra en
-generación, IA e interoperabilidad.
+| **RF-01** | Modelado visual manual (UML y ER) | CU03, CU04, CU09, CU15 | 🟡 faltan la vista ER y la interfaz de métodos y paquetes |
+| **RF-02** | Modelado por voz y texto en la web | CU16 | ⬜ |
+| **RF-03** | Modelado por visión (fotos) | CU17 | ⬜ |
+| **RF-04** | Colaboración en tiempo real y exclusión mutua | CU05, CU06, CU07, CU08, CU10, CU11 | 🟢 |
+| **RF-05** | Modo sin conexión y rebase | CU12 | 🟡 sólo el servidor |
+| **RF-06** | Generador de backend Spring Boot | CU13, CU14 | 🟡 plantillas listas, falta el endpoint |
+| **RF-07** | App móvil generada con asistente de voz | CU19 | ⬜ |
+| **RF-08** | IA local en el dispositivo, sin internet | CU19 | 🟡 viabilidad probada en el spike |
+| **RF-09** | Interoperabilidad XMI 2.1 | CU18 | ⬜ |
+| — | *(derivado de RF-04)* | CU01, CU02 | 🟢 |
 
 ---
 
-## 2.5 Diagramas de casos de uso
+## Resumen
+
+| | Total | 🟢 | 🟡 | ⬜ |
+| :--- | :---: | :---: | :---: | :---: |
+| **Ciclo 1** | 7 | 5 | 2 | 0 |
+| **Ciclo 2** | 4 | 4 | 0 | 0 |
+| **Ciclo 3** | 4 | 0 | 2 | 2 |
+| **Ciclos 4–5** | 4 | 0 | 0 | 4 |
+| **Total** | **19** | **9** | **4** | **6** |
+
+**En el parcial: 15 casos de uso.** El núcleo colaborativo (RF-04) está completo y
+verificado; lo pendiente se concentra en generación, trabajo sin conexión e IA.
+
+---
+
+## Diagramas
 
 Fuentes en [`../diagramas/`](../diagramas/):
 
 | Diagrama | Archivo |
 | :--- | :--- |
-| Contexto general | `casos-de-uso-general.puml` |
-| Paquete A+B — acceso, proyectos y diagramas | `casos-de-uso-acceso.puml` |
-| Paquete C — colaboración en tiempo real | `casos-de-uso-colaboracion.puml` |
-| Paquete D+E — modelado y trabajo sin conexión | `casos-de-uso-modelado.puml` |
-| Paquete F+G+H — generación, interoperabilidad e IA | `casos-de-uso-generacion.puml` |
-
-Se dividió en cinco diagramas y no uno solo por una razón práctica: **32 casos de uso y 9
-actores en una sola hoja no se leen**. El diagrama de contexto muestra actores y paquetes;
-cada diagrama por paquete muestra el detalle.
-
----
-
-## 2.6 Lo que este recorrido dejó al descubierto
-
-El valor de escribir el catálogo completo no es el catálogo: son los huecos que aparecen al
-recorrerlo.
-
-1. **No había forma de otorgar un rol** (CU08 a CU12). El sistema tenía tres roles
-   definidos, arbitrados y probados… y ninguna manera de asignarlos salvo escribir en la
-   base a mano. Es el hueco más grave que apareció, y estaba en la especificación original.
-2. **CU19 y CU21 están partidos**: el servidor sabe manipular métodos y paquetes, la
-   interfaz no los expone. Un caso de uso a medio camino es invisible para el usuario, que
-   es lo mismo que no existir.
-3. **CU22 (vista ER) no tiene ni servidor ni interfaz**, pero es parte de RF-01, que es
-   el requisito que le da nombre al proyecto.
-
-Los tres estaban en el código —o ausentes de él— desde antes. Ninguno se veía hasta
-hacer la tabla.
+| Contexto general — actores y paquetes | `casos-de-uso-general.puml` |
+| Ciclo 1 — acceso, modelado y colaboración | `casos-de-uso-ciclo1.puml` |
+| Ciclo 2 — proyectos y colaboradores | `casos-de-uso-ciclo2.puml` |
+| Ciclo 3 — generación y trabajo sin conexión | `casos-de-uso-ciclo3.puml` |
+| Ciclos 4 y 5 — IA, XMI y app móvil | `casos-de-uso-ciclo45.puml` |
