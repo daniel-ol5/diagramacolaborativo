@@ -11,22 +11,6 @@ dist/
 .vite/
 *.local
 
-# Flutter / Android
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-build/
-*.iml
-local.properties
-.gradle/
-key.properties
-*.keystore
-*.jks
-
-# Expo / React Native
-.expo/
-.expo-shared/
-
 # IDE
 .idea/
 .vscode/
@@ -40,3 +24,9 @@ application-local.yml
 # SO
 Thumbs.db
 .DS_Store
+
+# Documentacion de trabajo
+# Queda fuera del repositorio por decision de Daniel (13/09/2026): material interno
+# del proyecto y de la materia, no del producto. VIVE SOLO EN DISCO -> necesita
+# respaldo propio, git ya no la protege.
+docs/
