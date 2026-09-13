@@ -41,7 +41,7 @@ export function LoginScreen({ onLogin }: Props) {
   return (
     <div className="login-screen">
       <form className="login-screen__form" onSubmit={handleSubmit}>
-        <h1>ModelCollab</h1>
+        <h1>Ingrese sus credenciales</h1>
         <label>
           Email
           <input

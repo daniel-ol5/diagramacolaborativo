@@ -12,8 +12,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  width: 280px;
-  padding: 24px;
+  width: 340px;
+  padding: 50px;
   background: #fff;
   border: 1px solid #ddd;
   border-radius: 8px;
@@ -24,14 +24,15 @@
   margin: 0 0 8px;
   font-size: 20px;
   text-align: center;
+  color: #c92a2a;
 }
 
 .login-screen__form label {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 13px;
-  color: #333;
+  font-size: 17px;
+  color: #357cda;
 }
 
 .login-screen__form input {
