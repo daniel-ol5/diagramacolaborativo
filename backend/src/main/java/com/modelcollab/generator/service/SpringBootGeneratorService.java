@@ -11,8 +11,9 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 
 /**
- * Genera el proyecto Spring Boot a partir de un diagrama (§11.1). Hoy cubre las <b>capas 1 y
- * 2</b>: entidades JPA y repositorios, más el esqueleto mínimo para que el resultado compile.
+ * Genera el proyecto Spring Boot a partir de un diagrama (§11.1): las <b>cinco capas</b> —
+ * entidades JPA, repositorios, DTO con mapper, servicios transaccionales y controladores REST—
+ * más el esqueleto del proyecto.
  *
  * <p>Devuelve un mapa de <em>ruta relativa -> contenido</em> en lugar de escribir en disco. Eso
  * deja que el empaquetador ZIP del Día 11 y el test de compilación usen exactamente el mismo
@@ -47,12 +48,31 @@ public class SpringBootGeneratorService {
                     rutaDelPaquete + "/domain/model/" + clase + ".java",
                     render("entity.ftl", entidad));
 
-            // Las clases abstractas no llevan repositorio: no se instancian ni se consultan por
-            // sí solas, se consultan a través de sus subclases.
+            // Las clases abstractas no llevan repositorio ni CRUD: no se instancian ni se
+            // consultan por sí solas, se llega a ellas a través de sus subclases. Generarles un
+            // controlador seria exponer una entidad que no se puede crear.
             if (!Boolean.TRUE.equals(entidad.get("esAbstracta"))) {
                 archivos.put(
                         rutaDelPaquete + "/repository/" + clase + "Repository.java",
                         render("repository.ftl", modeloDeRepositorio(entidad)));
+                archivos.put(
+                        rutaDelPaquete + "/service/dto/" + clase + "RequestDTO.java",
+                        render("request-dto.ftl", entidad));
+                archivos.put(
+                        rutaDelPaquete + "/service/dto/" + clase + "ResponseDTO.java",
+                        render("response-dto.ftl", entidad));
+                archivos.put(
+                        rutaDelPaquete + "/service/dto/mapper/" + clase + "Mapper.java",
+                        render("mapper.ftl", entidad));
+                archivos.put(
+                        rutaDelPaquete + "/service/" + clase + "Service.java",
+                        render("service.ftl", entidad));
+                archivos.put(
+                        rutaDelPaquete + "/service/impl/" + clase + "ServiceImpl.java",
+                        render("service-impl.ftl", entidad));
+                archivos.put(
+                        rutaDelPaquete + "/controller/" + clase + "Controller.java",
+                        render("controller.ftl", entidad));
             }
         }
 
@@ -60,6 +80,8 @@ public class SpringBootGeneratorService {
         proyecto.put("paquete", paquete);
         proyecto.put("artefacto", artefacto);
         archivos.put(rutaDelPaquete + "/Application.java", render("application.ftl", proyecto));
+        archivos.put(rutaDelPaquete + "/config/GlobalExceptionHandler.java",
+                render("exception-handler.ftl", proyecto));
         archivos.put("pom.xml", render("pom.ftl", proyecto));
         archivos.put("src/main/resources/application.yml", render("application-yml.ftl", proyecto));
         archivos.put("README.md", render("readme.ftl", proyecto));

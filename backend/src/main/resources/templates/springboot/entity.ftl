@@ -56,8 +56,9 @@ public <#if esAbstracta>abstract </#if>class ${clase}<#if extiende??> extends ${
 
 </#if>
 </#list>
-    protected ${clase}() {
-        // Constructor sin argumentos requerido por JPA.
+    public ${clase}() {
+        // Constructor sin argumentos requerido por JPA. Publico y no protegido porque el mapper
+        // vive en otro paquete y necesita instanciar la entidad.
     }
 
 <#if id??>

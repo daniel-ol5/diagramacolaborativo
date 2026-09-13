@@ -4,7 +4,9 @@ import com.modelcollab.metamodel.model.Attribute;
 import com.modelcollab.metamodel.model.AttributeType;
 import com.modelcollab.metamodel.model.CanonicalModel;
 import com.modelcollab.metamodel.model.ClassEntity;
+import com.modelcollab.metamodel.model.Method;
 import com.modelcollab.metamodel.model.Multiplicity;
+import com.modelcollab.metamodel.model.Parameter;
 import com.modelcollab.metamodel.model.OwningSide;
 import com.modelcollab.metamodel.model.Relationship;
 import com.modelcollab.metamodel.model.RelationshipType;
@@ -115,15 +117,24 @@ class ModeloDeGeneracion {
             }
         });
 
+        // Que entidad tiene DTO. Las abstractas no: no se instancian ni se exponen por REST.
+        Map<String, String> dtoDeEntidad = new LinkedHashMap<>();
+        for (ClassEntity c : modelo.classes()) {
+            if (!Boolean.TRUE.equals(c.isAbstract())) {
+                dtoDeEntidad.put(nombresJava.get(c.id()), nombresJava.get(c.id()) + "ResponseDTO");
+            }
+        }
+
         List<Map<String, Object>> resultado = new ArrayList<>();
         for (ClassEntity clase : modelo.classes()) {
             Map<String, Object> entidad =
-                    entidad(clase, modelo, porId, nombresJava, paquete, tipos);
+                    entidad(clase, modelo, porId, nombresJava, paquete, tipos, dtoDeEntidad);
             entidad.put("t", tipos);
             entidad.put("importes", importesUsados(entidad, importables));
             resultado.add(entidad);
         }
         resolverTipoDeIdHeredado(resultado, tipos);
+        resolverReferencias(resultado);
         return resultado;
     }
 
@@ -156,7 +167,11 @@ class ModeloDeGeneracion {
                 id = (Map<String, Object>) actual.get("id");
             }
             String tipoSimple = id == null ? "Long" : (String) id.get("tipo");
+            String campoDelId = id == null ? "id" : (String) id.get("campo");
             entidad.put("tipoDelIdEfectivo", tipos.get(tipoSimple));
+            // El getter de la clave puede vivir en un ancestro: Dueno hereda getId() de Persona.
+            entidad.put("idGetter",
+                    Character.toUpperCase(campoDelId.charAt(0)) + campoDelId.substring(1));
             entidad.put("importeDelIdEfectivo",
                     "UUID".equals(tipoSimple) && "UUID".equals(tipos.get("UUID"))
                             ? "java.util.UUID"
@@ -170,13 +185,17 @@ class ModeloDeGeneracion {
             Map<String, ClassEntity> porId,
             Map<String, String> nombresJava,
             String paquete,
-            Map<String, String> tipos) {
+            Map<String, String> tipos,
+            Map<String, String> dtoDeEntidad) {
 
         Map<String, Object> e = new LinkedHashMap<>();
         e.put("paquete", paquete);
         e.put("nombreOriginal", clase.name());
         e.put("clase", nombresJava.get(clase.id()));
         e.put("tabla", literal(sanitizer.nombreDeTabla(clase.name())));
+        // Ruta REST en plural y en kebab: /api/movimiento-stocks. Se deriva del snake_case ya
+        // saneado, asi que una clase llamada Order da /api/orders sin comillas ni sorpresas.
+        e.put("rutaRest", sanitizer.nombreDeTabla(clase.name()).replace("\"", "").replace('_', '-') + "s");
         e.put("esAbstracta", clase.isAbstract());
 
         // Herencia: el origen de un INHERITANCE es el hijo (§8.1 y los fixtures del Día 1).
@@ -224,6 +243,7 @@ class ModeloDeGeneracion {
             campos.add(campo(atributo, usados));
         }
         e.put("campos", campos);
+        e.put("metodos", metodos(clase, nombresDelDiagrama(nombresJava), dtoDeEntidad, e));
 
         // --- relaciones ----------------------------------------------------------------------
         List<Map<String, Object>> relaciones = new ArrayList<>();
@@ -285,6 +305,239 @@ class ModeloDeGeneracion {
         List<String> ordenados = new ArrayList<>(usados);
         ordenados.sort(String::compareTo);
         return ordenados;
+    }
+
+    private static Set<String> nombresDelDiagrama(Map<String, String> nombresJava) {
+        return new LinkedHashSet<>(nombresJava.values());
+    }
+
+    /**
+     * Métodos del UML como firmas para la interface del servicio y stubs en la implementación
+     * (§11.2.5).
+     *
+     * <p>Los tipos del diagrama son <b>texto libre</b>: nada impide que alguien escriba
+     * {@code Fecha} o {@code lista de cosas} como tipo de retorno, y volcarlo tal cual al código
+     * rompería la garantía de que compila. Por eso se traduce lo reconocible y todo lo demás cae
+     * a {@code Object}: una firma menos precisa es infinitamente mejor que un archivo que no
+     * compila, y el stub lleva un TODO que le dice al desarrollador qué decía el diagrama.
+     */
+    private List<Map<String, Object>> metodos(
+            ClassEntity clase,
+            Set<String> entidades,
+            Map<String, String> dtoDeEntidad,
+            Map<String, Object> destino) {
+        Set<String> dtosUsados = new LinkedHashSet<>();
+        // Los tipos escalares que aparecen SOLO en las firmas de los metodos tambien necesitan
+        // su import: Barbero no tiene ningun atributo DATETIME pero su metodo estaDisponible
+        // recibe un LocalDateTime, y sin esto el archivo no compila.
+        Set<String> escalaresUsados = new LinkedHashSet<>();
+        List<Map<String, Object>> resultado = new ArrayList<>();
+        for (Method metodo : clase.methods()) {
+            List<Map<String, Object>> parametros = new ArrayList<>();
+            List<String> firmaDeParametros = new ArrayList<>();
+            int i = 0;
+            for (Parameter parametro : metodo.parameters()) {
+                String tipo = tipoJava(parametro.type(), entidades, dtoDeEntidad, dtosUsados, escalaresUsados);
+                String nombre = sanitizer.nombreDeCampo(
+                        parametro.name() == null || parametro.name().isBlank()
+                                ? "arg" + i
+                                : parametro.name());
+                Map<String, Object> p = new LinkedHashMap<>();
+                p.put("tipo", tipo);
+                p.put("nombre", nombre);
+                parametros.add(p);
+                firmaDeParametros.add(tipo + " " + nombre);
+                i++;
+            }
+            String retorno = tipoJava(metodo.returnType(), entidades, dtoDeEntidad, dtosUsados, escalaresUsados);
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("nombre", sanitizer.nombreDeCampo(metodo.name()));
+            m.put("nombreOriginal", metodo.name());
+            m.put("retorno", retorno);
+            m.put("esVoid", "void".equals(retorno));
+            m.put("parametros", parametros);
+            m.put("firmaDeParametros", String.join(", ", firmaDeParametros));
+            m.put("nombresDeParametros", parametros.stream()
+                    .map(p -> String.valueOf(p.get("nombre")))
+                    .toList());
+            m.put("valorPorDefecto", valorPorDefecto(retorno));
+            resultado.add(m);
+        }
+        destino.put("dtosUsadosEnMetodos", new ArrayList<>(dtosUsados));
+        destino.put("escalaresUsadosEnMetodos", new ArrayList<>(escalaresUsados));
+        return resultado;
+    }
+
+    /** Tipos que se pueden volcar al código generado sin riesgo. */
+    private static final Set<String> TIPOS_SEGUROS = Set.of(
+            "void", "String", "Integer", "Long", "Double", "Float", "Boolean", "BigDecimal",
+            "LocalDate", "LocalDateTime", "UUID", "int", "long", "double", "float", "boolean");
+
+    private static String tipoJava(
+            String delDiagrama,
+            Set<String> entidades,
+            Map<String, String> dtoDeEntidad,
+            Set<String> dtosUsados,
+            Set<String> escalaresUsados) {
+
+        if (delDiagrama == null || delDiagrama.isBlank()) {
+            return "void";
+        }
+        String limpio = delDiagrama.trim();
+        if (limpio.startsWith("List<") && limpio.endsWith(">")) {
+            String interno = uno(limpio.substring(5, limpio.length() - 1).trim(),
+                    entidades, dtoDeEntidad, dtosUsados, escalaresUsados);
+            return "Object".equals(interno) ? "Object" : "List<" + interno + ">";
+        }
+        return uno(limpio, entidades, dtoDeEntidad, dtosUsados, escalaresUsados);
+    }
+
+    /**
+     * Un tipo suelto del diagrama traducido a algo que compile.
+     *
+     * <p>Si nombra una entidad se devuelve <b>su DTO</b>, no la entidad: un servicio que expone
+     * entidades JPA rompe el corte de capas que las capas 3-5 existen para sostener, y ademas
+     * arrastra el grafo entero al serializar. Una entidad abstracta no tiene DTO, asi que cae a
+     * {@code Object} como cualquier tipo desconocido.
+     */
+    private static String uno(
+            String tipo,
+            Set<String> entidades,
+            Map<String, String> dtoDeEntidad,
+            Set<String> dtosUsados,
+            Set<String> escalaresUsados) {
+
+        if (TIPOS_SEGUROS.contains(tipo)) {
+            escalaresUsados.add(tipo);
+            return tipo;
+        }
+        String dto = dtoDeEntidad.get(tipo);
+        if (dto != null) {
+            dtosUsados.add(dto);
+            return dto;
+        }
+        return "Object";
+    }
+
+    /** Qué devuelve el stub para que el método compile mientras nadie lo implementa. */
+    private static String valorPorDefecto(String retorno) {
+        return switch (retorno) {
+            case "void" -> null;
+            case "int", "long", "double", "float" -> "0";
+            case "boolean" -> "false";
+            default -> retorno.startsWith("List<") ? "java.util.List.of()" : "null";
+        };
+    }
+
+    /**
+     * Las relaciones "a uno" que esta entidad posee, con el tipo de clave de la otra punta.
+     *
+     * <p>Son las que el DTO de entrada expone como {@code clienteId}: sin ellas no se puede crear
+     * una Cita asociada a un Cliente, y el CRUD generado quedaria en entidades sueltas sin
+     * relacion, que no es lo que dibuja nadie. La resolucion del id a la entidad la hace el
+     * servicio —que ya tiene los repositorios— y no el mapper, que se queda tonto.
+     *
+     * <p>Va en una segunda pasada porque necesita el tipo de clave de OTRA entidad, que recien se
+     * conoce cuando todas estan construidas.
+     */
+    @SuppressWarnings("unchecked")
+    private static void resolverReferencias(List<Map<String, Object>> entidades) {
+        Map<String, Map<String, Object>> porNombre = new HashMap<>();
+        entidades.forEach(e -> porNombre.put((String) e.get("clase"), e));
+
+        for (Map<String, Object> entidad : entidades) {
+            List<Map<String, Object>> referencias = new ArrayList<>();
+            for (Map<String, Object> r : (List<Map<String, Object>>) entidad.get("relaciones")) {
+                boolean aUno = !Boolean.TRUE.equals(r.get("esColeccion"));
+                if (!aUno || !Boolean.TRUE.equals(r.get("soyDuenio"))) {
+                    continue;
+                }
+                Map<String, Object> otra = porNombre.get((String) r.get("clase"));
+                if (otra == null) {
+                    continue;
+                }
+                String campo = (String) r.get("campo");
+                Map<String, Object> ref = new LinkedHashMap<>();
+                ref.put("campo", campo);
+                ref.put("campoId", campo + "Id");
+                ref.put("setter", campo.isEmpty()
+                        ? campo
+                        : Character.toUpperCase(campo.charAt(0)) + campo.substring(1));
+                ref.put("clase", r.get("clase"));
+                ref.put("tipoDelId", otra.get("tipoDelIdEfectivo"));
+                ref.put("obligatorio", Boolean.TRUE.equals(r.get("obligatorio")));
+                ref.put("repo", minuscularInicial((String) r.get("clase")) + "Repository");
+                referencias.add(ref);
+            }
+            entidad.put("referencias", referencias);
+        }
+        // Cada entidad necesita saber como se llama el getter de la clave de las OTRAS, para
+        // poder devolver sus identificadores en el DTO de salida.
+        Map<String, String> gettersDeId = new LinkedHashMap<>();
+        entidades.forEach(e -> gettersDeId.put(
+                (String) e.get("clase"), (String) e.get("idGetter")));
+        entidades.forEach(e -> e.put("idGetterDe", gettersDeId));
+        entidades.forEach(ModeloDeGeneracion::importesDeLasCapasAltas);
+    }
+
+    /**
+     * Los imports de los DTO, servicios y controladores.
+     *
+     * <p>Se calculan en la segunda pasada y no junto con la entidad porque tienen que incluir el
+     * tipo de la clave <b>efectiva</b>, que en una subclase vive en un ancestro: sin esto, el
+     * {@code DuenoResponseDTO} declara un {@code UUID} que nunca importa y no compila.
+     *
+     * <p>Es un unico conjunto ordenado para las dos capas, y eso tambien es a proposito: con dos
+     * listas que se emiten uno detras de otro salen imports duplicados, que tampoco compilan.
+     */
+    @SuppressWarnings("unchecked")
+    private static void importesDeLasCapasAltas(Map<String, Object> entidad) {
+        Set<String> deDatos = new java.util.TreeSet<>();
+        for (String usado : (Set<String>) entidad.get("tiposUsados")) {
+            if (!usado.startsWith("jakarta.persistence") && !usado.startsWith("java.lang")) {
+                deDatos.add(usado);
+            }
+        }
+        String importeDelId = (String) entidad.get("importeDelIdEfectivo");
+        if (importeDelId != null) {
+            deDatos.add(importeDelId);
+        }
+        // Los tipos que solo aparecen en las firmas de los metodos del UML.
+        for (String escalar : (List<String>) entidad.get("escalaresUsadosEnMetodos")) {
+            agregarSiSeImporta(escalar, deDatos);
+        }
+        // Y el tipo de clave de las entidades REFERENCIADAS, que el DTO expone como groupId:
+        // Order tiene clave Long y ningun atributo UUID, pero apunta a un Group de clave UUID.
+        for (Map<String, Object> ref : (List<Map<String, Object>>) entidad.get("referencias")) {
+            agregarSiSeImporta((String) ref.get("tipoDelId"), deDatos);
+        }
+        entidad.put("importesDto", new ArrayList<>(deDatos));
+
+        // El servicio suma los DTO que aparecen en las firmas de los metodos del UML.
+        Set<String> deServicio = new java.util.TreeSet<>(deDatos);
+        String paquete = (String) entidad.get("paquete");
+        for (String dto : (List<String>) entidad.get("dtosUsadosEnMetodos")) {
+            // El propio DTO de la entidad ya se importa aparte; importarlo dos veces no compila.
+            if (!dto.equals(entidad.get("clase") + "ResponseDTO")) {
+                deServicio.add(paquete + ".service.dto." + dto);
+            }
+        }
+        entidad.put("importesServicio", new ArrayList<>(deServicio));
+    }
+
+    private static String minuscularInicial(String s) {
+        return s.isEmpty() ? s : Character.toLowerCase(s.charAt(0)) + s.substring(1);
+    }
+
+    /** Suma el import de un tipo simple, si es que necesita uno. */
+    private static void agregarSiSeImporta(String tipo, Set<String> destino) {
+        if (tipo == null || tipo.contains(".")) {
+            return; // ya viene calificado por colision: no se importa, se escribe entero
+        }
+        String calificado = REGISTRO_DE_TIPOS.get(tipo);
+        if (calificado != null && !calificado.startsWith("java.lang")) {
+            destino.add(calificado);
+        }
     }
 
     private Map<String, Object> campoDeId(Attribute pk, Set<String> usados) {
