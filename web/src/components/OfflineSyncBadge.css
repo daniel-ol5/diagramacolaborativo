@@ -1,0 +1,28 @@
+.offline-badge {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-family: "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  max-width: min(90vw, 600px);
+  text-align: center;
+}
+
+.offline-badge--offline {
+  background: #e8590c;
+  color: #fff;
+}
+
+.offline-badge--syncing {
+  background: #3b5bdb;
+  color: #fff;
+}
+
+.offline-badge__count {
+  font-weight: 600;
+}

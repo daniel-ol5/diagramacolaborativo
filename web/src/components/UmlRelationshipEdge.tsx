@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { BaseEdge, useStore, type EdgeProps, type ReactFlowState } from "reactflow";
 import type { ClassEntity, Relationship, RelationshipType } from "../types/canonical";
 import { centerOf, offsetToward, rectBoundaryPoint, type Box, type Point } from "../lib/edgeGeometry";
 import { useCollaborationActions } from "../hooks/collaborationActionsContext";
 import { useCollaborationStore } from "../store/collaborationStore";
+import { useOfflineStore } from "../store/offlineStore";
 import "./UmlRelationshipEdge.css";
 
 function boxOf(classEntity: ClassEntity): Box {
@@ -84,14 +85,19 @@ export function UmlRelationshipEdge({ id, data, source, target, style }: EdgePro
   const sourceNode = useStore((s: ReactFlowState) => s.nodeInternals.get(source));
   const targetNode = useStore((s: ReactFlowState) => s.nodeInternals.get(target));
   const editingTargetId = useCollaborationStore((s) => s.editingTargetId);
+  const isOffline = useOfflineStore((s) => s.state === "OFFLINE");
   const actions = useCollaborationActions();
-  const confirmedDelete = editingTargetId === id;
+  const [deleteRequested, setDeleteRequested] = useState(false);
+  // Sin conexion se omite la adquisicion de candado (§8.4): el pedido local
+  // alcanza para confirmar, no hace falta esperar LOCK_ACQUIRED.
+  const confirmedDelete = deleteRequested && (isOffline || editingTargetId === id);
 
   useEffect(() => {
     if (!confirmedDelete) return;
     const ok = window.confirm("¿Borrar esta relación?");
     if (ok) actions?.deleteRelationship(id);
     else actions?.releaseLock(id);
+    setDeleteRequested(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo cuando se confirma el lock
   }, [confirmedDelete]);
 
@@ -148,7 +154,8 @@ export function UmlRelationshipEdge({ id, data, source, target, style }: EdgePro
           title="Borrar relación"
           onClick={(e) => {
             e.stopPropagation();
-            actions?.requestLock(id);
+            setDeleteRequested(true);
+            if (!isOffline) actions?.requestLock(id);
           }}
         >
           ✕

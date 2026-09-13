@@ -20,6 +20,8 @@ import { CursorOverlay } from "./components/CursorOverlay";
 import { LoginScreen, type Session } from "./components/LoginScreen";
 import { NewClassModal } from "./components/NewClassModal";
 import { RelationshipFormModal } from "./components/RelationshipFormModal";
+import { OfflineSyncBadge } from "./components/OfflineSyncBadge";
+import { ReconciliationModal } from "./components/ReconciliationModal";
 import { toFlowNodes } from "./lib/toFlowNodes";
 import { toFlowEdges } from "./lib/toFlowEdges";
 import { useCanonicalStore } from "./store/canonicalStore";
@@ -241,6 +243,8 @@ function App() {
       <div className="app__canvas">
         <UmlMarkerDefs />
         <CollaborationToasts />
+        {liveDiagramId && <OfflineSyncBadge />}
+        <ReconciliationModal />
         <CollaborationActionsContext.Provider
           value={{
             requestLock: collaboration.requestLock,

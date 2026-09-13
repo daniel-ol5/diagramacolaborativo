@@ -4,6 +4,7 @@ import type { Attribute, ClassEntity } from "../types/canonical";
 import { visibilitySymbol, methodSignature } from "../lib/uml";
 import { useCollaborationActions } from "../hooks/collaborationActionsContext";
 import { useCollaborationStore } from "../store/collaborationStore";
+import { useOfflineStore } from "../store/offlineStore";
 import { AttributeFormModal } from "./AttributeFormModal";
 import "./UmlClassNode.css";
 
@@ -39,6 +40,7 @@ export function UmlClassNode({ data, selected }: NodeProps<ClassEntity>) {
   const lock = useCollaborationStore((s) => s.locks[data.id]);
   const myUserId = useCollaborationStore((s) => s.myUserId);
   const editingTargetId = useCollaborationStore((s) => s.editingTargetId);
+  const isOffline = useOfflineStore((s) => s.state === "OFFLINE");
   const actions = useCollaborationActions();
 
   const [pending, setPending] = useState<Pending>(null);
@@ -46,17 +48,21 @@ export function UmlClassNode({ data, selected }: NodeProps<ClassEntity>) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const myTargetId = lockTargetOf(pending, data.id);
-  const confirmed = myTargetId !== null && editingTargetId === myTargetId;
+  // Sin conexion se omite la fase de adquisicion de candado por completo
+  // (§8.4): no tiene sentido esperar una confirmacion que nunca va a
+  // llegar. La exclusion mutua no desaparece, se traslada al momento del
+  // rebase — ver docs/dias/dia-08_2026-09-10.md punto 4.
+  const confirmed = myTargetId !== null && (isOffline || editingTargetId === myTargetId);
 
   // Heartbeat cada 2000ms mientras haya un lock confirmado abierto (input de
   // rename o panel de atributo): si se corta (pestaña en 2do plano, hipo de
   // red) el servidor vence el lock a los 5s y LOCK_RELEASED nos avisa (ver
-  // useCollaboration).
+  // useCollaboration). Sin conexion no hay lock que renovar.
   useEffect(() => {
-    if (!confirmed || !myTargetId || !actions) return;
+    if (!confirmed || !myTargetId || !actions || isOffline) return;
     const interval = setInterval(() => actions.renewLock(myTargetId), 2000);
     return () => clearInterval(interval);
-  }, [confirmed, myTargetId, actions]);
+  }, [confirmed, myTargetId, actions, isOffline]);
 
   useEffect(() => {
     if (pending?.kind === "rename" && confirmed) {
@@ -89,7 +95,7 @@ export function UmlClassNode({ data, selected }: NodeProps<ClassEntity>) {
 
   function start(next: Pending, targetId: string) {
     setPending(next);
-    actions?.requestLock(targetId);
+    if (!isOffline) actions?.requestLock(targetId);
   }
 
   function cancelPending() {

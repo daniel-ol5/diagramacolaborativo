@@ -3,7 +3,9 @@ import { Client, type IMessage } from "@stomp/stompjs";
 import { WS_URL } from "../services/config";
 import { useCanonicalStore } from "../store/canonicalStore";
 import { useCollaborationStore } from "../store/collaborationStore";
-import type { Attribute, ClassEntity, Relationship } from "../types/canonical";
+import { useOfflineStore } from "../store/offlineStore";
+import type { Attribute, CanonicalModel, ClassEntity, Relationship } from "../types/canonical";
+import type { OfflineOperation } from "../types/offline";
 import {
   esBroadcastDeMutacion,
   esEventoDeSala,
@@ -11,6 +13,17 @@ import {
   type Participante,
   type StompErrorMessage,
 } from "../types/collaboration";
+import {
+  countQueuedOperations,
+  enqueueOperation,
+  getQueuedOperations,
+  removeQueuedOperations,
+  type QueuedOperation,
+} from "../services/offlineQueue";
+import { syncOffline } from "../services/offlineApi";
+
+/** Tope por lote que exige el servidor (§9.2) — un lote mas grande se manda en varias tandas sucesivas. */
+const MAX_OPERATIONS_PER_BATCH = 500;
 
 export type CollaborationStatus = "desconectado" | "conectando" | "conectado" | "error";
 
@@ -100,6 +113,7 @@ export function useCollaboration(
   const lastSentAt = useRef(0);
   const lastCursorSentAt = useRef(0);
 
+  const setModel = useCanonicalStore((s) => s.setModel);
   const updateClassPosition = useCanonicalStore((s) => s.updateClassPosition);
   const renameClassLocal = useCanonicalStore((s) => s.renameClass);
   const addClassLocal = useCanonicalStore((s) => s.addClass);
@@ -122,6 +136,10 @@ export function useCollaboration(
   useEffect(() => {
     if (!diagramId || !token) {
       setStatus("desconectado");
+      // Sin diagrama en vivo (demo local, o deslogueado) no hay "offline"
+      // que mostrar: se resetea para no dejar un badge pegado de una sesion anterior.
+      useOfflineStore.getState().setState("ONLINE");
+      useOfflineStore.getState().setQueueLength(0);
       return;
     }
 
@@ -130,13 +148,88 @@ export function useCollaboration(
     setSequenceGap(null);
     lastSequenceNum.current = null;
     ownMutationIds.current.clear();
+    refreshQueueLength();
+
+    function refreshQueueLength() {
+      countQueuedOperations(diagramId!).then((n) => useOfflineStore.getState().setQueueLength(n));
+    }
+
+    // §9.1: al reconectar DESPUES de haber estado OFFLINE (no en el primer
+    // connect de la sesion) hay que mandar la cola pendiente y reconciliar
+    // antes de volver a ONLINE. SYNCING es un estado propio para que el
+    // usuario vea que hay un lote en camino, no un simple "ya se conecto".
+    async function sincronizarColaPendiente() {
+      const offline = useOfflineStore.getState();
+      offline.setState("SYNCING");
+
+      const pendientes = await getQueuedOperations(diagramId!);
+      if (pendientes.length === 0) {
+        offline.setState("ONLINE");
+        return;
+      }
+
+      let aplicadas = 0;
+      let descartadas = 0;
+      const detalles: string[] = [];
+      let ultimoSnapshot: CanonicalModel | null = null;
+
+      try {
+        for (let i = 0; i < pendientes.length; i += MAX_OPERATIONS_PER_BATCH) {
+          const lote: QueuedOperation[] = pendientes.slice(i, i + MAX_OPERATIONS_PER_BATCH);
+          const operaciones: OfflineOperation[] = lote.map(({ op, targetId, clientMutationId, payload, clientTimestamp }) => ({
+            op,
+            targetId,
+            clientMutationId,
+            payload,
+            clientTimestamp,
+          }));
+
+          const reporte = await syncOffline(diagramId!, token!, lastSequenceNum.current, operaciones);
+
+          aplicadas += reporte.appliedCount;
+          descartadas += reporte.discardedCount;
+          detalles.push(...reporte.discardedDetails);
+          ultimoSnapshot = reporte.snapshot;
+          lastSequenceNum.current = reporte.snapshot.mutationVersion;
+
+          await removeQueuedOperations(
+            lote.map((o) => o.id).filter((id): id is number => id != null),
+          );
+          refreshQueueLength();
+        }
+
+        if (ultimoSnapshot) setModel(ultimoSnapshot);
+        offline.setReconciliationReport({
+          appliedCount: aplicadas,
+          discardedCount: descartadas,
+          discardedDetails: detalles,
+          snapshot: ultimoSnapshot!,
+        });
+        offline.setState("RECONCILED");
+      } catch (e) {
+        // No se pudo mandar el lote (el servidor volvio a caer a mitad de
+        // camino, por ejemplo): la cola queda intacta en IndexedDB — nada
+        // se pierde — y se reintenta en la proxima reconexion.
+        console.error("[colaboracion] fallo la reconciliacion offline:", e);
+        offline.setState("OFFLINE");
+      }
+    }
 
     const client = new Client({
       brokerURL: WS_URL,
       connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 3000,
+      // Sin esto, una conexion "muerta en silencio" (el servidor se cayo
+      // sin cerrar el socket prolijamente, o hay un router en el medio que
+      // se traga los paquetes) puede quedar como "conectado" indefinidamente
+      // — exactamente el peor fallo del modo offline: creer que se esta
+      // guardando cuando no. Los latidos hacen que stomp.js lo note solo.
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
       onConnect: () => {
         setStatus("conectado");
+
+        const offlineState = useOfflineStore.getState().state;
 
         // El orden importa: primero TODAS las suscripciones, recien despues
         // el pedido de roster. [cl1] probo empujarlo automaticamente al
@@ -149,16 +242,39 @@ export function useCollaboration(
         client.subscribe("/user/queue/presence", (message) => handlePresenceResponse(message));
 
         client.publish({ destination: `/app/diagram/${diagramId}/presence`, body: "" });
+
+        if (offlineState === "OFFLINE" || offlineState === "SYNCING") {
+          void sincronizarColaPendiente();
+        } else {
+          useOfflineStore.getState().setState("ONLINE");
+        }
       },
       onStompError: (frame) => {
         setStatus("error");
         setError(frame.headers?.message ?? "el servidor rechazo la conexion STOMP");
+        useOfflineStore.getState().setState("OFFLINE");
       },
       onWebSocketError: () => {
         setStatus("error");
         setError("no se pudo abrir el WebSocket");
+        useOfflineStore.getState().setState("OFFLINE");
       },
-      onDisconnect: () => setStatus("desconectado"),
+      // El hook real para "se cayo la red" (§9.1). `onDisconnect` de abajo
+      // es para el DISCONNECT prolijo a nivel STOMP (client.deactivate()) —
+      // un corte de verdad NUNCA manda ese frame, cierra el socket a secas.
+      // Sin este handler especifico, cerrar el transporte no disparaba
+      // ningun cambio de estado: lo confirme cerrando el WebSocket real de
+      // la pagina de prueba (no con la emulacion de red offline de Chrome,
+      // que no llega a afectar un socket ya abierto) y viendo que
+      // `status` se quedaba en "conectado" para siempre.
+      onWebSocketClose: () => {
+        setStatus("desconectado");
+        useOfflineStore.getState().setState("OFFLINE");
+      },
+      onDisconnect: () => {
+        setStatus("desconectado");
+        useOfflineStore.getState().setState("OFFLINE");
+      },
     });
 
     function checkSequence(seq: number) {
@@ -294,6 +410,15 @@ export function useCollaboration(
           case "PRESENCE":
             aplicarRoster(body.participants);
             break;
+
+          case "OFFLINE_SYNC":
+            // Un compañero reconcilio su cola offline: un solo evento con
+            // el estado completo, no N mutaciones (asi lo emite el
+            // servidor a proposito, para no parpadear veinte veces). Se
+            // reemplaza el canonico entero, no se reproduce nada.
+            setModel(body.snapshot);
+            lastSequenceNum.current = body.sequenceNum;
+            break;
         }
         return;
       }
@@ -329,6 +454,7 @@ export function useCollaboration(
   }, [
     diagramId,
     token,
+    setModel,
     updateClassPosition,
     renameClassLocal,
     addClassLocal,
@@ -341,10 +467,27 @@ export function useCollaboration(
   ]);
 
   function publishMutate(op: string, targetId: string | null, payload: Record<string, unknown>) {
+    if (!diagramId) return;
     const client = clientRef.current;
-    if (!diagramId || !client?.connected) return;
-
     const clientMutationId = crypto.randomUUID();
+
+    if (!client?.connected) {
+      // OFFLINE (§8.4): se encola en vez de perderse — incluidas las
+      // operaciones que normalmente exigen lock, porque sin conexion no
+      // hay a quien pedirselo. clientMutationId es obligatorio aca (al
+      // reves que en el mensaje STOMP): es lo unico que hace seguro
+      // reenviar el lote entero si la sincronizacion se corta a la mitad.
+      void enqueueOperation({
+        diagramId,
+        op,
+        targetId,
+        clientMutationId,
+        payload,
+        clientTimestamp: Date.now(),
+      }).then(() => countQueuedOperations(diagramId).then((n) => useOfflineStore.getState().setQueueLength(n)));
+      return;
+    }
+
     ownMutationIds.current.add(clientMutationId);
     client.publish({
       destination: `/app/diagram/${diagramId}/mutate`,
