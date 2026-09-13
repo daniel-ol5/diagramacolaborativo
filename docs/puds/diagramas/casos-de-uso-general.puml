@@ -5,10 +5,6 @@ skinparam packageStyle rectangle
 
 actor "Visitante" as V
 actor "Usuario" as U
-actor "Tiempo" as T
-actor "Gemini" as G
-actor "Enterprise Architect" as EA
-actor "Motor STT" as STT
 
 V --> U : se registra
 
@@ -27,12 +23,8 @@ V --> A
 U --> B
 U --> CC
 U --> D
-T --> D
 U --> E
 U --> F
-STT --> F
 U --> GG
-EA --> GG
 U --> H
-G --> H
 @enduml

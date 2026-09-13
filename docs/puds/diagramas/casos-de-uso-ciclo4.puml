@@ -1,19 +1,16 @@
-@startuml casos-de-uso-ciclo45
-' CICLOS 4 y 5 - Fuera del parcial
+@startuml casos-de-uso-ciclo4
+' CICLO 4 - Fuera del parcial (examen final)
 left to right direction
 
 actor "Usuario" as U
-actor "Gemini" as G
-actor "Enterprise Architect" as EA
-actor "Motor STT\ndel dispositivo" as STT
+actor "Servicio de IA" as G <<apoyo>>
+actor "Herramienta CASE" as EA <<apoyo>>
+actor "Motor de voz\ndel dispositivo" as STT <<apoyo>>
 
-rectangle "CICLO 4" {
+rectangle "CICLO 4 - Examen final" {
   usecase "CU16 Modelar por comando\nde voz o texto" as CU16
   usecase "CU17 Importar diagrama\ndesde foto" as CU17
   usecase "CU18 Intercambiar modelos\nvia XMI 2.1" as CU18
-}
-
-rectangle "CICLO 5" {
   usecase "CU19 Generar app movil\ncon asistente de voz" as CU19
 }
 
@@ -21,10 +18,10 @@ U --> CU16
 U --> CU17
 U --> CU18
 U --> CU19
-G --> CU16
-G --> CU17
-EA --> CU18
-STT --> CU19
+CU16 --> G
+CU17 --> G
+CU18 --> EA
+CU19 --> STT
 
 note bottom of CU19
   Su riesgo se elimino en el ciclo 1 con un spike:
@@ -34,9 +31,9 @@ note bottom of CU19
   menos controlable.
 end note
 
-note bottom of CU18
-  Exportar e importar van juntos: el criterio de
-  aceptacion es el viaje de ida y vuelta.
-  La ida sin la vuelta no demuestra nada.
+note top of G
+  Actores **de apoyo**: nunca inician un caso de uso,
+  responden a una peticion del sistema.
+  Por eso no aparecen en los ciclos 1-3.
 end note
 @enduml

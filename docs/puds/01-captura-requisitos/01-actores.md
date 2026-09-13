@@ -133,53 +133,58 @@ inutilizable; renombrarla sin bloqueo produciría pérdidas silenciosas.
 
 ---
 
-## Actores no humanos
+## Sistemas externos: por qué no figuran como actores del parcial
 
-### Tiempo *(temporizador del sistema)*
+En UML **un sistema externo sí puede ser actor**: la definición es *"alguien o algo fuera
+del sistema que interactúa con él"*. Si ModelCollab le envía una petición a un servicio de
+IA y espera su respuesta, ese servicio está fuera de la frontera y participa del caso de
+uso.
+
+La distinción que conviene manejar es otra:
 
 | | |
 | :--- | :--- |
-| **Dispara** | La expiración de un bloqueo con TTL de 5 s, y la caducidad de una invitación |
-| **En el código** | El barrido periódico de `collaboration/service/LockManagerService` |
+| **Actor primario** | Inicia el caso de uso y persigue un objetivo propio |
+| **Actor de apoyo** | Sirve al caso de uso, pero nunca lo inicia |
 
-> Es actor porque **inicia** un caso de uso: nadie pulsa nada y el sistema libera el bloqueo
-> y se lo notifica a toda la sala. Sin él, el flujo "liberar bloqueo vencido" no tendría
-> quién lo empiece — y un usuario que cierra el navegador dejaría un elemento bloqueado
-> para siempre.
+Los tres sistemas externos de este proyecto son **de apoyo**, y todos participan
+**únicamente en casos de uso posteriores al parcial**:
+
+| Sistema | Participa en | Ciclo |
+| :--- | :--- | :---: |
+| Servicio de IA generativa (*Gemini*) | CU16 modelado por voz y texto · CU17 importación desde foto | 4 |
+| Herramienta CASE (*Sparx Enterprise Architect*) | CU18 intercambio XMI 2.1 | 4 |
+| Motor de reconocimiento de voz del dispositivo | CU19 app móvil generada | 4 |
+
+Por eso **no aparecen en el modelo de casos de uso de los ciclos 1 a 3**. Se documentan
+acá para dejar registrada la frontera del sistema, y se incorporan al modelo cuando se
+aborden sus casos de uso.
+
+> **Nota sobre el motor de voz.** Es actor del **sistema generado**, no de ModelCollab. Su
+> viabilidad ya está probada: el spike del ciclo 1 comprobó en un teléfono real, en modo
+> avión, que transcribe sin internet — evidencia en `evidencias/spike-voz-modo-avion.png`.
 
 ---
 
-### Servicio de IA generativa — *Gemini*
+## El vencimiento del bloqueo: un evento temporal, no un actor
 
-| | |
-| :--- | :--- |
-| **Participa en** | CU16 modelado por voz y texto (RF-02), CU17 importación desde foto (RF-03) |
-| **Estado** | ⬜ **No integrado.** Los paquetes `ai/` y `vision/` existen en la estructura, vacíos |
+Hay una convención de RUP que modela el paso del tiempo como un actor llamado *Tiempo*,
+para los casos de uso que nadie inicia. Acá aplicaría a uno: el bloqueo de un elemento
+vence a los 5 segundos y el sistema avisa a toda la sala **sin que nadie pulse nada**.
 
----
+**Se optó por no usar ese actor** y modelarlo como un **evento temporal** dentro del flujo
+alternativo de CU06:
 
-### Herramienta CASE externa — *Sparx Enterprise Architect*
+> **CU06 — Flujo alternativo B: el bloqueo vence**
+> Transcurridos 5 000 ms sin que el poseedor renueve el bloqueo, el sistema lo libera y
+> difunde `LOCK_RELEASED` a la sala.
 
-| | |
-| :--- | :--- |
-| **Participa en** | CU18 intercambio XMI 2.1 (RF-09) |
-| **Estado** | ⬜ **No implementado.** El paquete `xmi/` existe vacío |
+No se pierde nada: el detalle vive en la especificación, que es donde se lee. Y el modelo
+de casos de uso queda con **actores que son personas**, que es lo que se espera al leerlo.
 
-> Es actor y no un simple formato de archivo porque **el intercambio es bidireccional**: el
-> sistema exporta para que la herramienta lea, e importa lo que la herramienta produjo. Un
-> formato que sólo se escribe no necesita actor; uno que se negocia con otro sistema, sí.
-
----
-
-### Motor de reconocimiento de voz del dispositivo
-
-| | |
-| :--- | :--- |
-| **Participa en** | CU19, el asistente por voz de la **app móvil generada** (RF-07, RF-08) |
-| **Estado** | 🟡 **Validado, no integrado.** El spike del ciclo 1 comprobó en un teléfono real, en modo avión, que transcribe sin internet — evidencia en `evidencias/spike-voz-modo-avion.png` |
-
-> Es actor del **sistema generado**, no de ModelCollab. Aparece acá porque CU19 tiene que
-> producir código que hable con él.
+> **Por qué ese flujo importa y no es un detalle.** Sin él, un usuario que cierra el
+> navegador dejaría un elemento bloqueado para siempre, y nadie más podría editarlo. Es la
+> diferencia entre un bloqueo y un candado sin llave.
 
 ---
 
@@ -194,21 +199,23 @@ Fuente: [`../diagramas/actores.puml`](../diagramas/actores.puml)
                                                     rol por proyecto:
                                                     OWNER · EDITOR · VIEWER
                                                     (autorización, no actores)
-
-   NO HUMANOS:   [ Tiempo ]   [ Gemini ]   [ Enterprise Architect ]   [ Motor STT ]
 ```
+
+**Dos actores en todo el parcial.** Los sistemas externos y el evento temporal quedan fuera
+por los motivos de arriba.
 
 ---
 
 ## Resumen
 
-| Actor | Tipo | Estado |
+| Actor | Alcance | Estado |
 | :--- | :--- | :---: |
-| Visitante | Humano | 🟢 |
-| Usuario | Humano | 🟢 |
-| Tiempo | Sistema | 🟢 |
-| Gemini | Sistema externo | ⬜ |
-| Enterprise Architect | Sistema externo | ⬜ |
-| Motor STT del dispositivo | Sistema externo | 🟡 validado |
+| **Visitante** | Ciclos 1–3 *(parcial)* | 🟢 |
+| **Usuario** | Ciclos 1–3 *(parcial)* | 🟢 |
+| *Gemini* | Ciclo 4, actor de apoyo | ⬜ |
+| *Enterprise Architect* | Ciclo 4, actor de apoyo | ⬜ |
+| *Motor STT del dispositivo* | Ciclo 4, actor del sistema generado | 🟡 viabilidad probada |
+
+**El modelo de casos de uso del parcial tiene dos actores: Visitante y Usuario.**
 
 **Leyenda:** 🟢 implementado y verificado · 🟡 parcial · ⬜ no implementado

@@ -34,7 +34,7 @@ visible sea bajo. Uno rutinario va después, aunque el usuario lo use todos los 
 | :--- | :--- | :---: | :--- | :---: |
 | **CU05** | Editar el diagrama en colaboración | 🔴 | Obliga a congelar el modelo canónico, el protocolo, la persistencia y el orden de las operaciones. **Todo lo demás se construye encima**: el lienzo, el generador, el exportador y la app móvil comparten ese mismo modelo | **1** |
 | **CU06** | Gestionar bloqueo de elemento | 🔴 | Exclusión mutua distribuida. Resuelta con cola de espera introduce interbloqueo e inanición; la política hay que decidirla antes de tener clientes que dependan de ella | **1** |
-| **CU19** | Generar app móvil con asistente de voz | 🔴 | Riesgo **externo**: dependía de si un teléfono transcribe voz sin internet. Si la respuesta era no, cambiaba alcance y cronograma | *spike, ciclo 5* |
+| **CU19** | Generar app móvil con asistente de voz | 🔴 | Riesgo **externo**: dependía de si un teléfono transcribe voz sin internet. Si la respuesta era no, cambiaba alcance y cronograma | *spike, ciclo 4* |
 | **CU12** | Trabajar sin conexión y sincronizar | 🟠 | Define las reglas de resolución de conflictos. Tocarlas después obliga a revisar cliente, servidor y registro histórico a la vez. Detectar mal la desconexión hace que el usuario **pierda trabajo creyendo que se guardó** | **3** |
 | **CU14** | Generar backend Spring Boot | 🟠 | Sostiene la afirmación *"el código generado siempre compila"*, que es la promesa central del proyecto | **3** |
 | **CU10** | Gestionar colaboradores del proyecto | 🟠 | Un enlace de invitación mal diseñado **no se puede revocar**: si se filtra, el proyecto queda abierto para siempre | **2** |
@@ -153,18 +153,24 @@ descargar el proyecto generado de un diagrama y compilarlo.
 
 ---
 
-### Fuera del parcial — ciclos 4 y 5
+### CICLO 4 — Fuera del parcial *(examen final)*
 
-| # | Caso de uso | Ciclo |
-| :--- | :--- | :---: |
-| CU16 | Modelar por comando de voz o texto | 4 |
-| CU17 | Importar diagrama desde foto | 4 |
-| CU18 | Intercambiar modelos vía XMI 2.1 | 4 |
-| CU19 | Generar app móvil con asistente de voz | 5 |
+> **Objetivo:** los tres modos de modelado asistido y la app móvil generada.
 
-Se dejan fuera **por prioridad, no por dificultad**. Ninguno es precondición de otro caso de
-uso: son hojas del árbol de dependencias. Eso los convierte en lo primero que se recorta si
-hay atraso, y en lo último que se construye si no lo hay.
+| # | Caso de uso | Sistema de apoyo |
+| :--- | :--- | :--- |
+| CU16 | Modelar por comando de voz o texto | Servicio de IA generativa |
+| CU17 | Importar diagrama desde foto | Servicio de IA generativa |
+| CU18 | Intercambiar modelos vía XMI 2.1 | Herramienta CASE externa |
+| CU19 | Generar app móvil con asistente de voz | Motor de voz del dispositivo |
+
+Se dejan fuera del parcial **por prioridad, no por dificultad**. Ninguno es precondición de
+otro caso de uso: son hojas del árbol de dependencias. Eso los convierte en lo primero que
+se recorta si hay atraso, y en lo último que se construye si no lo hay.
+
+> **El riesgo de CU19 ya está eliminado**, aunque el caso de uso sea el último. El spike del
+> ciclo 1 comprobó en un teléfono real, en modo avión, que el reconocimiento de voz funciona
+> sin internet. Averiguarlo recién en este ciclo habría sido fatal.
 
 ---
 
@@ -175,7 +181,7 @@ hay atraso, y en lo último que se construye si no lo hay.
 | **1** | 7 | 5 | 2 | 0 |
 | **2** | 4 | 4 | 0 | 0 |
 | **3** | 4 | 0 | 2 | 2 |
-| Fuera | 4 | 0 | 0 | 4 |
+| **4** *(examen)* | 4 | 0 | 0 | 4 |
 | **Total** | **19** | **9** | **4** | **6** |
 
 **Los ciclos 1 y 2 están cerrados y verificados. El ciclo 3 está en curso.**

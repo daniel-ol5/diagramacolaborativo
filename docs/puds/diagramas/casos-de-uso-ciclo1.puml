@@ -4,7 +4,6 @@ left to right direction
 
 actor "Visitante" as V
 actor "Usuario" as U
-actor "Tiempo" as T
 
 rectangle "CICLO 1 - Nucleo colaborativo" {
   usecase "CU01 Registrarse" as CU01
@@ -22,7 +21,6 @@ U --> CU03
 U --> CU04
 U --> CU05
 U --> CU06
-T --> CU06
 U --> CU07
 
 CU03 ..> CU05 : <<include>>
@@ -39,7 +37,7 @@ note right of CU05
 end note
 
 note bottom of CU06
-  Flujo alternativo disparado por Tiempo:
+  Flujo alternativo por **evento temporal**:
   el bloqueo vence a los 5 s si nadie lo renueva.
   Sin eso, cerrar el navegador dejaria un
   elemento bloqueado para siempre.

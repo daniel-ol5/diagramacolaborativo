@@ -135,7 +135,7 @@ requisitos.
 | # | Caso de uso | Actor | RF | Ciclo | Estado |
 | :--- | :--- | :--- | :---: | :---: | :---: |
 | **CU05** | Editar el diagrama en colaboración | Usuario | RF-04 | 1 | 🟢 |
-| **CU06** | Gestionar bloqueo de elemento | Usuario, **Tiempo** | RF-04 | 1 | 🟢 |
+| **CU06** | Gestionar bloqueo de elemento | Usuario | RF-04 | 1 | 🟢 |
 | **CU07** | Visualizar presencia y cursores | Usuario | RF-04 | 1 | 🟢 |
 
 | # | Operaciones que absorbe | Destino |
@@ -145,9 +145,9 @@ requisitos.
 | CU07 | Emitir cursor · Consultar participantes · Alta y baja de la sala | `/app/diagram/{id}/cursor` y `/presence` |
 
 > **La expiración del bloqueo es un flujo alternativo de CU06, no un caso de uso aparte.**
-> El disparador es el actor **Tiempo** —nadie pulsa nada— pero el objetivo es el mismo:
-> que el elemento quede libre. Sin ese flujo, un usuario que cierra el navegador dejaría un
-> elemento bloqueado para siempre.
+> Es un **evento temporal**: transcurridos 5 000 ms sin renovación, el sistema libera el
+> bloqueo y avisa a la sala, sin que nadie pulse nada. Sin ese flujo, un usuario que cierra
+> el navegador dejaría un elemento bloqueado para siempre.
 
 > **Política de fallo rápido sin cola.** Si el elemento está tomado, el solicitante recibe
 > el rechazo y **no espera**: no hay cola ni reintento automático. Es lo que garantiza
@@ -183,7 +183,7 @@ Endpoint: `POST /api/v1/diagrams/{id}/sync-offline`.
 | :--- | :--- | :--- | :---: | :---: | :---: |
 | **CU13** | Validar diagrama | Usuario | RF-06 | 3 | ⬜ |
 | **CU14** | Generar backend Spring Boot | Usuario | RF-06 | 3 | 🟡 |
-| **CU19** | Generar app móvil con asistente de voz | Usuario, *Motor STT* | RF-07, RF-08 | 5 | ⬜ |
+| **CU19** | Generar app móvil con asistente de voz | Usuario | RF-07, RF-08 | 4 | ⬜ |
 
 > **CU13 es precondición de CU14 y no un adorno.** El botón de descarga ejecuta primero la
 > validación y, si hay errores bloqueantes —una relación huérfana, herencia múltiple—
@@ -200,7 +200,9 @@ Endpoint: `POST /api/v1/diagrams/{id}/sync-offline`.
 
 | # | Caso de uso | Actor | RF | Ciclo | Estado |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| **CU18** | Intercambiar modelos vía XMI 2.1 | Usuario, *Enterprise Architect* | RF-09 | 4 | ⬜ |
+| **CU18** | Intercambiar modelos vía XMI 2.1 | Usuario | RF-09 | 4 | ⬜ |
+
+*Sistema de apoyo:* Sparx Enterprise Architect.
 
 Absorbe exportar e importar. Se agrupa porque el objetivo es uno —**interoperar con una
 herramienta CASE**— y el criterio de aceptación también: exportar, abrir en Enterprise
@@ -212,8 +214,11 @@ Architect, reimportar y no perder nada. La ida sin la vuelta no demuestra nada.
 
 | # | Caso de uso | Actor | RF | Ciclo | Estado |
 | :--- | :--- | :--- | :---: | :---: | :---: |
-| **CU16** | Modelar por comando de voz o texto | Usuario, *Gemini* | RF-02 | 4 | ⬜ |
-| **CU17** | Importar diagrama desde foto | Usuario, *Gemini* | RF-03 | 4 | ⬜ |
+| **CU16** | Modelar por comando de voz o texto | Usuario | RF-02 | 4 | ⬜ |
+| **CU17** | Importar diagrama desde foto | Usuario | RF-03 | 4 | ⬜ |
+
+*Sistema de apoyo:* el servicio de IA generativa (Gemini), que nunca inicia un caso de uso:
+responde a una petición del sistema.
 
 CU16 agrupa voz y texto porque **son el mismo caso de uso con distinto dispositivo de
 entrada**: la voz se transcribe en el navegador y entra por el mismo endpoint que el texto.
@@ -280,7 +285,7 @@ de uso (sección 2.3).
 | **Ciclo 1** | 7 | 5 | 2 | 0 |
 | **Ciclo 2** | 4 | 4 | 0 | 0 |
 | **Ciclo 3** | 4 | 0 | 2 | 2 |
-| **Ciclos 4–5** | 4 | 0 | 0 | 4 |
+| **Ciclo 4** *(examen)* | 4 | 0 | 0 | 4 |
 | **Total** | **19** | **9** | **4** | **6** |
 
 **En el parcial: 15 casos de uso.** El núcleo colaborativo (RF-04) está completo y
@@ -298,4 +303,4 @@ Fuentes en [`../diagramas/`](../diagramas/):
 | Ciclo 1 — acceso, modelado y colaboración | `casos-de-uso-ciclo1.puml` |
 | Ciclo 2 — proyectos y colaboradores | `casos-de-uso-ciclo2.puml` |
 | Ciclo 3 — generación y trabajo sin conexión | `casos-de-uso-ciclo3.puml` |
-| Ciclos 4 y 5 — IA, XMI y app móvil | `casos-de-uso-ciclo45.puml` |
+| Ciclo 4 — IA, XMI y app móvil *(examen final)* | `casos-de-uso-ciclo4.puml` |
