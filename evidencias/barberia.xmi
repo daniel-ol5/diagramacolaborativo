@@ -224,6 +224,107 @@
       </ownedEnd>
     </packagedElement>
   </uml:Model>
+  <xmi:Extension extender="Enterprise Architect" extenderID="6.5">
+    <elements>
+      <element name="Cliente" scope="public" xmi:idref="f4281e21-43e9-5959-97ad-7bcaaef35382" xmi:type="uml:Class">
+        <model ea_eleType="element" ea_localid="1" package="40bcd2a1-ef8d-50e7-bacf-1ce93f0fac95"/>
+        <properties isAbstract="false" isLeaf="false" isRoot="false" isSpecification="false" nType="0" sType="Class" scope="public"/>
+        <project author="ModelCollab" created="2026-01-01 00:00:00" modified="2026-01-01 00:00:00" version="1.0"/>
+      </element>
+      <element name="Barbero" scope="public" xmi:idref="900f9c73-4ca3-5453-89a6-63fb70b8b78e" xmi:type="uml:Class">
+        <model ea_eleType="element" ea_localid="2" package="40bcd2a1-ef8d-50e7-bacf-1ce93f0fac95"/>
+        <properties isAbstract="false" isLeaf="false" isRoot="false" isSpecification="false" nType="0" sType="Class" scope="public"/>
+        <project author="ModelCollab" created="2026-01-01 00:00:00" modified="2026-01-01 00:00:00" version="1.0"/>
+      </element>
+      <element name="Servicio" scope="public" xmi:idref="817ef8ca-6485-55c8-bed6-8e3c93be4726" xmi:type="uml:Class">
+        <model ea_eleType="element" ea_localid="3" package="40bcd2a1-ef8d-50e7-bacf-1ce93f0fac95"/>
+        <properties isAbstract="false" isLeaf="false" isRoot="false" isSpecification="false" nType="0" sType="Class" scope="public"/>
+        <project author="ModelCollab" created="2026-01-01 00:00:00" modified="2026-01-01 00:00:00" version="1.0"/>
+      </element>
+      <element name="Cita" scope="public" xmi:idref="c3383fbd-5db2-5655-a32c-28a4a6c71706" xmi:type="uml:Class">
+        <model ea_eleType="element" ea_localid="4" package="40bcd2a1-ef8d-50e7-bacf-1ce93f0fac95"/>
+        <properties isAbstract="false" isLeaf="false" isRoot="false" isSpecification="false" nType="0" sType="Class" scope="public"/>
+        <project author="ModelCollab" created="2026-01-01 00:00:00" modified="2026-01-01 00:00:00" version="1.0"/>
+      </element>
+      <element name="Pago" scope="public" xmi:idref="f8ecc8ec-5351-54ca-b969-93075c12e0ec" xmi:type="uml:Class">
+        <model ea_eleType="element" ea_localid="5" package="40bcd2a1-ef8d-50e7-bacf-1ce93f0fac95"/>
+        <properties isAbstract="false" isLeaf="false" isRoot="false" isSpecification="false" nType="0" sType="Class" scope="public"/>
+        <project author="ModelCollab" created="2026-01-01 00:00:00" modified="2026-01-01 00:00:00" version="1.0"/>
+      </element>
+    </elements>
+    <connectors>
+      <connector xmi:idref="8857f10a-9af5-526b-ae1c-957379b7894e">
+        <source xmi:idref="f4281e21-43e9-5959-97ad-7bcaaef35382">
+          <model name="Cliente" type="Class"/>
+          <role name="cliente" visibility="Public"/>
+          <type aggregation="none" multiplicity="1..1"/>
+        </source>
+        <target xmi:idref="c3383fbd-5db2-5655-a32c-28a4a6c71706">
+          <model name="Cita" type="Class"/>
+          <role name="citas" visibility="Public"/>
+          <type aggregation="none" multiplicity="0..*"/>
+        </target>
+        <properties direction="Source -&gt; Destination" ea_type="Association"/>
+      </connector>
+      <connector xmi:idref="1a719b4c-0bf8-5831-83c7-43270c55ab7d">
+        <source xmi:idref="900f9c73-4ca3-5453-89a6-63fb70b8b78e">
+          <model name="Barbero" type="Class"/>
+          <role name="barbero" visibility="Public"/>
+          <type aggregation="none" multiplicity="1..1"/>
+        </source>
+        <target xmi:idref="c3383fbd-5db2-5655-a32c-28a4a6c71706">
+          <model name="Cita" type="Class"/>
+          <role name="citas" visibility="Public"/>
+          <type aggregation="none" multiplicity="0..*"/>
+        </target>
+        <properties direction="Source -&gt; Destination" ea_type="Association"/>
+      </connector>
+      <connector xmi:idref="8ca8e3aa-01bb-56b0-9f47-81b45ad94c7c">
+        <source xmi:idref="c3383fbd-5db2-5655-a32c-28a4a6c71706">
+          <model name="Cita" type="Class"/>
+          <role name="citas" visibility="Public"/>
+          <type aggregation="none" multiplicity="0..*"/>
+        </source>
+        <target xmi:idref="817ef8ca-6485-55c8-bed6-8e3c93be4726">
+          <model name="Servicio" type="Class"/>
+          <role name="servicios" visibility="Public"/>
+          <type aggregation="none" multiplicity="0..*"/>
+        </target>
+        <properties direction="Source -&gt; Destination" ea_type="Association"/>
+      </connector>
+      <connector xmi:idref="38b1960d-144f-5864-aa3e-82aa38c74d65">
+        <source xmi:idref="c3383fbd-5db2-5655-a32c-28a4a6c71706">
+          <model name="Cita" type="Class"/>
+          <role name="cita" visibility="Public"/>
+          <type aggregation="none" multiplicity="1..1"/>
+        </source>
+        <target xmi:idref="f8ecc8ec-5351-54ca-b969-93075c12e0ec">
+          <model name="Pago" type="Class"/>
+          <role name="pago" visibility="Public"/>
+          <type aggregation="composite" multiplicity="0..1"/>
+        </target>
+        <properties direction="Source -&gt; Destination" ea_type="Aggregation"/>
+      </connector>
+    </connectors>
+    <diagrams>
+      <diagram xmi:id="modelcollab-diagram">
+        <model localID="1" owner="modelcollab-model" package="modelcollab-model"/>
+        <properties name="Barberia Central" type="Logical"/>
+        <project author="ModelCollab" created="2026-01-01 00:00:00" modified="2026-01-01 00:00:00" version="1.0"/>
+        <elements>
+          <element geometry="Left=60;Top=60;Right=300;Bottom=260;" seqno="1" subject="f4281e21-43e9-5959-97ad-7bcaaef35382"/>
+          <element geometry="Left=400;Top=60;Right=640;Bottom=260;" seqno="2" subject="900f9c73-4ca3-5453-89a6-63fb70b8b78e"/>
+          <element geometry="Left=740;Top=60;Right=980;Bottom=240;" seqno="3" subject="817ef8ca-6485-55c8-bed6-8e3c93be4726"/>
+          <element geometry="Left=400;Top=360;Right=660;Bottom=580;" seqno="4" subject="c3383fbd-5db2-5655-a32c-28a4a6c71706"/>
+          <element geometry="Left=740;Top=640;Right=980;Bottom=840;" seqno="5" subject="f8ecc8ec-5351-54ca-b969-93075c12e0ec"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="6" subject="8857f10a-9af5-526b-ae1c-957379b7894e"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="7" subject="1a719b4c-0bf8-5831-83c7-43270c55ab7d"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="8" subject="8ca8e3aa-01bb-56b0-9f47-81b45ad94c7c"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="9" subject="38b1960d-144f-5864-aa3e-82aa38c74d65"/>
+        </elements>
+      </diagram>
+    </diagrams>
+  </xmi:Extension>
   <xmi:Extension extender="ModelCollab" schemaVersion="1.0.0">
     <mc:diagram classOrder="f4281e21-43e9-5959-97ad-7bcaaef35382 900f9c73-4ca3-5453-89a6-63fb70b8b78e 817ef8ca-6485-55c8-bed6-8e3c93be4726 c3383fbd-5db2-5655-a32c-28a4a6c71706 f8ecc8ec-5351-54ca-b969-93075c12e0ec" mutationVersion="1" relationshipOrder="8857f10a-9af5-526b-ae1c-957379b7894e 1a719b4c-0bf8-5831-83c7-43270c55ab7d 8ca8e3aa-01bb-56b0-9f47-81b45ad94c7c 38b1960d-144f-5864-aa3e-82aa38c74d65">
       <mc:class height="200" id="f4281e21-43e9-5959-97ad-7bcaaef35382" width="240" x="60" y="60"/>

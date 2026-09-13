@@ -228,6 +228,107 @@
       </ownedEnd>
     </packagedElement>
   </uml:Model>
+  <xmi:Extension extender="Enterprise Architect" extenderID="6.5">
+    <elements>
+      <element name="Categoria" scope="public" xmi:idref="cb97e87a-ed6a-5b88-899f-39bbd46e2a79" xmi:type="uml:Class">
+        <model ea_eleType="element" ea_localid="1" package="7586fd38-62f0-5c46-b436-498828b968be"/>
+        <properties isAbstract="false" isLeaf="false" isRoot="false" isSpecification="false" nType="0" sType="Class" scope="public"/>
+        <project author="ModelCollab" created="2026-01-01 00:00:00" modified="2026-01-01 00:00:00" version="1.0"/>
+      </element>
+      <element name="Proveedor" scope="public" xmi:idref="066be93c-be23-59a8-bece-27501c103dd5" xmi:type="uml:Class">
+        <model ea_eleType="element" ea_localid="2" package="7586fd38-62f0-5c46-b436-498828b968be"/>
+        <properties isAbstract="false" isLeaf="false" isRoot="false" isSpecification="false" nType="0" sType="Class" scope="public"/>
+        <project author="ModelCollab" created="2026-01-01 00:00:00" modified="2026-01-01 00:00:00" version="1.0"/>
+      </element>
+      <element name="Producto" scope="public" xmi:idref="52a0c30d-25ae-510f-9071-8e3cfd9b51e8" xmi:type="uml:Class">
+        <model ea_eleType="element" ea_localid="3" package="7586fd38-62f0-5c46-b436-498828b968be"/>
+        <properties isAbstract="false" isLeaf="false" isRoot="false" isSpecification="false" nType="0" sType="Class" scope="public"/>
+        <project author="ModelCollab" created="2026-01-01 00:00:00" modified="2026-01-01 00:00:00" version="1.0"/>
+      </element>
+      <element name="Almacen" scope="public" xmi:idref="cda5842a-5bf5-55cb-8d48-092fe7835b73" xmi:type="uml:Class">
+        <model ea_eleType="element" ea_localid="4" package="ff456f4c-eecc-5c5a-ab0d-ecd8f43daebb"/>
+        <properties isAbstract="false" isLeaf="false" isRoot="false" isSpecification="false" nType="0" sType="Class" scope="public"/>
+        <project author="ModelCollab" created="2026-01-01 00:00:00" modified="2026-01-01 00:00:00" version="1.0"/>
+      </element>
+      <element name="MovimientoStock" scope="public" xmi:idref="a13d3f05-7f2d-5031-b864-752f4340cbb1" xmi:type="uml:Class">
+        <model ea_eleType="element" ea_localid="5" package="ff456f4c-eecc-5c5a-ab0d-ecd8f43daebb"/>
+        <properties isAbstract="false" isLeaf="false" isRoot="false" isSpecification="false" nType="0" sType="Class" scope="public"/>
+        <project author="ModelCollab" created="2026-01-01 00:00:00" modified="2026-01-01 00:00:00" version="1.0"/>
+      </element>
+    </elements>
+    <connectors>
+      <connector xmi:idref="16f5081e-ae49-5cc7-803b-b38a5df062c2">
+        <source xmi:idref="cb97e87a-ed6a-5b88-899f-39bbd46e2a79">
+          <model name="Categoria" type="Class"/>
+          <role name="categoria" visibility="Public"/>
+          <type aggregation="none" multiplicity="1..1"/>
+        </source>
+        <target xmi:idref="52a0c30d-25ae-510f-9071-8e3cfd9b51e8">
+          <model name="Producto" type="Class"/>
+          <role name="productos" visibility="Public"/>
+          <type aggregation="none" multiplicity="0..*"/>
+        </target>
+        <properties direction="Source -&gt; Destination" ea_type="Association"/>
+      </connector>
+      <connector xmi:idref="da26dcce-36d8-5751-9302-f9248d0be4f5">
+        <source xmi:idref="52a0c30d-25ae-510f-9071-8e3cfd9b51e8">
+          <model name="Producto" type="Class"/>
+          <role name="productos" visibility="Public"/>
+          <type aggregation="none" multiplicity="0..*"/>
+        </source>
+        <target xmi:idref="066be93c-be23-59a8-bece-27501c103dd5">
+          <model name="Proveedor" type="Class"/>
+          <role name="proveedores" visibility="Public"/>
+          <type aggregation="none" multiplicity="0..*"/>
+        </target>
+        <properties direction="Source -&gt; Destination" ea_type="Association"/>
+      </connector>
+      <connector xmi:idref="da645067-fcb4-5aeb-9886-96a46513bafd">
+        <source xmi:idref="52a0c30d-25ae-510f-9071-8e3cfd9b51e8">
+          <model name="Producto" type="Class"/>
+          <role name="producto" visibility="Public"/>
+          <type aggregation="none" multiplicity="1..1"/>
+        </source>
+        <target xmi:idref="a13d3f05-7f2d-5031-b864-752f4340cbb1">
+          <model name="MovimientoStock" type="Class"/>
+          <role name="movimientos" visibility="Public"/>
+          <type aggregation="none" multiplicity="0..*"/>
+        </target>
+        <properties direction="Source -&gt; Destination" ea_type="Association"/>
+      </connector>
+      <connector xmi:idref="b2a887f4-5e8e-5110-a7d2-3c8345b729b8">
+        <source xmi:idref="cda5842a-5bf5-55cb-8d48-092fe7835b73">
+          <model name="Almacen" type="Class"/>
+          <role name="almacen" visibility="Public"/>
+          <type aggregation="none" multiplicity="1..1"/>
+        </source>
+        <target xmi:idref="a13d3f05-7f2d-5031-b864-752f4340cbb1">
+          <model name="MovimientoStock" type="Class"/>
+          <role name="movimientos" visibility="Public"/>
+          <type aggregation="none" multiplicity="0..*"/>
+        </target>
+        <properties direction="Source -&gt; Destination" ea_type="Association"/>
+      </connector>
+    </connectors>
+    <diagrams>
+      <diagram xmi:id="modelcollab-diagram">
+        <model localID="1" owner="modelcollab-model" package="modelcollab-model"/>
+        <properties name="Inventario" type="Logical"/>
+        <project author="ModelCollab" created="2026-01-01 00:00:00" modified="2026-01-01 00:00:00" version="1.0"/>
+        <elements>
+          <element geometry="Left=60;Top=60;Right=300;Bottom=240;" seqno="1" subject="cb97e87a-ed6a-5b88-899f-39bbd46e2a79"/>
+          <element geometry="Left=740;Top=60;Right=1000;Bottom=280;" seqno="2" subject="066be93c-be23-59a8-bece-27501c103dd5"/>
+          <element geometry="Left=400;Top=340;Right=680;Bottom=600;" seqno="3" subject="52a0c30d-25ae-510f-9071-8e3cfd9b51e8"/>
+          <element geometry="Left=60;Top=700;Right=300;Bottom=900;" seqno="4" subject="cda5842a-5bf5-55cb-8d48-092fe7835b73"/>
+          <element geometry="Left=520;Top=740;Right=800;Bottom=980;" seqno="5" subject="a13d3f05-7f2d-5031-b864-752f4340cbb1"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="6" subject="16f5081e-ae49-5cc7-803b-b38a5df062c2"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="7" subject="da26dcce-36d8-5751-9302-f9248d0be4f5"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="8" subject="da645067-fcb4-5aeb-9886-96a46513bafd"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="9" subject="b2a887f4-5e8e-5110-a7d2-3c8345b729b8"/>
+        </elements>
+      </diagram>
+    </diagrams>
+  </xmi:Extension>
   <xmi:Extension extender="ModelCollab" schemaVersion="1.0.0">
     <mc:diagram classOrder="cb97e87a-ed6a-5b88-899f-39bbd46e2a79 066be93c-be23-59a8-bece-27501c103dd5 52a0c30d-25ae-510f-9071-8e3cfd9b51e8 cda5842a-5bf5-55cb-8d48-092fe7835b73 a13d3f05-7f2d-5031-b864-752f4340cbb1" mutationVersion="1" relationshipOrder="16f5081e-ae49-5cc7-803b-b38a5df062c2 da26dcce-36d8-5751-9302-f9248d0be4f5 da645067-fcb4-5aeb-9886-96a46513bafd b2a887f4-5e8e-5110-a7d2-3c8345b729b8">
       <mc:class height="180" id="cb97e87a-ed6a-5b88-899f-39bbd46e2a79" width="240" x="60" y="60"/>

@@ -65,6 +65,9 @@ public class XmiExporterService {
      */
     public static final String NS_MC = "http://modelcollab.dev/schema/xmi/1.0";
 
+    /** Id del {@code uml:Model} raiz. Lo referencia la extension de EA como paquete contenedor. */
+    static final String ID_DEL_MODELO = "modelcollab-model";
+
     /** Tipos primitivos de UML a los que apuntan los atributos exportados. */
     private static final Map<String, String> PRIMITIVOS = Map.of(
             "INTEGER", "Integer",
@@ -76,6 +79,17 @@ public class XmiExporterService {
             "DATE", "String",
             "DATETIME", "String",
             "UUID", "String");
+
+    private final EnterpriseArchitectViewWriter vistaEa;
+
+    /**
+     * Un solo constructor publico, a proposito. Con dos, Spring no sabe cual elegir, busca uno
+     * sin argumentos, no lo encuentra y la aplicacion no arranca — con toda la suite en verde,
+     * porque los tests construyen la clase a mano. Ya nos paso con LockManagerService.
+     */
+    public XmiExporterService(EnterpriseArchitectViewWriter vistaEa) {
+        this.vistaEa = vistaEa;
+    }
 
     public String exportar(CanonicalModel modelo, String nombreDelDiagrama) {
         try {
@@ -92,11 +106,16 @@ public class XmiExporterService {
 
             Element model = doc.createElementNS(NS_UML, "uml:Model");
             model.setAttributeNS(NS_XMI, "xmi:type", "uml:Model");
-            model.setAttributeNS(NS_XMI, "xmi:id", "modelcollab-model");
+            model.setAttributeNS(NS_XMI, "xmi:id", ID_DEL_MODELO);
             model.setAttribute("name", nombreDelDiagrama == null ? "Diagrama" : nombreDelDiagrama);
             raiz.appendChild(model);
 
             escribirModelo(doc, model, modelo);
+            // Primero la de EA y despues la nuestra. El orden entre extensiones no deberia
+            // importarle a ningun lector —cada una se identifica por su atributo extender, que es
+            // lo que hace nuestro propio importador— pero si algun lector mira solo la primera,
+            // que sea la que le habla a el.
+            raiz.appendChild(vistaEa.escribir(doc, modelo, nombreDelDiagrama, ID_DEL_MODELO));
             raiz.appendChild(extension(doc, modelo));
 
             return serializar(doc);

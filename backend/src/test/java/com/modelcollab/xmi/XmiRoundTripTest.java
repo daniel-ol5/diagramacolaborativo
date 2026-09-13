@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.modelcollab.config.JacksonConfig;
 import com.modelcollab.metamodel.model.CanonicalModel;
 import com.modelcollab.metamodel.model.RelationshipType;
+import com.modelcollab.xmi.service.EnterpriseArchitectViewWriter;
 import com.modelcollab.xmi.service.XmiExporterService;
 import com.modelcollab.xmi.service.XmiImporterService;
 import java.io.ByteArrayInputStream;
@@ -37,7 +38,8 @@ import org.w3c.dom.NodeList;
 class XmiRoundTripTest {
 
     private final ObjectMapper mapper = JacksonConfig.canonicalObjectMapper();
-    private final XmiExporterService exportador = new XmiExporterService();
+    private final XmiExporterService exportador =
+            new XmiExporterService(new EnterpriseArchitectViewWriter());
     private final XmiImporterService importador = new XmiImporterService();
 
     private CanonicalModel leer(String recurso) throws Exception {
@@ -228,10 +230,12 @@ class XmiRoundTripTest {
         // un modelo incompleto sin decir por qué.
         for (int i = 0; i < todos.getLength(); i++) {
             Element e = (Element) todos.item(i);
-            // Sólo la parte UML estándar: dentro de nuestra extensión, "type" es el tipo
-            // canónico ("UUID") y no una referencia. La regla de referencias aplica a lo que
-            // otra herramienta va a intentar resolver, no a lo nuestro, que ignora.
-            if (XmiExporterService.NS_MC.equals(e.getNamespaceURI())) {
+            // Sólo la parte UML estándar. Dentro de CUALQUIER xmi:Extension el atributo "type"
+            // significa lo que decida su extender y no es una referencia: en la nuestra es el
+            // tipo canónico ("UUID") y en la de Enterprise Architect es la clase de elemento
+            // ("Class", "Logical"). La regla de referencias aplica a lo que otra herramienta va
+            // a intentar resolver — el UML estándar—, no al contenido privado de una extensión.
+            if (dentroDeUnaExtension(e)) {
                 continue;
             }
             for (String atributo : List.of("type", "general", "client", "supplier")) {
@@ -334,6 +338,16 @@ class XmiRoundTripTest {
         org.assertj.core.api.Assertions.assertThatThrownBy(
                         () -> importador.importar(conEntidad.getBytes(StandardCharsets.UTF_8)))
                 .isInstanceOf(org.springframework.web.server.ResponseStatusException.class);
+    }
+
+    /** Si el elemento cuelga de una {@code xmi:Extension}, sea de quien sea. */
+    private static boolean dentroDeUnaExtension(org.w3c.dom.Node nodo) {
+        for (org.w3c.dom.Node n = nodo; n != null; n = n.getParentNode()) {
+            if ("Extension".equals(n.getLocalName())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static Document parsear(String xml) throws Exception {
