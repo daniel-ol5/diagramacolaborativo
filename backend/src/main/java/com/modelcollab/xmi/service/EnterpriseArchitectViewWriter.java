@@ -89,8 +89,19 @@ public class EnterpriseArchitectViewWriter {
         Map<String, String> nombrePorClase = new LinkedHashMap<>();
         modelo.classes().forEach(c -> nombrePorClase.put(c.id(), c.name()));
 
-        ext.appendChild(elementos(doc, modelo, paquetePorClase));
-        ext.appendChild(conectores(doc, modelo, nombrePorClase));
+        // La numeracion interna de EA (ea_localid) se calcula UNA vez y la comparten las dos
+        // secciones. Antes <elements> numeraba las clases y <connectors> no referenciaba esos
+        // numeros desde ningun lado: EA tenia el conector fichado y sus extremos identificados
+        // solo por xmi:idref, asi que sabia que la linea existia y no de donde a donde iba. El
+        // sintoma fue exactamente ese — dibujaba las clases y ninguna linea.
+        Map<String, Integer> localIdPorClase = new LinkedHashMap<>();
+        int siguiente = 1;
+        for (ClassEntity clase : modelo.classes()) {
+            localIdPorClase.put(clase.id(), siguiente++);
+        }
+
+        ext.appendChild(elementos(doc, modelo, paquetePorClase, localIdPorClase));
+        ext.appendChild(conectores(doc, modelo, nombrePorClase, localIdPorClase, siguiente));
         ext.appendChild(laminas(doc, modelo, nombreDelDiagrama, idDelModelo));
         return ext;
     }
@@ -103,10 +114,10 @@ public class EnterpriseArchitectViewWriter {
      * sección los {@code subject} de la lámina apuntarían a elementos que EA no tiene fichados.
      */
     private Element elementos(
-            Document doc, CanonicalModel modelo, Map<String, String> paquetePorClase) {
+            Document doc, CanonicalModel modelo, Map<String, String> paquetePorClase,
+            Map<String, Integer> localIdPorClase) {
 
         Element elementos = doc.createElement("elements");
-        int localId = 1;
         for (ClassEntity clase : modelo.classes()) {
             Element e = doc.createElement("element");
             e.setAttributeNS(XmiExporterService.NS_XMI, "xmi:idref", clase.id());
@@ -116,7 +127,7 @@ public class EnterpriseArchitectViewWriter {
 
             Element model = doc.createElement("model");
             model.setAttribute("package", paquetePorClase.get(clase.id()));
-            model.setAttribute("ea_localid", String.valueOf(localId++));
+            model.setAttribute("ea_localid", String.valueOf(localIdPorClase.get(clase.id())));
             model.setAttribute("ea_eleType", "element");
             e.appendChild(model);
 
@@ -151,21 +162,31 @@ public class EnterpriseArchitectViewWriter {
      * trazado, esta sección aporta qué une con qué. Las dos hacen falta.
      */
     private Element conectores(
-            Document doc, CanonicalModel modelo, Map<String, String> nombrePorClase) {
+            Document doc, CanonicalModel modelo, Map<String, String> nombrePorClase,
+            Map<String, Integer> localIdPorClase, int primerLocalIdLibre) {
 
         Element conectores = doc.createElement("connectors");
+        int localIdDelConector = primerLocalIdLibre;
         for (Relationship r : modelo.relationships()) {
             Element c = doc.createElement("connector");
             c.setAttributeNS(XmiExporterService.NS_XMI, "xmi:idref", r.id());
 
+            // El conector tambien tiene numero propio en la numeracion de EA. Sigue despues de
+            // los de las clases para que no haya dos objetos con el mismo.
+            Element modelDelConector = doc.createElement("model");
+            modelDelConector.setAttribute("ea_localid", String.valueOf(localIdDelConector++));
+            c.appendChild(modelDelConector);
+
             c.appendChild(extremo(doc, "source", r.sourceClassId(),
-                    nombrePorClase.get(r.sourceClassId()), r.sourceMultiplicity(),
+                    nombrePorClase.get(r.sourceClassId()),
+                    localIdPorClase.get(r.sourceClassId()), r.sourceMultiplicity(),
                     r.sourceRole(), "none"));
             // La agregación va en el extremo del TODO, igual que en el UML estándar que ya
             // emitimos: si acá se pusiera del otro lado, el mismo archivo diría dos cosas
             // distintas sobre el mismo rombo.
             c.appendChild(extremo(doc, "target", r.targetClassId(),
-                    nombrePorClase.get(r.targetClassId()), r.targetMultiplicity(),
+                    nombrePorClase.get(r.targetClassId()),
+                    localIdPorClase.get(r.targetClassId()), r.targetMultiplicity(),
                     r.targetRole(), agregacion(r.type())));
 
             Element propiedades = doc.createElement("properties");
@@ -181,13 +202,20 @@ public class EnterpriseArchitectViewWriter {
 
     private Element extremo(
             Document doc, String etiqueta, String classId, String nombreDeLaClase,
-            Multiplicity multiplicidad, String rol, String agregacion) {
+            Integer localIdDeLaClase, Multiplicity multiplicidad, String rol,
+            String agregacion) {
 
         Element e = doc.createElement(etiqueta);
         e.setAttributeNS(XmiExporterService.NS_XMI, "xmi:idref", classId);
 
         Element model = doc.createElement("model");
         model.setAttribute("type", "Class");
+        if (localIdDeLaClase != null) {
+            // El mismo numero con el que la clase figura en <elements>. Es lo que le permite a
+            // EA resolver el extremo contra un objeto que ya tiene fichado, en vez de quedarse
+            // con un identificador que para el no significa nada.
+            model.setAttribute("ea_localid", String.valueOf(localIdDeLaClase));
+        }
         if (nombreDeLaClase != null) {
             model.setAttribute("name", nombreDeLaClase);
         }
@@ -291,9 +319,21 @@ public class EnterpriseArchitectViewWriter {
         // diagrama con las clases sueltas y ninguna línea entre ellas.
         for (Relationship r : modelo.relationships()) {
             Element e = doc.createElement("element");
+            // SX/SY/EX/EY en cero significa "traza la linea por donde te parezca". La geometria
+            // fina de los conectores —los waypoints— es lo ultimo que importa: una linea recta
+            // entre las clases correctas es infinitamente mejor que ninguna linea.
             e.setAttribute("geometry", "SX=0;SY=0;EX=0;EY=0;EDGE=1;");
             e.setAttribute("subject", r.id());
             e.setAttribute("seqno", String.valueOf(seqno++));
+            // SOID y EOID: que objetos une la linea.
+            //
+            // Antes esto no estaba, por la regla de no inventar cadenas de estilo. La regla
+            // sigue valiendo para lo COSMETICO —una clave mal escrita en el estilo de una clase
+            // puede ocultarle los atributos— pero estas dos no son cosmeticas: son la unica
+            // forma que tiene la lamina de decir de donde a donde va el trazo. Y el costo de no
+            // ponerlas ya se midio: EA dibujaba las clases y ninguna linea.
+            e.setAttribute("style",
+                    "Mode=3;EOID=" + r.targetClassId() + ";SOID=" + r.sourceClassId() + ";");
             elementos.appendChild(e);
         }
         diagrama.appendChild(elementos);

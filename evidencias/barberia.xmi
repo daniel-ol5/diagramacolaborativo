@@ -256,52 +256,56 @@
     </elements>
     <connectors>
       <connector xmi:idref="8857f10a-9af5-526b-ae1c-957379b7894e">
+        <model ea_localid="6"/>
         <source xmi:idref="f4281e21-43e9-5959-97ad-7bcaaef35382">
-          <model name="Cliente" type="Class"/>
+          <model ea_localid="1" name="Cliente" type="Class"/>
           <role name="cliente" visibility="Public"/>
           <type aggregation="none" multiplicity="1..1"/>
         </source>
         <target xmi:idref="c3383fbd-5db2-5655-a32c-28a4a6c71706">
-          <model name="Cita" type="Class"/>
+          <model ea_localid="4" name="Cita" type="Class"/>
           <role name="citas" visibility="Public"/>
           <type aggregation="none" multiplicity="0..*"/>
         </target>
         <properties direction="Source -&gt; Destination" ea_type="Association"/>
       </connector>
       <connector xmi:idref="1a719b4c-0bf8-5831-83c7-43270c55ab7d">
+        <model ea_localid="7"/>
         <source xmi:idref="900f9c73-4ca3-5453-89a6-63fb70b8b78e">
-          <model name="Barbero" type="Class"/>
+          <model ea_localid="2" name="Barbero" type="Class"/>
           <role name="barbero" visibility="Public"/>
           <type aggregation="none" multiplicity="1..1"/>
         </source>
         <target xmi:idref="c3383fbd-5db2-5655-a32c-28a4a6c71706">
-          <model name="Cita" type="Class"/>
+          <model ea_localid="4" name="Cita" type="Class"/>
           <role name="citas" visibility="Public"/>
           <type aggregation="none" multiplicity="0..*"/>
         </target>
         <properties direction="Source -&gt; Destination" ea_type="Association"/>
       </connector>
       <connector xmi:idref="8ca8e3aa-01bb-56b0-9f47-81b45ad94c7c">
+        <model ea_localid="8"/>
         <source xmi:idref="c3383fbd-5db2-5655-a32c-28a4a6c71706">
-          <model name="Cita" type="Class"/>
+          <model ea_localid="4" name="Cita" type="Class"/>
           <role name="citas" visibility="Public"/>
           <type aggregation="none" multiplicity="0..*"/>
         </source>
         <target xmi:idref="817ef8ca-6485-55c8-bed6-8e3c93be4726">
-          <model name="Servicio" type="Class"/>
+          <model ea_localid="3" name="Servicio" type="Class"/>
           <role name="servicios" visibility="Public"/>
           <type aggregation="none" multiplicity="0..*"/>
         </target>
         <properties direction="Source -&gt; Destination" ea_type="Association"/>
       </connector>
       <connector xmi:idref="38b1960d-144f-5864-aa3e-82aa38c74d65">
+        <model ea_localid="9"/>
         <source xmi:idref="c3383fbd-5db2-5655-a32c-28a4a6c71706">
-          <model name="Cita" type="Class"/>
+          <model ea_localid="4" name="Cita" type="Class"/>
           <role name="cita" visibility="Public"/>
           <type aggregation="none" multiplicity="1..1"/>
         </source>
         <target xmi:idref="f8ecc8ec-5351-54ca-b969-93075c12e0ec">
-          <model name="Pago" type="Class"/>
+          <model ea_localid="5" name="Pago" type="Class"/>
           <role name="pago" visibility="Public"/>
           <type aggregation="composite" multiplicity="0..1"/>
         </target>
@@ -319,10 +323,10 @@
           <element geometry="Left=740;Top=60;Right=980;Bottom=240;" seqno="3" subject="817ef8ca-6485-55c8-bed6-8e3c93be4726"/>
           <element geometry="Left=400;Top=360;Right=660;Bottom=580;" seqno="4" subject="c3383fbd-5db2-5655-a32c-28a4a6c71706"/>
           <element geometry="Left=740;Top=640;Right=980;Bottom=840;" seqno="5" subject="f8ecc8ec-5351-54ca-b969-93075c12e0ec"/>
-          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="6" subject="8857f10a-9af5-526b-ae1c-957379b7894e"/>
-          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="7" subject="1a719b4c-0bf8-5831-83c7-43270c55ab7d"/>
-          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="8" subject="8ca8e3aa-01bb-56b0-9f47-81b45ad94c7c"/>
-          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="9" subject="38b1960d-144f-5864-aa3e-82aa38c74d65"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="6" style="Mode=3;EOID=c3383fbd-5db2-5655-a32c-28a4a6c71706;SOID=f4281e21-43e9-5959-97ad-7bcaaef35382;" subject="8857f10a-9af5-526b-ae1c-957379b7894e"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="7" style="Mode=3;EOID=c3383fbd-5db2-5655-a32c-28a4a6c71706;SOID=900f9c73-4ca3-5453-89a6-63fb70b8b78e;" subject="1a719b4c-0bf8-5831-83c7-43270c55ab7d"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="8" style="Mode=3;EOID=817ef8ca-6485-55c8-bed6-8e3c93be4726;SOID=c3383fbd-5db2-5655-a32c-28a4a6c71706;" subject="8ca8e3aa-01bb-56b0-9f47-81b45ad94c7c"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="9" style="Mode=3;EOID=f8ecc8ec-5351-54ca-b969-93075c12e0ec;SOID=c3383fbd-5db2-5655-a32c-28a4a6c71706;" subject="38b1960d-144f-5864-aa3e-82aa38c74d65"/>
         </elements>
       </diagram>
     </diagrams>

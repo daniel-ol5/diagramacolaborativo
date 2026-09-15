@@ -260,52 +260,56 @@
     </elements>
     <connectors>
       <connector xmi:idref="16f5081e-ae49-5cc7-803b-b38a5df062c2">
+        <model ea_localid="6"/>
         <source xmi:idref="cb97e87a-ed6a-5b88-899f-39bbd46e2a79">
-          <model name="Categoria" type="Class"/>
+          <model ea_localid="1" name="Categoria" type="Class"/>
           <role name="categoria" visibility="Public"/>
           <type aggregation="none" multiplicity="1..1"/>
         </source>
         <target xmi:idref="52a0c30d-25ae-510f-9071-8e3cfd9b51e8">
-          <model name="Producto" type="Class"/>
+          <model ea_localid="3" name="Producto" type="Class"/>
           <role name="productos" visibility="Public"/>
           <type aggregation="none" multiplicity="0..*"/>
         </target>
         <properties direction="Source -&gt; Destination" ea_type="Association"/>
       </connector>
       <connector xmi:idref="da26dcce-36d8-5751-9302-f9248d0be4f5">
+        <model ea_localid="7"/>
         <source xmi:idref="52a0c30d-25ae-510f-9071-8e3cfd9b51e8">
-          <model name="Producto" type="Class"/>
+          <model ea_localid="3" name="Producto" type="Class"/>
           <role name="productos" visibility="Public"/>
           <type aggregation="none" multiplicity="0..*"/>
         </source>
         <target xmi:idref="066be93c-be23-59a8-bece-27501c103dd5">
-          <model name="Proveedor" type="Class"/>
+          <model ea_localid="2" name="Proveedor" type="Class"/>
           <role name="proveedores" visibility="Public"/>
           <type aggregation="none" multiplicity="0..*"/>
         </target>
         <properties direction="Source -&gt; Destination" ea_type="Association"/>
       </connector>
       <connector xmi:idref="da645067-fcb4-5aeb-9886-96a46513bafd">
+        <model ea_localid="8"/>
         <source xmi:idref="52a0c30d-25ae-510f-9071-8e3cfd9b51e8">
-          <model name="Producto" type="Class"/>
+          <model ea_localid="3" name="Producto" type="Class"/>
           <role name="producto" visibility="Public"/>
           <type aggregation="none" multiplicity="1..1"/>
         </source>
         <target xmi:idref="a13d3f05-7f2d-5031-b864-752f4340cbb1">
-          <model name="MovimientoStock" type="Class"/>
+          <model ea_localid="5" name="MovimientoStock" type="Class"/>
           <role name="movimientos" visibility="Public"/>
           <type aggregation="none" multiplicity="0..*"/>
         </target>
         <properties direction="Source -&gt; Destination" ea_type="Association"/>
       </connector>
       <connector xmi:idref="b2a887f4-5e8e-5110-a7d2-3c8345b729b8">
+        <model ea_localid="9"/>
         <source xmi:idref="cda5842a-5bf5-55cb-8d48-092fe7835b73">
-          <model name="Almacen" type="Class"/>
+          <model ea_localid="4" name="Almacen" type="Class"/>
           <role name="almacen" visibility="Public"/>
           <type aggregation="none" multiplicity="1..1"/>
         </source>
         <target xmi:idref="a13d3f05-7f2d-5031-b864-752f4340cbb1">
-          <model name="MovimientoStock" type="Class"/>
+          <model ea_localid="5" name="MovimientoStock" type="Class"/>
           <role name="movimientos" visibility="Public"/>
           <type aggregation="none" multiplicity="0..*"/>
         </target>
@@ -323,10 +327,10 @@
           <element geometry="Left=400;Top=340;Right=680;Bottom=600;" seqno="3" subject="52a0c30d-25ae-510f-9071-8e3cfd9b51e8"/>
           <element geometry="Left=60;Top=700;Right=300;Bottom=900;" seqno="4" subject="cda5842a-5bf5-55cb-8d48-092fe7835b73"/>
           <element geometry="Left=520;Top=740;Right=800;Bottom=980;" seqno="5" subject="a13d3f05-7f2d-5031-b864-752f4340cbb1"/>
-          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="6" subject="16f5081e-ae49-5cc7-803b-b38a5df062c2"/>
-          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="7" subject="da26dcce-36d8-5751-9302-f9248d0be4f5"/>
-          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="8" subject="da645067-fcb4-5aeb-9886-96a46513bafd"/>
-          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="9" subject="b2a887f4-5e8e-5110-a7d2-3c8345b729b8"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="6" style="Mode=3;EOID=52a0c30d-25ae-510f-9071-8e3cfd9b51e8;SOID=cb97e87a-ed6a-5b88-899f-39bbd46e2a79;" subject="16f5081e-ae49-5cc7-803b-b38a5df062c2"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="7" style="Mode=3;EOID=066be93c-be23-59a8-bece-27501c103dd5;SOID=52a0c30d-25ae-510f-9071-8e3cfd9b51e8;" subject="da26dcce-36d8-5751-9302-f9248d0be4f5"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="8" style="Mode=3;EOID=a13d3f05-7f2d-5031-b864-752f4340cbb1;SOID=52a0c30d-25ae-510f-9071-8e3cfd9b51e8;" subject="da645067-fcb4-5aeb-9886-96a46513bafd"/>
+          <element geometry="SX=0;SY=0;EX=0;EY=0;EDGE=1;" seqno="9" style="Mode=3;EOID=a13d3f05-7f2d-5031-b864-752f4340cbb1;SOID=cda5842a-5bf5-55cb-8d48-092fe7835b73;" subject="b2a887f4-5e8e-5110-a7d2-3c8345b729b8"/>
         </elements>
       </diagram>
     </diagrams>

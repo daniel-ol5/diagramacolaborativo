@@ -159,6 +159,70 @@ class EnterpriseArchitectViewTest {
     }
 
     @Test
+    @DisplayName("Los extremos de cada conector apuntan al MISMO ea_localid que la clase")
+    void losExtremosResuelvenALaNumeracionDeEa() throws Exception {
+        // EA numera sus objetos con ea_localid. Durante una vuelta entera, <elements> numeraba
+        // las clases y <connectors> no referenciaba esos numeros desde ningun lado: EA tenia el
+        // conector fichado y sus extremos identificados solo por xmi:idref, asi que sabia que la
+        // linea existia y no de donde a donde iba. Dibujaba las clases y ninguna linea.
+        //
+        // Media mecanica implementada no se ve leyendo el codigo: las dos partes existian.
+        Document doc = parsear(exportador.exportar(leer("reference-diagrams/barberia.json"), "X"));
+        Element extension = extensionDeEa(doc);
+
+        java.util.Map<String, String> localIdPorClase = new java.util.HashMap<>();
+        NodeList clases = primerHijo(extension, "elements").getElementsByTagName("element");
+        for (int i = 0; i < clases.getLength(); i++) {
+            Element e = (Element) clases.item(i);
+            localIdPorClase.put(
+                    e.getAttributeNS(XmiExporterService.NS_XMI, "idref"),
+                    primerHijo(e, "model").getAttribute("ea_localid"));
+        }
+        assertThat(localIdPorClase.values()).doesNotHaveDuplicates();
+
+        NodeList conectores =
+                primerHijo(extension, "connectors").getElementsByTagName("connector");
+        assertThat(conectores.getLength()).isPositive();
+
+        for (int i = 0; i < conectores.getLength(); i++) {
+            Element conector = (Element) conectores.item(i);
+            for (String extremo : List.of("source", "target")) {
+                Element punta = primerHijo(conector, extremo);
+                String classId = punta.getAttributeNS(XmiExporterService.NS_XMI, "idref");
+                String declarado = primerHijo(punta, "model").getAttribute("ea_localid");
+
+                assertThat(declarado)
+                        .as("el %s del conector %s no declara ea_localid", extremo,
+                                conector.getAttributeNS(XmiExporterService.NS_XMI, "idref"))
+                        .isNotBlank();
+                assertThat(declarado)
+                        .as("el %s apunta a un ea_localid que no es el de su clase", extremo)
+                        .isEqualTo(localIdPorClase.get(classId));
+            }
+        }
+    }
+
+    @Test
+    @DisplayName("Cada línea de la lámina dice qué dos objetos une")
+    void cadaLineaDiceQueUne() throws Exception {
+        CanonicalModel modelo = leer("reference-diagrams/barberia.json");
+        Element diagrama = lamina(parsear(exportador.exportar(modelo, "X")));
+
+        for (com.modelcollab.metamodel.model.Relationship r : modelo.relationships()) {
+            Element linea = apariciones(diagrama).stream()
+                    .filter(e -> r.id().equals(e.getAttribute("subject")))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("falta la línea de " + r.id()));
+
+            // Sin SOID y EOID, EA tiene el conector y no sabe por donde trazarlo.
+            assertThat(linea.getAttribute("style"))
+                    .as("la línea %s no declara sus extremos", r.id())
+                    .contains("SOID=" + r.sourceClassId())
+                    .contains("EOID=" + r.targetClassId());
+        }
+    }
+
+    @Test
     @DisplayName("Ninguna referencia de la sección de EA queda colgada")
     void lasReferenciasDeLaExtensionResuelven() throws Exception {
         Document doc = parsear(exportador.exportar(leer("reference-diagrams/barberia.json"), "X"));
