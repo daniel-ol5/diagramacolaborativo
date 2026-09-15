@@ -11,6 +11,7 @@ import com.modelcollab.diagram.model.Diagram;
 import com.modelcollab.diagram.repository.DiagramRepository;
 import com.modelcollab.diagram.service.OfflineReconciliationService;
 import com.modelcollab.diagram.service.PreGenerationValidatorService;
+import com.modelcollab.generator.service.FlutterAppGeneratorService;
 import com.modelcollab.generator.service.SpringBootGeneratorService;
 import com.modelcollab.generator.service.ZipPackagingService;
 import com.modelcollab.metamodel.model.CanonicalModel;
@@ -47,6 +48,7 @@ public class DiagramController {
     private final OfflineReconciliationService reconciliationService;
     private final PreGenerationValidatorService validatorService;
     private final SpringBootGeneratorService generatorService;
+    private final FlutterAppGeneratorService movilService;
     private final ZipPackagingService zipService;
     private final IdentifierSanitizer sanitizer;
     private final DiagramRepository diagramRepository;
@@ -58,6 +60,7 @@ public class DiagramController {
             OfflineReconciliationService reconciliationService,
             PreGenerationValidatorService validatorService,
             SpringBootGeneratorService generatorService,
+            FlutterAppGeneratorService movilService,
             ZipPackagingService zipService,
             IdentifierSanitizer sanitizer,
             DiagramRepository diagramRepository,
@@ -67,6 +70,7 @@ public class DiagramController {
         this.reconciliationService = reconciliationService;
         this.validatorService = validatorService;
         this.generatorService = generatorService;
+        this.movilService = movilService;
         this.zipService = zipService;
         this.sanitizer = sanitizer;
         this.diagramRepository = diagramRepository;
@@ -150,6 +154,84 @@ public class DiagramController {
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + artefacto + ".zip\"")
+                .body(zip);
+    }
+
+    // ------------------------------------------ CU19: generar app movil (ZIP)
+
+    /**
+     * Genera el proyecto Flutter con asistente de voz y lo devuelve como ZIP (§14, RF-07).
+     *
+     * <h2>Valida primero, igual que la generación del backend</h2>
+     *
+     * <p>Y no por simetría: <b>las siete invariantes bloqueantes de §11.2 aplican a Dart</b>, y
+     * varias con más filo que en Java.
+     *
+     * <ul>
+     *   <li>{@code MULTIPLE_INHERITANCE}: Dart tampoco tiene herencia múltiple de clases. Los
+     *       mixins son otra cosa y no se derivan de una generalización UML.</li>
+     *   <li>{@code DUPLICATE_CLASS_NAME}: dos clases con el mismo nombre saneado producen
+     *       <b>dos claves iguales</b> en el mapa de rutas del cliente —que en Dart es un error de
+     *       compilación— y dos intenciones {@code CREAR_X} en el catálogo, con lo que una frase
+     *       dictada pasaría a significar dos cosas.</li>
+     *   <li>{@code EMPTY_DIAGRAM}: una app de voz sin ninguna intención no tiene nada que
+     *       escuchar.</li>
+     *   <li>{@code ORPHAN_RELATIONSHIP}, {@code CIRCULAR_INHERITANCE},
+     *       {@code MISSING_CLASS_NAME} y {@code DUPLICATE_ATTRIBUTE}: el generador los tolera
+     *       sin romperse —descarta la relación colgada, corta el recorrido de ancestros, ignora
+     *       el atributo repetido— pero tolerar no es aceptar. El resultado es una app a la que
+     *       le falta en silencio algo que el usuario dibujó.</li>
+     * </ul>
+     *
+     * <p>Fui a buscar una invariante que hiciera falta <b>sólo</b> para Dart y no encontré
+     * ninguna. La candidata era que dos nombres distintos colapsaran en la misma ruta REST
+     * ({@code Movimiento-Stock} y {@code MovimientoStock} dan las dos {@code movimiento-stocks}),
+     * pero el validador ya compara el nombre <b>saneado</b> y no el del diagrama, así que toda
+     * colisión de ruta llega acompañada de un {@code DUPLICATE_CLASS_NAME}. Comprobado con los
+     * dos nombres, no razonado.
+     *
+     * <p>{@code apiUrl} es contra qué servidor habla la app generada. Es un parámetro y no una
+     * constante porque una app instalada <b>no se reconfigura</b>: con la dirección clavada,
+     * apuntar a otro servidor obliga a regenerar y reinstalar.
+     *
+     * <p>Lo puede pedir cualquier miembro, VIEWER incluido, por lo mismo que el backend: generar
+     * no modifica el diagrama.
+     */
+    @PostMapping("/{diagramId}/generate-mobile")
+    public ResponseEntity<?> generarMovil(
+            @PathVariable UUID diagramId,
+            @RequestParam(required = false) String apiUrl,
+            Principal emisor) {
+
+        exigirMembresia(diagramId, userId(emisor));
+
+        ValidationReportDTO informe = validatorService.validar(diagramId);
+        if (!informe.valid()) {
+            log.debug("App móvil de {} rechazada: {} error(es) bloqueante(s)",
+                    diagramId, informe.errors().size());
+            return ResponseEntity.unprocessableEntity().body(informe);
+        }
+
+        Diagram diagrama = traer(diagramId);
+        String artefacto = artefactoDe(diagrama.getName());
+
+        byte[] zip;
+        try {
+            zip = zipService.empaquetar(movilService.generar(
+                    validatorService.estadoDe(diagramId), diagrama.getName(), apiUrl));
+        } catch (IllegalArgumentException e) {
+            // La única que llega acá es una apiUrl que no es una URL absoluta. Es un dato del
+            // cliente, así que 400 y con el motivo: si se dejara pasar, la app rompería en el
+            // teléfono del usuario final con un error de red que no dice nada de su causa.
+            return ResponseEntity.badRequest().body(java.util.Map.of(
+                    "reason", "INVALID_API_URL", "message", e.getMessage()));
+        }
+
+        log.debug("ZIP de la app móvil de {} generado: {} bytes", diagramId, zip.length);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + artefacto + "-movil.zip\"")
                 .body(zip);
     }
 

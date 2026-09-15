@@ -1,0 +1,354 @@
+{
+  "schemaVersion" : "1.0.0",
+  "language" : "es",
+  "intents" : [ {
+    "name" : "CREAR_CLIENTE",
+    "entity" : "Cliente",
+    "action" : "CREATE",
+    "triggers" : [ "crea un cliente", "creá un cliente", "crear un cliente", "registra un cliente", "registrá un cliente", "anota un cliente", "agrega un cliente", "nuevo cliente" ],
+    "slots" : [ {
+      "name" : "nombre",
+      "type" : "VARCHAR",
+      "required" : true
+    }, {
+      "name" : "telefono",
+      "type" : "VARCHAR",
+      "required" : true
+    }, {
+      "name" : "email",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "fechaRegistro",
+      "type" : "DATETIME",
+      "required" : true
+    } ]
+  }, {
+    "name" : "LISTAR_CLIENTE",
+    "entity" : "Cliente",
+    "action" : "LIST",
+    "triggers" : [ "muestra los clientes", "mostrá los clientes", "lista los clientes", "listá los clientes", "ver los clientes", "dame los clientes", "cuáles son los clientes", "clientes" ],
+    "slots" : [ ]
+  }, {
+    "name" : "BUSCAR_CLIENTE",
+    "entity" : "Cliente",
+    "action" : "SEARCH",
+    "triggers" : [ "busca el cliente", "buscá el cliente", "buscar el cliente", "encuentra el cliente", "encontrá el cliente", "mostrame el cliente" ],
+    "slots" : [ {
+      "name" : "nombre",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "telefono",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "email",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "fechaRegistro",
+      "type" : "DATETIME",
+      "required" : false
+    } ]
+  }, {
+    "name" : "ELIMINAR_CLIENTE",
+    "entity" : "Cliente",
+    "action" : "DELETE",
+    "triggers" : [ "elimina el cliente", "eliminá el cliente", "eliminar el cliente", "borra el cliente", "borrá el cliente", "quita el cliente" ],
+    "slots" : [ {
+      "name" : "nombre",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "telefono",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "email",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "fechaRegistro",
+      "type" : "DATETIME",
+      "required" : false
+    } ]
+  }, {
+    "name" : "CREAR_BARBERO",
+    "entity" : "Barbero",
+    "action" : "CREATE",
+    "triggers" : [ "crea un barbero", "creá un barbero", "crear un barbero", "registra un barbero", "registrá un barbero", "anota un barbero", "agrega un barbero", "nuevo barbero" ],
+    "slots" : [ {
+      "name" : "nombre",
+      "type" : "VARCHAR",
+      "required" : true
+    }, {
+      "name" : "especialidad",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "activo",
+      "type" : "BOOLEAN",
+      "required" : true
+    }, {
+      "name" : "comisionPorcentaje",
+      "type" : "DECIMAL",
+      "required" : true
+    } ]
+  }, {
+    "name" : "LISTAR_BARBERO",
+    "entity" : "Barbero",
+    "action" : "LIST",
+    "triggers" : [ "muestra los barberos", "mostrá los barberos", "lista los barberos", "listá los barberos", "ver los barberos", "dame los barberos", "cuáles son los barberos", "barberos" ],
+    "slots" : [ ]
+  }, {
+    "name" : "BUSCAR_BARBERO",
+    "entity" : "Barbero",
+    "action" : "SEARCH",
+    "triggers" : [ "busca el barbero", "buscá el barbero", "buscar el barbero", "encuentra el barbero", "encontrá el barbero", "mostrame el barbero" ],
+    "slots" : [ {
+      "name" : "nombre",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "especialidad",
+      "type" : "VARCHAR",
+      "required" : false
+    } ]
+  }, {
+    "name" : "ELIMINAR_BARBERO",
+    "entity" : "Barbero",
+    "action" : "DELETE",
+    "triggers" : [ "elimina el barbero", "eliminá el barbero", "eliminar el barbero", "borra el barbero", "borrá el barbero", "quita el barbero" ],
+    "slots" : [ {
+      "name" : "nombre",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "especialidad",
+      "type" : "VARCHAR",
+      "required" : false
+    } ]
+  }, {
+    "name" : "CREAR_SERVICIO",
+    "entity" : "Servicio",
+    "action" : "CREATE",
+    "triggers" : [ "crea un servicio", "creá un servicio", "crear un servicio", "registra un servicio", "registrá un servicio", "anota un servicio", "agrega un servicio", "nuevo servicio" ],
+    "slots" : [ {
+      "name" : "nombre",
+      "type" : "VARCHAR",
+      "required" : true
+    }, {
+      "name" : "descripcion",
+      "type" : "TEXT",
+      "required" : false
+    }, {
+      "name" : "precio",
+      "type" : "DECIMAL",
+      "required" : true
+    }, {
+      "name" : "duracionMinutos",
+      "type" : "INTEGER",
+      "required" : true
+    } ]
+  }, {
+    "name" : "LISTAR_SERVICIO",
+    "entity" : "Servicio",
+    "action" : "LIST",
+    "triggers" : [ "muestra los servicios", "mostrá los servicios", "lista los servicios", "listá los servicios", "ver los servicios", "dame los servicios", "cuáles son los servicios", "servicios" ],
+    "slots" : [ ]
+  }, {
+    "name" : "BUSCAR_SERVICIO",
+    "entity" : "Servicio",
+    "action" : "SEARCH",
+    "triggers" : [ "busca el servicio", "buscá el servicio", "buscar el servicio", "encuentra el servicio", "encontrá el servicio", "mostrame el servicio" ],
+    "slots" : [ {
+      "name" : "nombre",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "duracionMinutos",
+      "type" : "INTEGER",
+      "required" : false
+    } ]
+  }, {
+    "name" : "ELIMINAR_SERVICIO",
+    "entity" : "Servicio",
+    "action" : "DELETE",
+    "triggers" : [ "elimina el servicio", "eliminá el servicio", "eliminar el servicio", "borra el servicio", "borrá el servicio", "quita el servicio" ],
+    "slots" : [ {
+      "name" : "nombre",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "duracionMinutos",
+      "type" : "INTEGER",
+      "required" : false
+    } ]
+  }, {
+    "name" : "CREAR_CITA",
+    "entity" : "Cita",
+    "action" : "CREATE",
+    "triggers" : [ "crea una cita", "creá una cita", "crear una cita", "registra una cita", "registrá una cita", "anota una cita", "agrega una cita", "nueva cita" ],
+    "slots" : [ {
+      "name" : "fechaHora",
+      "type" : "DATETIME",
+      "required" : true
+    }, {
+      "name" : "estado",
+      "type" : "VARCHAR",
+      "required" : true
+    }, {
+      "name" : "observaciones",
+      "type" : "TEXT",
+      "required" : false
+    }, {
+      "name" : "total",
+      "type" : "DECIMAL",
+      "required" : true
+    }, {
+      "name" : "cliente",
+      "type" : "VARCHAR",
+      "required" : true,
+      "references" : "Cliente"
+    }, {
+      "name" : "barbero",
+      "type" : "VARCHAR",
+      "required" : true,
+      "references" : "Barbero"
+    } ]
+  }, {
+    "name" : "LISTAR_CITA",
+    "entity" : "Cita",
+    "action" : "LIST",
+    "triggers" : [ "muestra las citas", "mostrá las citas", "lista las citas", "listá las citas", "ver las citas", "dame las citas", "cuáles son las citas", "citas" ],
+    "slots" : [ ]
+  }, {
+    "name" : "BUSCAR_CITA",
+    "entity" : "Cita",
+    "action" : "SEARCH",
+    "triggers" : [ "busca la cita", "buscá la cita", "buscar la cita", "encuentra la cita", "encontrá la cita", "mostrame la cita" ],
+    "slots" : [ {
+      "name" : "fechaHora",
+      "type" : "DATETIME",
+      "required" : false
+    }, {
+      "name" : "estado",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "cliente",
+      "type" : "VARCHAR",
+      "required" : false,
+      "references" : "Cliente"
+    }, {
+      "name" : "barbero",
+      "type" : "VARCHAR",
+      "required" : false,
+      "references" : "Barbero"
+    } ]
+  }, {
+    "name" : "ELIMINAR_CITA",
+    "entity" : "Cita",
+    "action" : "DELETE",
+    "triggers" : [ "elimina la cita", "eliminá la cita", "eliminar la cita", "borra la cita", "borrá la cita", "quita la cita" ],
+    "slots" : [ {
+      "name" : "fechaHora",
+      "type" : "DATETIME",
+      "required" : false
+    }, {
+      "name" : "estado",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "cliente",
+      "type" : "VARCHAR",
+      "required" : false,
+      "references" : "Cliente"
+    }, {
+      "name" : "barbero",
+      "type" : "VARCHAR",
+      "required" : false,
+      "references" : "Barbero"
+    } ]
+  }, {
+    "name" : "CREAR_PAGO",
+    "entity" : "Pago",
+    "action" : "CREATE",
+    "triggers" : [ "crea un pago", "creá un pago", "crear un pago", "registra un pago", "registrá un pago", "anota un pago", "agrega un pago", "nuevo pago" ],
+    "slots" : [ {
+      "name" : "monto",
+      "type" : "DECIMAL",
+      "required" : true
+    }, {
+      "name" : "metodo",
+      "type" : "VARCHAR",
+      "required" : true
+    }, {
+      "name" : "fechaPago",
+      "type" : "DATETIME",
+      "required" : true
+    }, {
+      "name" : "referencia",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "cita",
+      "type" : "VARCHAR",
+      "required" : true,
+      "references" : "Cita"
+    } ]
+  }, {
+    "name" : "LISTAR_PAGO",
+    "entity" : "Pago",
+    "action" : "LIST",
+    "triggers" : [ "muestra los pagos", "mostrá los pagos", "lista los pagos", "listá los pagos", "ver los pagos", "dame los pagos", "cuáles son los pagos", "pagos" ],
+    "slots" : [ ]
+  }, {
+    "name" : "BUSCAR_PAGO",
+    "entity" : "Pago",
+    "action" : "SEARCH",
+    "triggers" : [ "busca el pago", "buscá el pago", "buscar el pago", "encuentra el pago", "encontrá el pago", "mostrame el pago" ],
+    "slots" : [ {
+      "name" : "metodo",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "fechaPago",
+      "type" : "DATETIME",
+      "required" : false
+    }, {
+      "name" : "referencia",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "cita",
+      "type" : "VARCHAR",
+      "required" : false,
+      "references" : "Cita"
+    } ]
+  }, {
+    "name" : "ELIMINAR_PAGO",
+    "entity" : "Pago",
+    "action" : "DELETE",
+    "triggers" : [ "elimina el pago", "eliminá el pago", "eliminar el pago", "borra el pago", "borrá el pago", "quita el pago" ],
+    "slots" : [ {
+      "name" : "metodo",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "fechaPago",
+      "type" : "DATETIME",
+      "required" : false
+    }, {
+      "name" : "referencia",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "cita",
+      "type" : "VARCHAR",
+      "required" : false,
+      "references" : "Cita"
+    } ]
+  } ]
+}
