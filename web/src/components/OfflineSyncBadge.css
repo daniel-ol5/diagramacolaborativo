@@ -14,13 +14,13 @@
 }
 
 .offline-badge--offline {
-  background: #e8590c;
-  color: #fff;
+  background: var(--color-warning);
+  color: var(--color-text-on-dark);
 }
 
 .offline-badge--syncing {
-  background: #3b5bdb;
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-on-dark);
 }
 
 .offline-badge__count {

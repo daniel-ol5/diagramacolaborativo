@@ -6,6 +6,9 @@ import java.util.List;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.converter.DefaultContentTypeResolver;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.messaging.converter.MessageConverter;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -46,7 +49,22 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // Broker en memoria: alcanza para los 20 clientes concurrentes del NFR. §5.3 documenta
         // el reemplazo por un relay Redis si hiciera falta escalar horizontalmente, sin que el
         // protocolo del cliente cambie.
-        registry.enableSimpleBroker("/topic", "/queue");
+        //
+        // LATIDOS: sin esto, una sala sin actividad no genera NI UN BYTE, y cualquier
+        // intermediario con tiempo de inactividad la corta. No es hipotetico: Nginx corta a los
+        // 60 segundos por defecto (proxy_read_timeout) y el balanceador de AWS tambien. En
+        // localhost no se nota porque no hay nada en el medio que caduque, asi que el sintoma
+        // aparece recien en el despliegue y con la forma mas confusa posible: "la colaboracion
+        // se cae sola cada minuto".
+        //
+        // 10 segundos en cada direccion deja seis veces de margen contra ese limite de 60. Los
+        // latidos exigen un planificador propio: enableSimpleBroker sin TaskScheduler los deja
+        // apagados sin avisar. Es uno aparte del de @Scheduled a proposito — el barrido de
+        // locks corre cada segundo con un solo hilo, y compartirlo haria que un barrido lento
+        // atrasara los latidos de toda la sala.
+        registry.enableSimpleBroker("/topic", "/queue")
+                .setHeartbeatValue(new long[] {10_000L, 10_000L})
+                .setTaskScheduler(planificadorDeLatidos());
         registry.setApplicationDestinationPrefixes("/app");
         registry.setUserDestinationPrefix("/user");
     }
@@ -75,5 +93,21 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
         converters.add(converter);
         return false; // false = no agregues los converters por defecto, este es el único
+    }
+
+    /**
+     * Planificador dedicado a los latidos del broker.
+     *
+     * <p>Un solo hilo alcanza: mandar un byte por conexion cada 10 segundos con los 20 clientes
+     * del NFR no es trabajo. Lo que importa es que <b>no sea el mismo</b> que atiende a
+     * {@code @Scheduled}, para que el barrido de locks y los latidos no se pisen.
+     */
+    @Bean
+    public TaskScheduler planificadorDeLatidos() {
+        ThreadPoolTaskScheduler planificador = new ThreadPoolTaskScheduler();
+        planificador.setPoolSize(1);
+        planificador.setThreadNamePrefix("latidos-stomp-");
+        planificador.initialize();
+        return planificador;
     }
 }

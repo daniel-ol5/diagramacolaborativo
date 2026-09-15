@@ -5,61 +5,61 @@
   align-items: center;
   justify-content: center;
   font-family: "Segoe UI", Roboto, sans-serif;
-  background: #f4f4f8;
+  background: var(--color-bg-subtle);
 }
 
 .login-screen__form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   width: 340px;
   padding: 50px;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .login-screen__form h1 {
-  margin: 0 0 8px;
-  font-size: 20px;
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-xl);
   text-align: center;
-  color: #c92a2a;
+  color: var(--color-danger);
 }
 
 .login-screen__form label {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   font-size: 17px;
-  color: #357cda;
+  color: var(--color-link);
 }
 
 .login-screen__form input {
-  font-size: 14px;
-  padding: 6px 8px;
-  border: 1px solid #ccc;
+  font-size: var(--font-size-base);
+  padding: 6px var(--space-2);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
 }
 
 .login-screen__form button {
-  margin-top: 4px;
-  padding: 8px;
-  font-size: 14px;
+  margin-top: var(--space-1);
+  padding: var(--space-2);
+  font-size: var(--font-size-base);
   border: none;
   border-radius: 4px;
-  background: #3b5bdb;
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
   cursor: pointer;
 }
 
 .login-screen__form button:disabled {
-  background: #9aa5d8;
+  background: var(--color-primary-muted);
   cursor: default;
 }
 
 .login-screen__error {
   margin: 0;
-  color: #c92a2a;
-  font-size: 12px;
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
 }

@@ -19,14 +19,19 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  border: 2px solid #fff;
+  /* Borde blanco fijo para que el punto se recorte del fondo del lienzo
+     sea cual sea el color que le asigne el servidor (Participante.color). */
+  border: 2px solid var(--color-bg);
   box-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
 }
 
 .cursor-overlay__label {
   font-family: "Segoe UI", Roboto, sans-serif;
   font-size: 11px;
-  color: #fff;
+  /* El fondo lo manda el servidor (Participante.color), inline por cursor
+     -- el contraste con este texto blanco lo garantiza esa paleta, no esta
+     regla (ver paleta de colaboradores medida contra fondo blanco). */
+  color: var(--color-text-on-dark);
   padding: 1px 6px;
   border-radius: 8px;
   white-space: nowrap;

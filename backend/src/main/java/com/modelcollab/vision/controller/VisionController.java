@@ -111,6 +111,23 @@ public class VisionController {
                 "mutationVersion", resultado.mutationVersion()));
     }
 
+    /**
+     * Un archivo tan grande que Spring lo corta antes de que llegue el controlador.
+     *
+     * <p>Sin este manejador la respuesta es un <b>413 con el cuerpo vacío</b>: el usuario sube
+     * una foto, no pasa nada y no hay ningún texto que leer. El límite de Spring está puesto por
+     * encima del que aplica el validador justamente para que casi siempre hable el validador,
+     * que explica cuánto pesa y qué hacer; esto es la red por si alguien sube algo absurdo.
+     */
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, String>> demasiadoGrande(
+            org.springframework.web.multipart.MaxUploadSizeExceededException e) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(Map.of("reason", "INVALID_IMAGE",
+                        "message", "La imagen es demasiado grande. El máximo son 8 MB: "
+                                + "sacale resolución y volvé a intentar."));
+    }
+
     /** La imagen no sirve y quien la subió puede arreglarlo: 400. */
     @ExceptionHandler(VisionImageValidator.ImagenRechazadaException.class)
     public ResponseEntity<Map<String, String>> imagenRechazada(

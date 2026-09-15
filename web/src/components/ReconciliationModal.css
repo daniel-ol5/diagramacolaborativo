@@ -4,12 +4,12 @@
 }
 
 .reconciliation-modal__applied {
-  color: #2b8a3e;
+  color: var(--color-success);
   font-weight: 600;
 }
 
 .reconciliation-modal__discarded {
-  color: #c92a2a;
+  color: var(--color-danger);
   font-weight: 600;
 }
 

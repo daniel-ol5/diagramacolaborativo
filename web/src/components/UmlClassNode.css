@@ -3,10 +3,18 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
-  background: #fff;
-  border: 1.5px solid #1a1a2e;
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-border-strong);
   border-radius: 4px;
   font-family: "Segoe UI", Roboto, sans-serif;
+  /* El piso de 13px (--font-size-canvas) queda pendiente aca a proposito:
+     con este tamaño el texto de atributos/metodos desborda la altura fija
+     de la caja (dato del diagrama, no CSS) y RECORTA filas enteras sin
+     avisar -- verificado visualmente, ver informe. Subir el tamaño sin
+     poder tocar la altura de la caja es exactamente el "reacomodar" que
+     esta pasada tiene prohibido. Se resuelve cuando la caja deje de tener
+     una altura fija heredada del Dia 6 (parte del rediseño con pantallas),
+     no por CSS solo. */
   font-size: 11px;
   overflow: hidden;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
@@ -16,8 +24,8 @@
   padding: 6px 8px;
   font-weight: 700;
   text-align: center;
-  background: #eef0fb;
-  border-bottom: 1.5px solid #1a1a2e;
+  background: var(--color-bg-muted);
+  border-bottom: 1.5px solid var(--color-border-strong);
 }
 
 .uml-class-node__name--abstract {
@@ -37,7 +45,7 @@
 }
 
 .uml-class-node__lock-icon {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1;
 }
 
@@ -45,25 +53,25 @@
   border: none;
   background: none;
   padding: 0 2px;
-  font-size: 11px;
+  font-size: var(--font-size-canvas);
   line-height: 1;
   cursor: pointer;
-  color: #666;
+  color: var(--color-text-secondary);
   border-radius: 3px;
 }
 
 .uml-class-node__edit-btn:hover {
-  background: #d8dcf5;
+  background: var(--color-bg-selected);
 }
 
 .uml-class-node__edit-btn[data-locked="true"] {
-  color: #e8590c;
+  color: var(--color-warning);
   cursor: not-allowed;
 }
 
 .uml-class-node__edit-btn--danger:hover {
-  background: #ffe3e3;
-  color: #c92a2a;
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
 }
 
 .uml-class-node__name-input {
@@ -71,7 +79,7 @@
   font: inherit;
   font-weight: 700;
   text-align: center;
-  border: 1px solid #3b5bdb;
+  border: 1px solid var(--color-primary);
   border-radius: 3px;
   padding: 2px 4px;
   box-sizing: border-box;
@@ -79,7 +87,7 @@
 
 .uml-class-node__section {
   padding: 4px 8px;
-  border-bottom: 1px solid #c9cbe0;
+  border-bottom: 1px solid var(--color-border-muted);
   overflow-x: hidden;
   overflow-y: auto;
   flex: 1;
@@ -114,23 +122,23 @@
   border: none;
   background: none;
   padding: 0 2px;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1;
   cursor: pointer;
-  color: #888;
+  color: var(--color-text-tertiary);
   border-radius: 3px;
 }
 
 .uml-class-node__mini-btn:hover {
-  background: #d8dcf5;
+  background: var(--color-bg-selected);
 }
 
 .uml-class-node__add-attr {
   margin-top: 2px;
-  border: 1px dashed #b0b4d8;
+  border: 1px dashed var(--color-border);
   background: none;
-  color: #555;
-  font-size: 10px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
   padding: 2px 6px;
   border-radius: 3px;
   cursor: pointer;
@@ -138,7 +146,7 @@
 }
 
 .uml-class-node__add-attr:hover {
-  background: #eef0fb;
+  background: var(--color-bg-muted);
 }
 
 .uml-class-node__row--pk {
@@ -146,7 +154,7 @@
 }
 
 .uml-class-node__empty {
-  color: #999;
+  color: var(--color-text-tertiary);
   font-style: italic;
 }
 
@@ -157,6 +165,6 @@
 .uml-class-node__handle {
   width: 10px;
   height: 10px;
-  background: #fff;
-  border: 1.5px solid #3b5bdb;
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-primary);
 }

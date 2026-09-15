@@ -1,0 +1,82 @@
+# Integración continua del backend.
+#
+# El plan la pide para el día 12 con un criterio concreto: "el build de CI falla si un diagrama
+# de referencia no compila". Eso no es una metáfora — el arnés del generador escribe el código
+# de cada diagrama de referencia, lo compila de verdad con javax.tools.JavaCompiler y valida el
+# mapeo JPA con Hibernate. Si alguna de esas cosas se rompe, este flujo se pone en rojo.
+#
+# POR QUÉ IMPORTA, con un ejemplo que ya pasó: el generador emitía @ManyToOne(mappedBy = "..."),
+# que no existe en JPA, y el ZIP no compilaba. Sobrevivió semanas porque los tres diagramas de
+# referencia estaban escritos a mano con el owningSide correcto y lo tapaban, y porque la suite
+# sólo corría cuando alguien se acordaba. Lo primero se arregló agregando un caso que contradice
+# a propósito; lo segundo se arregla acá.
+#
+# NO VERIFICADO: este archivo nunca se ejecutó. GitHub Actions sólo corre en el servidor de
+# GitHub y el push lo hace Daniel, así que hasta el primer push esto está escrito y no probado.
+# Lo que SÍ está comprobado en la máquina de desarrollo es todo lo que el flujo ejecuta: el
+# comando exacto de Maven, que la suite no necesita PostgreSQL, y que sin JWT_SECRET la
+# aplicación se niega a arrancar (por eso el paso que lo genera).
+
+name: backend
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  # Para poder dispararlo a mano desde la pestaña Actions sin tener que inventar un commit.
+  workflow_dispatch:
+
+# Un push encima de otro cancela el anterior: en una rama con varios commits seguidos, lo único
+# que interesa es si el último está bien.
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Compila y pasa la suite
+    runs-on: ubuntu-latest
+    # La suite tarda ~2 minutos; con 15 se corta sola si algo queda colgado en vez de consumir
+    # la hora entera que da el valor por defecto.
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+          # Cachea ~/.m2 usando pom.xml como clave. Sin esto cada corrida vuelve a bajar todas
+          # las dependencias, que es la mayor parte del tiempo del build.
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      - name: Suite completa
+        working-directory: backend
+        env:
+          # Hace falta de verdad: JwtService se niega a construirse sin secreto, a propósito,
+          # para que un despliegue que se olvide de configurarlo no arranque firmando con una
+          # clave publicada. Se genera uno al vuelo y distinto en cada corrida — no hay ninguna
+          # razón para que la CI tenga un secreto estable, y uno fijo acá terminaría copiado a
+          # un despliegue real.
+          JWT_SECRET: ci-${{ github.run_id }}-${{ github.run_attempt }}-clave-efimera-hs256-32b
+        # No hace falta levantar PostgreSQL: no hay ningún @SpringBootTest ni @DataJpaTest en la
+        # suite. Los repositorios van mockeados y el arnés de mapeo JPA usa MetadataSources de
+        # Hibernate, que valida el mapeo sin conectarse a ninguna base. Si algún día se agrega un
+        # test de integración, acá va un `services: postgres:`.
+        run: ./mvnw -B clean test
+
+      - name: Informes de las pruebas
+        # Con `always()` los informes se suben también cuando la suite falla, que es justo cuando
+        # hacen falta: si sólo se subieran en verde, para diagnosticar un rojo habría que
+        # reproducirlo a mano en otra máquina.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: backend/target/surefire-reports/
+          retention-days: 7
+          if-no-files-found: warn

@@ -19,6 +19,18 @@ spring:
     baseline-on-migrate: true
   jackson:
     default-property-inclusion: non_null
+  servlet:
+    multipart:
+      # CU17 acepta fotos de hasta 8 MB y Spring cortaba en 1 MB (su valor por
+      # defecto), asi que una foto de celular daba 413 con el cuerpo VACIO: el
+      # validador no llegaba a correr y el usuario no recibia ningun mensaje.
+      #
+      # El limite se pone POR ENCIMA del que aplica VisionImageValidator, no
+      # igual: asi un archivo de entre 8 y 10 MB llega hasta el validador y
+      # recibe la explicacion de que le sobra y que baje la resolucion. Con los
+      # dos limites iguales, el que hablaria seria Spring, con un 413 mudo.
+      max-file-size: 10MB
+      max-request-size: 12MB
 
 server:
   port: 8080

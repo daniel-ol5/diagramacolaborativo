@@ -1,0 +1,89 @@
+/**
+ * Tokens de diseno: paleta, espaciado y tipografia en un solo lugar.
+ *
+ * Antes de esto los colores estaban escritos a mano y repetidos en ocho
+ * archivos (#fff x15, #3b5bdb, #c92a2a, #666, #ccc, #ddd, #eee...): cambiar
+ * cualquier decision exigia tocar los ocho y acordarse de todos. Nadie
+ * habia elegido esos valores, se fueron poniendo uno por uno.
+ *
+ * Los que fallaban WCAG AA (4.5:1 texto, 3:1 bordes/iconos) se corrigieron
+ * aca, no se preservaron -- medido con la formula de contraste relativo de
+ * WCAG 2.x, no "a ojo":
+ *   #ccc borde sobre blanco       1.61:1  -> --color-border      4.49:1
+ *   #ddd borde sobre blanco       1.36:1  -> --color-border      4.49:1
+ *   #eee borde sobre blanco       1.16:1  -> --color-border      4.49:1
+ *   #999 texto sobre blanco       2.85:1  -> --color-text-tertiary  5.33:1
+ *   #888 texto sobre blanco       3.54:1  -> --color-text-tertiary  5.33:1
+ *   #357cda link sobre blanco     4.16:1  -> --color-link        6.70:1
+ *   #e8590c + texto blanco        3.58:1  -> --color-warning     6.25:1
+ *   #9aa5d8 + texto blanco (deshabilitado) 2.40:1 -> --color-primary-muted 4.98:1
+ *   #b1b1b7 trazo de conector (default de React Flow) 2.13:1 -> --canvas-edge-stroke 6.61:1
+ * #666 (5.74:1) y #555 (7.46:1) ya pasaban: quedan de piso de referencia,
+ * no hace falta bajarlos mas.
+ *
+ * Regla del proyector: el trazo del conector no es chrome, es la mitad de
+ * la notacion UML -- por eso --canvas-edge-stroke lleva contraste fuerte
+ * como el resto del lienzo, y --canvas-edge-stroke-active es un CAMBIO DE
+ * TONO (gris -> azul de marca), no solo "mas oscuro": si el reposo ya subio
+ * de contraste, oscurecer mas el seleccionado angosta la diferencia entre
+ * los dos hasta que deja de leerse. Con un tono distinto, se distinguen
+ * aunque ambos pasen el umbral.
+ *
+ * El resto de la interfaz (barra, paneles, modales) se queda en neutros:
+ * el contraste fuerte se reserva para el diagrama, que es el producto.
+ */
+:root {
+  /* Superficies */
+  --color-bg: #ffffff;
+  --color-bg-subtle: #f4f4f8;
+  --color-bg-muted: #eef0fb;
+  --color-bg-selected: #d8dcf5;
+  --color-bg-footer: #343a40;
+
+  /* Bordes / iconos: minimo 3:1 sobre --color-bg */
+  --color-border: #767680; /* 4.49:1 */
+  --color-border-muted: #c9cbe0; /* separador interno de compartimentos UML, igual de suave que antes pero medido: ~2.2:1, uso decorativo (no es el borde que delimita nada solo) */
+  --color-border-strong: #1a1a2e; /* borde de clase UML -- notacion, no decoracion (D-XX): 17.06:1 */
+
+  /* Texto: minimo 4.5:1 sobre --color-bg */
+  --color-text: #1a1a2e;
+  --color-text-secondary: #555555; /* 7.46:1 */
+  --color-text-tertiary: #6b6b6b; /* 5.33:1 -- piso de legibilidad, no bajar de aca */
+  --color-text-on-dark: #ffffff;
+
+  /* Marca / accion primaria */
+  --color-primary: #3b5bdb;
+  --color-primary-contrast: #ffffff; /* 5.67:1 sobre --color-primary */
+  --color-primary-muted: #5f6bb0; /* botones deshabilitados: 4.98:1 con texto blanco, antes 2.40:1 */
+  --color-link: #2c5aa8; /* 6.70:1 */
+
+  /* Estado semantico */
+  --color-danger: #c92a2a;
+  --color-danger-bg: #ffe3e3;
+  --color-success: #2b8a3e;
+  --color-success-bg: #d3f9d8;
+  --color-warning: #a83e08; /* 6.25:1 con texto blanco, antes #e8590c (3.58:1) */
+
+  /* Lienzo UML: contraste fuerte a proposito (regla del proyector) */
+  --canvas-edge-stroke: #5c5c66; /* 6.61:1 sobre blanco, antes el default de React Flow (2.13:1) */
+  --canvas-edge-stroke-active: var(--color-primary); /* tono distinto, no solo mas oscuro */
+  --canvas-edge-stroke-width: 1.5px; /* piso: 1px desaparece proyectado */
+
+  /* Espaciado (escala de 4px, ya era el patron implicito en el CSS existente) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Tipografia. --font-size-canvas es el piso para texto DENTRO del lienzo
+     al zoom por defecto (atributos/metodos de clase, etiquetas de
+     relacion): un proyector aplasta cualquier cosa mas chica. El resto de
+     la escala es para chrome (barra, modales), que no tiene esa restriccion. */
+  --font-size-canvas: 13px;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 20px;
+}
