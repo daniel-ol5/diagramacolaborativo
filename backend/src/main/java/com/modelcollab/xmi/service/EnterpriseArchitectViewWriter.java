@@ -246,10 +246,22 @@ public class EnterpriseArchitectViewWriter {
         Element diagrama = doc.createElement("diagram");
         diagrama.setAttributeNS(XmiExporterService.NS_XMI, "xmi:id", ID_DE_LA_LAMINA);
 
+        // De quien cuelga la lamina. En EA una lamina vive dentro de un PAQUETE, y hasta la
+        // vuelta 1 esto apuntaba al uml:Model raiz, que no es un paquete. Si EA resuelve el
+        // dueno y no encuentra un paquete, puede descartar la lamina entera — que es
+        // exactamente el sintoma que reporto Daniel: importa las clases y no abre ningun
+        // diagrama.
+        //
+        // Cuando el modelo tiene paquetes se usa el primero; cuando no tiene ninguno no queda
+        // otra que el modelo raiz, y ahi este candidato no aplica.
+        String duenio = modelo.packages().isEmpty()
+                ? idDelModelo
+                : modelo.packages().get(0).id();
+
         Element model = doc.createElement("model");
-        model.setAttribute("package", idDelModelo);
+        model.setAttribute("package", duenio);
         model.setAttribute("localID", "1");
-        model.setAttribute("owner", idDelModelo);
+        model.setAttribute("owner", duenio);
         diagrama.appendChild(model);
 
         Element propiedades = doc.createElement("properties");

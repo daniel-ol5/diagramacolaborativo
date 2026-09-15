@@ -104,6 +104,21 @@ public class XmiExporterService {
             raiz.setAttributeNS(NS_XMI, "xmi:version", "2.1");
             doc.appendChild(raiz);
 
+            // Le dice a Enterprise Architect en que dialecto esta escrita la seccion de
+            // extension de mas abajo. NO dice quien escribio el archivo: eso lo dice el
+            // comentario que va justo arriba, que viaja en el documento y cualquiera puede
+            // leer. Es la distincion entre declarar un formato y atribuirse una autoria.
+            //
+            // Se agrega en la vuelta 2 del ajuste con EA: la vuelta 1 no lo llevaba —por no
+            // querer declarar algo falso— y EA ignoro la seccion de diagramas por completo.
+            raiz.appendChild(doc.createComment(
+                    " Archivo producido por ModelCollab. El atributo exporter de la linea "
+                            + "siguiente declara el DIALECTO de la xmi:Extension, no el autor. "));
+            Element documentacion = doc.createElementNS(NS_XMI, "xmi:Documentation");
+            documentacion.setAttribute("exporter", EnterpriseArchitectViewWriter.EXTENDER);
+            documentacion.setAttribute("exporterVersion", "6.5");
+            raiz.appendChild(documentacion);
+
             Element model = doc.createElementNS(NS_UML, "uml:Model");
             model.setAttributeNS(NS_XMI, "xmi:type", "uml:Model");
             model.setAttributeNS(NS_XMI, "xmi:id", ID_DEL_MODELO);

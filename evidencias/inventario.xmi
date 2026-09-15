@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <xmi:XMI xmlns:xmi="http://schema.omg.org/spec/XMI/2.1" xmlns:mc="http://modelcollab.dev/schema/xmi/1.0" xmlns:uml="http://schema.omg.org/spec/UML/2.1" xmi:version="2.1">
+  <!-- Archivo producido por ModelCollab. El atributo exporter de la linea siguiente declara el DIALECTO de la xmi:Extension, no el autor. -->
+  <xmi:Documentation exporter="Enterprise Architect" exporterVersion="6.5"/>
   <uml:Model name="Inventario" xmi:id="modelcollab-model" xmi:type="uml:Model">
     <packagedElement name="catalogo" xmi:id="7586fd38-62f0-5c46-b436-498828b968be" xmi:type="uml:Package">
       <packagedElement name="Categoria" visibility="public" xmi:id="cb97e87a-ed6a-5b88-899f-39bbd46e2a79" xmi:type="uml:Class">
@@ -312,7 +314,7 @@
     </connectors>
     <diagrams>
       <diagram xmi:id="modelcollab-diagram">
-        <model localID="1" owner="modelcollab-model" package="modelcollab-model"/>
+        <model localID="1" owner="7586fd38-62f0-5c46-b436-498828b968be" package="7586fd38-62f0-5c46-b436-498828b968be"/>
         <properties name="Inventario" type="Logical"/>
         <project author="ModelCollab" created="2026-01-01 00:00:00" modified="2026-01-01 00:00:00" version="1.0"/>
         <elements>

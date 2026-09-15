@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <xmi:XMI xmlns:xmi="http://schema.omg.org/spec/XMI/2.1" xmlns:mc="http://modelcollab.dev/schema/xmi/1.0" xmlns:uml="http://schema.omg.org/spec/UML/2.1" xmi:version="2.1">
+  <!-- Archivo producido por ModelCollab. El atributo exporter de la linea siguiente declara el DIALECTO de la xmi:Extension, no el autor. -->
+  <xmi:Documentation exporter="Enterprise Architect" exporterVersion="6.5"/>
   <uml:Model name="Barberia Central" xmi:id="modelcollab-model" xmi:type="uml:Model">
     <packagedElement name="barberia" xmi:id="40bcd2a1-ef8d-50e7-bacf-1ce93f0fac95" xmi:type="uml:Package">
       <packagedElement name="Cliente" visibility="public" xmi:id="f4281e21-43e9-5959-97ad-7bcaaef35382" xmi:type="uml:Class">
@@ -308,7 +310,7 @@
     </connectors>
     <diagrams>
       <diagram xmi:id="modelcollab-diagram">
-        <model localID="1" owner="modelcollab-model" package="modelcollab-model"/>
+        <model localID="1" owner="40bcd2a1-ef8d-50e7-bacf-1ce93f0fac95" package="40bcd2a1-ef8d-50e7-bacf-1ce93f0fac95"/>
         <properties name="Barberia Central" type="Logical"/>
         <project author="ModelCollab" created="2026-01-01 00:00:00" modified="2026-01-01 00:00:00" version="1.0"/>
         <elements>
