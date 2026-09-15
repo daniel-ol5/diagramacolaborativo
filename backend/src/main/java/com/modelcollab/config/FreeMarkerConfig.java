@@ -26,10 +26,26 @@ public class FreeMarkerConfig {
 
     public static final String RUTA_DE_PLANTILLAS = "/templates/springboot";
 
+    /** Plantillas de la app movil de CU19. */
+    public static final String RUTA_DE_PLANTILLAS_FLUTTER = "/templates/flutter";
+
     @Bean
     public Configuration freemarkerConfiguration() {
+        return paraPlantillas(RUTA_DE_PLANTILLAS);
+    }
+
+    /**
+     * La misma configuracion, apuntando a otro directorio de plantillas.
+     *
+     * <p>Es una fabrica estatica y NO un segundo {@code @Bean} a proposito: con dos beans del
+     * mismo tipo {@code Configuration}, cualquier servicio que pida uno por constructor se
+     * vuelve ambiguo y la aplicacion no arranca — con toda la suite en verde, porque los tests
+     * construyen las clases a mano. Es el mismo patron que ya nos dejo sin arrancar por tener
+     * dos constructores publicos.
+     */
+    public static Configuration paraPlantillas(String ruta) {
         Configuration configuration = new Configuration(Configuration.VERSION_2_3_34);
-        configuration.setClassForTemplateLoading(FreeMarkerConfig.class, RUTA_DE_PLANTILLAS);
+        configuration.setClassForTemplateLoading(FreeMarkerConfig.class, ruta);
         configuration.setDefaultEncoding("UTF-8");
         configuration.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
         configuration.setLogTemplateExceptions(false);
