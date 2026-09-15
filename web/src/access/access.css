@@ -1,0 +1,125 @@
+.access-page {
+  min-height: 100vh;
+  background: var(--color-bg-page);
+  font-family: "Segoe UI", Roboto, sans-serif;
+}
+
+.access-page__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-bg-subtle);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.access-page__brand {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.access-page__back {
+  color: var(--color-link);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+}
+
+.access-page__back:hover {
+  text-decoration: underline;
+}
+
+.access-page__session {
+  margin-left: auto;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.access-page__body {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4);
+}
+
+.access-page__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.access-page__row h1 {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  color: var(--color-text);
+}
+
+.access-page__primary-btn {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+}
+
+.access-page__error {
+  color: var(--color-danger);
+  font-size: var(--font-size-base);
+}
+
+.access-page__empty {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+  padding: var(--space-4) 0;
+}
+
+.access-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.access-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.access-list__item:hover {
+  background: var(--color-bg-selected);
+}
+
+.access-list__item-name {
+  font-weight: 600;
+}
+
+.access-list__item-meta {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.access-role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--color-bg-muted);
+  color: var(--color-text-secondary);
+}
+
+.access-role-badge--owner {
+  background: var(--color-bg-selected);
+  color: var(--color-primary);
+}

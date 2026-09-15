@@ -1,0 +1,116 @@
+.share-modal {
+  width: 440px;
+  max-width: 100%;
+}
+
+.share-modal__section {
+  margin-bottom: var(--space-4);
+}
+
+.share-modal__section h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-tertiary);
+}
+
+.share-modal__inline-form {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.share-modal__inline-form select,
+.share-modal__inline-form input {
+  font-size: var(--font-size-base);
+  padding: 6px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.share-modal__inline-form input[type="email"] {
+  flex: 1;
+}
+
+.share-modal__inline-form input[type="number"] {
+  width: 70px;
+}
+
+.share-modal__link-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.share-modal__link-row code {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
+.share-modal__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.share-modal__list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 6px var(--space-2);
+  border: 1px solid var(--color-border-muted);
+  border-radius: 4px;
+  font-size: var(--font-size-sm);
+}
+
+.share-modal__list-item--inactive {
+  opacity: 0.55;
+}
+
+.share-modal__list-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.share-modal__list-item-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-modal__list-item-meta {
+  color: var(--color-text-tertiary);
+}
+
+.share-modal__revoke {
+  border: 1px solid var(--color-danger);
+  background: none;
+  color: var(--color-danger);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.share-modal__empty {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}
