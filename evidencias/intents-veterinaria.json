@@ -1,0 +1,481 @@
+{
+  "schemaVersion" : "1.0.0",
+  "language" : "es",
+  "intents" : [ {
+    "name" : "CREAR_DUENO",
+    "entity" : "Dueno",
+    "action" : "CREATE",
+    "triggers" : [ "crea un dueno", "creá un dueno", "crear un dueno", "registra un dueno", "registrá un dueno", "anota un dueno", "agrega un dueno", "nuevo dueno" ],
+    "slots" : [ {
+      "name" : "direccion",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "email",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "fechaAlta",
+      "type" : "DATE",
+      "required" : true
+    }, {
+      "name" : "nombres",
+      "type" : "VARCHAR",
+      "required" : true
+    }, {
+      "name" : "apellidos",
+      "type" : "VARCHAR",
+      "required" : true
+    }, {
+      "name" : "ci",
+      "type" : "VARCHAR",
+      "required" : true
+    }, {
+      "name" : "telefono",
+      "type" : "VARCHAR",
+      "required" : false
+    } ]
+  }, {
+    "name" : "LISTAR_DUENO",
+    "entity" : "Dueno",
+    "action" : "LIST",
+    "triggers" : [ "muestra los duenos", "mostrá los duenos", "lista los duenos", "listá los duenos", "ver los duenos", "dame los duenos", "cuáles son los duenos", "duenos" ],
+    "slots" : [ ]
+  }, {
+    "name" : "BUSCAR_DUENO",
+    "entity" : "Dueno",
+    "action" : "SEARCH",
+    "triggers" : [ "busca el dueno", "buscá el dueno", "buscar el dueno", "encuentra el dueno", "encontrá el dueno", "mostrame el dueno" ],
+    "slots" : [ {
+      "name" : "direccion",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "email",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "fechaAlta",
+      "type" : "DATE",
+      "required" : false
+    }, {
+      "name" : "nombres",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "apellidos",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "ci",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "telefono",
+      "type" : "VARCHAR",
+      "required" : false
+    } ]
+  }, {
+    "name" : "ELIMINAR_DUENO",
+    "entity" : "Dueno",
+    "action" : "DELETE",
+    "triggers" : [ "elimina el dueno", "eliminá el dueno", "eliminar el dueno", "borra el dueno", "borrá el dueno", "quita el dueno" ],
+    "slots" : [ {
+      "name" : "direccion",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "email",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "fechaAlta",
+      "type" : "DATE",
+      "required" : false
+    }, {
+      "name" : "nombres",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "apellidos",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "ci",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "telefono",
+      "type" : "VARCHAR",
+      "required" : false
+    } ]
+  }, {
+    "name" : "CREAR_VETERINARIO",
+    "entity" : "Veterinario",
+    "action" : "CREATE",
+    "triggers" : [ "crea un veterinario", "creá un veterinario", "crear un veterinario", "registra un veterinario", "registrá un veterinario", "anota un veterinario", "agrega un veterinario", "nuevo veterinario" ],
+    "slots" : [ {
+      "name" : "matricula",
+      "type" : "VARCHAR",
+      "required" : true
+    }, {
+      "name" : "especialidad",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "disponible",
+      "type" : "BOOLEAN",
+      "required" : true
+    }, {
+      "name" : "nombres",
+      "type" : "VARCHAR",
+      "required" : true
+    }, {
+      "name" : "apellidos",
+      "type" : "VARCHAR",
+      "required" : true
+    }, {
+      "name" : "ci",
+      "type" : "VARCHAR",
+      "required" : true
+    }, {
+      "name" : "telefono",
+      "type" : "VARCHAR",
+      "required" : false
+    } ]
+  }, {
+    "name" : "LISTAR_VETERINARIO",
+    "entity" : "Veterinario",
+    "action" : "LIST",
+    "triggers" : [ "muestra los veterinarios", "mostrá los veterinarios", "lista los veterinarios", "listá los veterinarios", "ver los veterinarios", "dame los veterinarios", "cuáles son los veterinarios", "veterinarios" ],
+    "slots" : [ ]
+  }, {
+    "name" : "BUSCAR_VETERINARIO",
+    "entity" : "Veterinario",
+    "action" : "SEARCH",
+    "triggers" : [ "busca el veterinario", "buscá el veterinario", "buscar el veterinario", "encuentra el veterinario", "encontrá el veterinario", "mostrame el veterinario" ],
+    "slots" : [ {
+      "name" : "matricula",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "especialidad",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "nombres",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "apellidos",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "ci",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "telefono",
+      "type" : "VARCHAR",
+      "required" : false
+    } ]
+  }, {
+    "name" : "ELIMINAR_VETERINARIO",
+    "entity" : "Veterinario",
+    "action" : "DELETE",
+    "triggers" : [ "elimina el veterinario", "eliminá el veterinario", "eliminar el veterinario", "borra el veterinario", "borrá el veterinario", "quita el veterinario" ],
+    "slots" : [ {
+      "name" : "matricula",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "especialidad",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "nombres",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "apellidos",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "ci",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "telefono",
+      "type" : "VARCHAR",
+      "required" : false
+    } ]
+  }, {
+    "name" : "CREAR_MASCOTA",
+    "entity" : "Mascota",
+    "action" : "CREATE",
+    "triggers" : [ "crea una mascota", "creá una mascota", "crear una mascota", "registra una mascota", "registrá una mascota", "anota una mascota", "agrega una mascota", "nueva mascota" ],
+    "slots" : [ {
+      "name" : "nombre",
+      "type" : "VARCHAR",
+      "required" : true
+    }, {
+      "name" : "especie",
+      "type" : "VARCHAR",
+      "required" : true
+    }, {
+      "name" : "raza",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "fechaNacimiento",
+      "type" : "DATE",
+      "required" : false
+    }, {
+      "name" : "pesoKg",
+      "type" : "DECIMAL",
+      "required" : false
+    }, {
+      "name" : "esterilizado",
+      "type" : "BOOLEAN",
+      "required" : true
+    }, {
+      "name" : "dueno",
+      "type" : "VARCHAR",
+      "required" : true,
+      "references" : "Dueno"
+    } ]
+  }, {
+    "name" : "LISTAR_MASCOTA",
+    "entity" : "Mascota",
+    "action" : "LIST",
+    "triggers" : [ "muestra las mascotas", "mostrá las mascotas", "lista las mascotas", "listá las mascotas", "ver las mascotas", "dame las mascotas", "cuáles son las mascotas", "mascotas" ],
+    "slots" : [ ]
+  }, {
+    "name" : "BUSCAR_MASCOTA",
+    "entity" : "Mascota",
+    "action" : "SEARCH",
+    "triggers" : [ "busca la mascota", "buscá la mascota", "buscar la mascota", "encuentra la mascota", "encontrá la mascota", "mostrame la mascota" ],
+    "slots" : [ {
+      "name" : "nombre",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "especie",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "raza",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "fechaNacimiento",
+      "type" : "DATE",
+      "required" : false
+    }, {
+      "name" : "dueno",
+      "type" : "VARCHAR",
+      "required" : false,
+      "references" : "Dueno"
+    } ]
+  }, {
+    "name" : "ELIMINAR_MASCOTA",
+    "entity" : "Mascota",
+    "action" : "DELETE",
+    "triggers" : [ "elimina la mascota", "eliminá la mascota", "eliminar la mascota", "borra la mascota", "borrá la mascota", "quita la mascota" ],
+    "slots" : [ {
+      "name" : "nombre",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "especie",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "raza",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "fechaNacimiento",
+      "type" : "DATE",
+      "required" : false
+    }, {
+      "name" : "dueno",
+      "type" : "VARCHAR",
+      "required" : false,
+      "references" : "Dueno"
+    } ]
+  }, {
+    "name" : "CREAR_CONSULTA",
+    "entity" : "Consulta",
+    "action" : "CREATE",
+    "triggers" : [ "crea una consulta", "creá una consulta", "crear una consulta", "registra una consulta", "registrá una consulta", "anota una consulta", "agrega una consulta", "nueva consulta" ],
+    "slots" : [ {
+      "name" : "fecha",
+      "type" : "DATETIME",
+      "required" : true
+    }, {
+      "name" : "motivo",
+      "type" : "TEXT",
+      "required" : true
+    }, {
+      "name" : "diagnostico",
+      "type" : "TEXT",
+      "required" : false
+    }, {
+      "name" : "temperatura",
+      "type" : "DECIMAL",
+      "required" : false
+    }, {
+      "name" : "costo",
+      "type" : "DECIMAL",
+      "required" : true
+    }, {
+      "name" : "mascota",
+      "type" : "VARCHAR",
+      "required" : true,
+      "references" : "Mascota"
+    }, {
+      "name" : "veterinario",
+      "type" : "VARCHAR",
+      "required" : true,
+      "references" : "Veterinario"
+    } ]
+  }, {
+    "name" : "LISTAR_CONSULTA",
+    "entity" : "Consulta",
+    "action" : "LIST",
+    "triggers" : [ "muestra las consultas", "mostrá las consultas", "lista las consultas", "listá las consultas", "ver las consultas", "dame las consultas", "cuáles son las consultas", "consultas" ],
+    "slots" : [ ]
+  }, {
+    "name" : "BUSCAR_CONSULTA",
+    "entity" : "Consulta",
+    "action" : "SEARCH",
+    "triggers" : [ "busca la consulta", "buscá la consulta", "buscar la consulta", "encuentra la consulta", "encontrá la consulta", "mostrame la consulta" ],
+    "slots" : [ {
+      "name" : "fecha",
+      "type" : "DATETIME",
+      "required" : false
+    }, {
+      "name" : "mascota",
+      "type" : "VARCHAR",
+      "required" : false,
+      "references" : "Mascota"
+    }, {
+      "name" : "veterinario",
+      "type" : "VARCHAR",
+      "required" : false,
+      "references" : "Veterinario"
+    } ]
+  }, {
+    "name" : "ELIMINAR_CONSULTA",
+    "entity" : "Consulta",
+    "action" : "DELETE",
+    "triggers" : [ "elimina la consulta", "eliminá la consulta", "eliminar la consulta", "borra la consulta", "borrá la consulta", "quita la consulta" ],
+    "slots" : [ {
+      "name" : "fecha",
+      "type" : "DATETIME",
+      "required" : false
+    }, {
+      "name" : "mascota",
+      "type" : "VARCHAR",
+      "required" : false,
+      "references" : "Mascota"
+    }, {
+      "name" : "veterinario",
+      "type" : "VARCHAR",
+      "required" : false,
+      "references" : "Veterinario"
+    } ]
+  }, {
+    "name" : "CREAR_TRATAMIENTO",
+    "entity" : "Tratamiento",
+    "action" : "CREATE",
+    "triggers" : [ "crea un tratamiento", "creá un tratamiento", "crear un tratamiento", "registra un tratamiento", "registrá un tratamiento", "anota un tratamiento", "agrega un tratamiento", "nuevo tratamiento" ],
+    "slots" : [ {
+      "name" : "descripcion",
+      "type" : "TEXT",
+      "required" : true
+    }, {
+      "name" : "medicamento",
+      "type" : "VARCHAR",
+      "required" : true
+    }, {
+      "name" : "dosis",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "diasDuracion",
+      "type" : "INTEGER",
+      "required" : true
+    }, {
+      "name" : "fechaInicio",
+      "type" : "DATE",
+      "required" : true
+    }, {
+      "name" : "consulta",
+      "type" : "VARCHAR",
+      "required" : true,
+      "references" : "Consulta"
+    } ]
+  }, {
+    "name" : "LISTAR_TRATAMIENTO",
+    "entity" : "Tratamiento",
+    "action" : "LIST",
+    "triggers" : [ "muestra los tratamientos", "mostrá los tratamientos", "lista los tratamientos", "listá los tratamientos", "ver los tratamientos", "dame los tratamientos", "cuáles son los tratamientos", "tratamientos" ],
+    "slots" : [ ]
+  }, {
+    "name" : "BUSCAR_TRATAMIENTO",
+    "entity" : "Tratamiento",
+    "action" : "SEARCH",
+    "triggers" : [ "busca el tratamiento", "buscá el tratamiento", "buscar el tratamiento", "encuentra el tratamiento", "encontrá el tratamiento", "mostrame el tratamiento" ],
+    "slots" : [ {
+      "name" : "medicamento",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "dosis",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "diasDuracion",
+      "type" : "INTEGER",
+      "required" : false
+    }, {
+      "name" : "fechaInicio",
+      "type" : "DATE",
+      "required" : false
+    }, {
+      "name" : "consulta",
+      "type" : "VARCHAR",
+      "required" : false,
+      "references" : "Consulta"
+    } ]
+  }, {
+    "name" : "ELIMINAR_TRATAMIENTO",
+    "entity" : "Tratamiento",
+    "action" : "DELETE",
+    "triggers" : [ "elimina el tratamiento", "eliminá el tratamiento", "eliminar el tratamiento", "borra el tratamiento", "borrá el tratamiento", "quita el tratamiento" ],
+    "slots" : [ {
+      "name" : "medicamento",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "dosis",
+      "type" : "VARCHAR",
+      "required" : false
+    }, {
+      "name" : "diasDuracion",
+      "type" : "INTEGER",
+      "required" : false
+    }, {
+      "name" : "fechaInicio",
+      "type" : "DATE",
+      "required" : false
+    }, {
+      "name" : "consulta",
+      "type" : "VARCHAR",
+      "required" : false,
+      "references" : "Consulta"
+    } ]
+  } ]
+}
