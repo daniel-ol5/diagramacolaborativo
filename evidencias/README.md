@@ -133,6 +133,46 @@ cuando la caja deje de tener una altura heredada del Día 6, junto con las panta
 
 ---
 
+## Paleta "para ingenieros" — 15 de septiembre de 2026
+
+Segunda pasada sobre `tokens.css`: la primera (arriba) sólo corregía contraste sobre los
+colores que ya había; ésta rediseña la paleta con el criterio de las herramientas que un
+ingeniero elige — Linear, Figma, VS Code, Excalidraw, draw.io — sin bajar ningún número por
+debajo de lo que `scripts/check-contrast.mjs` exige (18 checks, incluidos los de esta paleta).
+
+| Archivo | Qué prueba |
+| :--- | :--- |
+| `paleta-ingenieros/canvas.png` | El lienzo con la paleta nueva: comparar contra `tokens-contraste/canvas-despues.png` (la pasada anterior) |
+| `paleta-ingenieros/login.png` | La pantalla de acceso: comparar contra `tokens-contraste/login-despues.png` |
+| `paleta-ingenieros/lienzo-reticula-zoom.png` | Acercamiento a una zona vacía del lienzo — la retícula de puntos que antes no existía |
+
+Seis cambios, cada uno con un motivo, no un gusto:
+
+1. **Rampa neutra fría (pizarra), no grises puros ni blanco plano.** La barra de herramientas y
+   las pantallas standalone pasan de blanco liso a un gris azulado sutil (`--gray-page`,
+   `--gray-chrome`) — la interfaz se corre del medio.
+2. **Un solo acento**, `#365d94` (antes `#3b5bdb`, más saturado), usado sólo para la acción
+   principal y la selección — el link ahora es literalmente `var(--color-primary)`, no un azul
+   aparte.
+3. **El lienzo es un plano distinto** (`--canvas-bg: #fbfcfd`) del resto de la interfaz, con una
+   retícula de puntos sutil (`<Background color="var(--canvas-grid-dot)" gap={20} size={1.5}/>`
+   de React Flow) — la señal universal de "esto es un espacio de trabajo".
+4. **Monoespaciada para identificadores**: nombre/tipo de atributo, firma de método,
+   multiplicidad de relación (`--font-mono`, sólo fuentes de sistema — sin dependencia externa,
+   coherente con una app que tiene que poder funcionar sin red).
+5. **Bordes finos en vez de sombras difusas**: la caja de clase, los modales y la tarjeta de
+   acceso bajan de una sombra de 16px de difusión a un borde de 1px con un resto mínimo de
+   elevación.
+6. **Densidad**: el interlineado y el padding de las filas de atributos/métodos se ajustaron
+   para mostrar más contenido antes que más aire.
+
+Dos anclas que **no se tocaron** a propósito: `--color-border-strong` (`#1a1a2e`, el borde de
+clase UML) y el texto del lienzo. La paleta de colores de colaborador que asigna el servidor
+está medida contra esos dos valores exactos — cambiarlos sin avisar habría invalidado esa
+medición.
+
+---
+
 ## La regla que ordena esta carpeta
 
 **La evidencia primaria es la aserción automática; la captura ilustra.**

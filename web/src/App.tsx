@@ -273,7 +273,7 @@ function App() {
             onPaneMouseMove={handlePaneMouseMove}
             fitView
           >
-            <Background />
+            <Background color="var(--canvas-grid-dot)" gap={20} size={1.5} />
             <Controls />
             {liveDiagramId && <CursorOverlay />}
           </ReactFlow>

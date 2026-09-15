@@ -17,7 +17,6 @@
      no por CSS solo. */
   font-size: 11px;
   overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
 .uml-class-node__name {
@@ -86,7 +85,7 @@
 }
 
 .uml-class-node__section {
-  padding: 4px 8px;
+  padding: 3px 8px;
   border-bottom: 1px solid var(--color-border-muted);
   overflow-x: hidden;
   overflow-y: auto;
@@ -104,7 +103,11 @@
   gap: 6px;
   white-space: normal;
   overflow-wrap: break-word;
-  line-height: 1.4;
+  line-height: 1.35;
+  /* Identificadores (nombre/tipo de atributo, firma de metodo): la
+     monoespaciada alinea y hace escaneable, no es decoracion (regla 4 de
+     la pasada visual). */
+  font-family: var(--font-mono);
 }
 
 .uml-class-node__attr-text {

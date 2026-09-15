@@ -24,11 +24,12 @@
 }
 
 .uml-edge-label {
-  font-family: "Segoe UI", Roboto, sans-serif;
+  /* Multiplicidad: es un identificador, no prosa (regla 4). */
+  font-family: var(--font-mono);
   font-size: var(--font-size-canvas);
   fill: var(--color-border-strong);
   paint-order: stroke;
-  stroke: var(--color-bg);
+  stroke: var(--canvas-bg);
   stroke-width: 3px;
 }
 

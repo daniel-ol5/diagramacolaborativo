@@ -1,76 +1,111 @@
 /**
  * Tokens de diseno: paleta, espaciado y tipografia en un solo lugar.
  *
- * Antes de esto los colores estaban escritos a mano y repetidos en ocho
- * archivos (#fff x15, #3b5bdb, #c92a2a, #666, #ccc, #ddd, #eee...): cambiar
- * cualquier decision exigia tocar los ocho y acordarse de todos. Nadie
- * habia elegido esos valores, se fueron poniendo uno por uno.
+ * Segunda pasada (la primera solo saneo contraste, esta rediseña sobre esa
+ * base): el pedido fue una paleta "para ingenieros" -- lo que tienen en
+ * comun Linear, Figma, VS Code, Excalidraw, draw.io, no un gusto personal:
  *
- * Los que fallaban WCAG AA (4.5:1 texto, 3:1 bordes/iconos) se corrigieron
- * aca, no se preservaron -- medido con la formula de contraste relativo de
- * WCAG 2.x, no "a ojo":
- *   #ccc borde sobre blanco       1.61:1  -> --color-border      4.49:1
- *   #ddd borde sobre blanco       1.36:1  -> --color-border      4.49:1
- *   #eee borde sobre blanco       1.16:1  -> --color-border      4.49:1
- *   #999 texto sobre blanco       2.85:1  -> --color-text-tertiary  5.33:1
- *   #888 texto sobre blanco       3.54:1  -> --color-text-tertiary  5.33:1
- *   #357cda link sobre blanco     4.16:1  -> --color-link        6.70:1
- *   #e8590c + texto blanco        3.58:1  -> --color-warning     6.25:1
- *   #9aa5d8 + texto blanco (deshabilitado) 2.40:1 -> --color-primary-muted 4.98:1
- *   #b1b1b7 trazo de conector (default de React Flow) 2.13:1 -> --canvas-edge-stroke 6.61:1
- *   #2b8a3e "conectado"/success sobre blanco 4.37:1 -> --color-success 5.38:1 (no llegaba a 4.5)
- * #666 (5.74:1) y #555 (7.46:1) ya pasaban: quedan de piso de referencia,
- * no hace falta bajarlos mas.
+ *   1. Cromo neutro y de baja saturacion: una rampa de grises FRIOS
+ *      (pizarra), no grises puros ni blanco plano. La interfaz se corre
+ *      del medio; lo unico saturado del sistema es el contenido del
+ *      diagrama.
+ *   2. Un solo acento (--color-primary), usado con avaricia: accion
+ *      principal y seleccion. Nada mas -- un acento en seis lugares deja
+ *      de señalar. El azul anterior (#3b5bdb) era mas saturado y competia
+ *      con el lienzo.
+ *   3. El lienzo no es blanco: --canvas-bg es un plano distinto de
+ *      --color-bg-subtle (la barra, las pantallas standalone), con una
+ *      reticula de puntos sutil -- la señal universal de "esto es un
+ *      espacio de trabajo".
+ *   4. --font-mono para identificadores: nombre/tipo de atributo, firma de
+ *      metodo, multiplicidad de relacion. Alinea y hace escaneable, no es
+ *      decoracion.
+ *   5. Bordes finos (1-1.5px) en vez de sombras difusas -- una sombra
+ *      grande se lee como app de consumo, no como herramienta.
+ *   6. Densidad: mas informacion visible antes que mas aire.
  *
- * Regla del proyector: el trazo del conector no es chrome, es la mitad de
- * la notacion UML -- por eso --canvas-edge-stroke lleva contraste fuerte
- * como el resto del lienzo, y --canvas-edge-stroke-active es un CAMBIO DE
- * TONO (gris -> azul de marca), no solo "mas oscuro": si el reposo ya subio
- * de contraste, oscurecer mas el seleccionado angosta la diferencia entre
- * los dos hasta que deja de leerse. Con un tono distinto, se distinguen
- * aunque ambos pasen el umbral.
+ * La restriccion que no se negocia sigue siendo WCAG AA (4.5:1 texto, 3:1
+ * bordes/iconos) -- scripts/check-contrast.mjs mide TODOS los tokens de
+ * color reales de este archivo, incluida la paleta nueva. Ningun valor de
+ * abajo se eligio sin correr ese script primero.
  *
- * El resto de la interfaz (barra, paneles, modales) se queda en neutros:
- * el contraste fuerte se reserva para el diagrama, que es el producto.
+ * Historial de la primera pasada (contraste sobre los colores viejos,
+ * sigue siendo la razon de fondo de --color-border/--color-text-tertiary
+ * aunque el valor exacto cambio en esta):
+ *   #ccc/#ddd/#eee bordes sobre blanco   1.16-1.61:1 -> ahora 3.5-3.7:1
+ *   #999/#888 texto sobre blanco          2.85/3.54:1 -> ahora 4.8-7.5:1
+ *   #357cda link sobre blanco             4.16:1      -> ahora 6.67:1 (fusionado con --color-primary)
+ *   #e8590c + texto blanco                3.58:1      -> --color-warning 6.25:1
+ *   #9aa5d8 + texto blanco (deshabilitado) 2.40:1      -> --color-primary-muted 4.95:1
+ *   #b1b1b7 trazo de conector (default RF) 2.13:1      -> --canvas-edge-stroke 6.61:1
+ *   #2b8a3e "conectado"/success            4.37:1      -> --color-success 5.38:1
+ *
+ * --color-border-strong (#1a1a2e, borde de clase UML) y el texto negro del
+ * lienzo NO se tocan en esta pasada: son la tinta contra la que [cl1] midio
+ * la paleta de colores de colaborador (server-side). Si algun dia hace
+ * falta cambiarlos, es una conversacion con esa paleta, no un valor mas
+ * aca.
  */
 :root {
+  /* Rampa neutra fria (pizarra): reemplaza los grises puros/azulados de
+     la primera pasada. Nombrada por uso, no por posicion en la rampa,
+     para no obligar a memorizar una escala al leer el resto del archivo. */
+  --gray-page: #f2f4f6; /* pantallas standalone: acceso, proyectos */
+  --gray-chrome: #eef0f3; /* barra de herramientas, superficies secundarias */
+  --gray-header: #e2e6ec; /* encabezado de clase UML, superficie "hundida" */
+  --gray-divider: #d3d8de; /* separador decorativo (no delimita nada por si solo) */
+  --gray-border: #7e8694; /* borde real: inputs, paneles, botones -- 3.5:1+ */
+  --gray-text-secondary: #4b5566; /* 7.53:1 */
+  --gray-text-tertiary: #6b7280; /* 4.83:1 -- piso de legibilidad, no bajar de aca */
+
   /* Superficies */
   --color-bg: #ffffff;
-  --color-bg-subtle: #f4f4f8;
-  --color-bg-muted: #eef0fb;
-  --color-bg-selected: #d8dcf5;
+  --color-bg-page: var(--gray-page);
+  --color-bg-subtle: var(--gray-chrome);
+  --color-bg-muted: var(--gray-header);
+  --color-bg-selected: #d7deea; /* hover/seleccion: la unica superficie con tinte de acento, es una de las dos señales permitidas */
   --color-bg-footer: #343a40;
 
-  /* Bordes / iconos: minimo 3:1 sobre --color-bg */
-  --color-border: #767680; /* 4.49:1 */
-  --color-border-muted: #c9cbe0; /* separador interno de compartimentos UML, igual de suave que antes pero medido: ~2.2:1, uso decorativo (no es el borde que delimita nada solo) */
-  --color-border-strong: #1a1a2e; /* borde de clase UML -- notacion, no decoracion (D-XX): 17.06:1 */
+  /* Bordes / iconos: minimo 3:1 sobre --color-bg o --canvas-bg */
+  --color-border: var(--gray-border); /* 3.5-3.7:1 */
+  --color-border-muted: var(--gray-divider); /* decorativo, no WCAG-critico */
+  --color-border-strong: #1a1a2e; /* borde de clase UML -- notacion, no decoracion. NO TOCAR sin avisar a [cl1] (ancla la paleta de colaboradores). 17.06:1 */
 
   /* Texto: minimo 4.5:1 sobre --color-bg */
-  --color-text: #1a1a2e;
-  --color-text-secondary: #555555; /* 7.46:1 */
-  --color-text-tertiary: #6b6b6b; /* 5.33:1 -- piso de legibilidad, no bajar de aca */
+  --color-text: #1a1a2e; /* NO TOCAR sin avisar a [cl1], mismo motivo que --color-border-strong */
+  --color-text-secondary: var(--gray-text-secondary);
+  --color-text-tertiary: var(--gray-text-tertiary);
   --color-text-on-dark: #ffffff;
 
-  /* Marca / accion primaria */
-  --color-primary: #3b5bdb;
-  --color-primary-contrast: #ffffff; /* 5.67:1 sobre --color-primary */
-  --color-primary-muted: #5f6bb0; /* botones deshabilitados: 4.98:1 con texto blanco, antes 2.40:1 */
-  --color-link: #2c5aa8; /* 6.70:1 */
+  /* Acento unico: accion principal y seleccion, nada mas. Desaturado a
+     proposito frente al azul anterior (#3b5bdb) para que el lienzo sea lo
+     unico vivo de la pantalla. */
+  --color-primary: #365d94; /* 6.67:1 con texto blanco */
+  --color-primary-contrast: #ffffff;
+  --color-primary-muted: #5d7099; /* botones deshabilitados: 4.95:1 con texto blanco */
+  --color-link: var(--color-primary); /* un solo acento: el link no es un azul aparte */
 
-  /* Estado semantico */
+  /* Estado semantico -- señales funcionales, no "el acento": se quedan mas
+     vivas que el resto de la paleta a proposito (rojo=error, verde=exito
+     tienen que leerse rapido). */
   --color-danger: #c92a2a;
   --color-danger-bg: #ffe3e3;
-  --color-success: #227a34; /* 5.38:1 sobre blanco -- el original (#2b8a3e) daba 4.37:1, no llegaba a 4.5 */
+  --color-success: #227a34;
   --color-success-bg: #d3f9d8;
-  --color-warning: #a83e08; /* 6.25:1 con texto blanco, antes #e8590c (3.58:1) */
+  --color-warning: #a83e08;
 
-  /* Lienzo UML: contraste fuerte a proposito (regla del proyector) */
-  --canvas-edge-stroke: #5c5c66; /* 6.61:1 sobre blanco, antes el default de React Flow (2.13:1) */
-  --canvas-edge-stroke-active: var(--color-primary); /* tono distinto, no solo mas oscuro */
+  /* Lienzo UML: es un plano distinto del resto de la interfaz (regla 3),
+     con contraste fuerte reservado para su contenido (regla del
+     proyector). --canvas-grid-dot es decorativo (textura ambiente de
+     "espacio de trabajo", como el punteado de Figma/Excalidraw) y no lleva
+     el piso de 3:1: no delimita nada ni transmite informacion por si solo. */
+  --canvas-bg: #fbfcfd;
+  --canvas-grid-dot: #ccd2d9;
+  --canvas-edge-stroke: #5c5c66; /* 6.61:1 sobre blanco */
+  --canvas-edge-stroke-active: var(--color-primary); /* tono distinto (gris -> acento), no solo mas oscuro: si el reposo ya subio de contraste, oscurecer mas el seleccionado angosta la diferencia hasta que deja de leerse. deltaE=28.7 entre los dos. */
   --canvas-edge-stroke-width: 1.5px; /* piso: 1px desaparece proyectado */
 
-  /* Espaciado (escala de 4px, ya era el patron implicito en el CSS existente) */
+  /* Espaciado (escala de 4px) */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -79,12 +114,15 @@
   --space-6: 32px;
 
   /* Tipografia. --font-size-canvas es el piso para texto DENTRO del lienzo
-     al zoom por defecto (atributos/metodos de clase, etiquetas de
-     relacion): un proyector aplasta cualquier cosa mas chica. El resto de
-     la escala es para chrome (barra, modales), que no tiene esa restriccion. */
+     al zoom por defecto (regla del proyector). --font-mono es para
+     identificadores (regla 4): nombre/tipo de atributo, firma de metodo,
+     multiplicidad -- alinea y hace escaneable, no es decoracion. Stack de
+     sistema a proposito, sin depender de una fuente externa (coherente
+     con una app que tiene que poder funcionar sin red, ver CU12). */
   --font-size-canvas: 13px;
   --font-size-sm: 12px;
   --font-size-base: 14px;
   --font-size-lg: 16px;
   --font-size-xl: 20px;
+  --font-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Consolas, "SF Mono", Menlo, monospace;
 }

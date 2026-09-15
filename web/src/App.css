@@ -9,7 +9,8 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  padding: 6px var(--space-3);
+  background: var(--color-bg-subtle);
   border-bottom: 1px solid var(--color-border);
   font-family: "Segoe UI", Roboto, sans-serif;
   font-size: var(--font-size-base);
@@ -19,6 +20,10 @@
   position: relative;
   flex: 1;
   min-height: 0;
+  /* El lienzo es un plano distinto del resto de la interfaz, no blanco
+     plano: es la señal de "esto es un espacio de trabajo" (regla 3 de la
+     pasada visual). El punteado lo pone <Background/> de React Flow. */
+  background: var(--canvas-bg);
 }
 
 .app__collab-status {
@@ -91,7 +96,7 @@
   background: var(--color-bg-footer);
   color: var(--color-text-on-dark);
   font-size: 13px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .app__toast--warning {

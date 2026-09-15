@@ -76,18 +76,22 @@ function deltaE76(hexA, hexB) {
 // [descripcion, tokenFondo, tokenFrente, umbral, categoria]
 const checks = [
   ["borde/chrome sobre fondo", "color-bg", "color-border", 3, "borde"],
+  ["borde/chrome sobre pantalla standalone", "color-bg-page", "color-border", 3, "borde"],
   ["borde fuerte (clase UML) sobre fondo", "color-bg", "color-border-strong", 3, "borde"],
   ["texto principal sobre fondo", "color-bg", "color-text", 4.5, "texto"],
   ["texto secundario sobre fondo", "color-bg", "color-text-secondary", 4.5, "texto"],
+  ["texto secundario sobre superficie de seleccion", "color-bg-selected", "color-text-secondary", 4.5, "texto"],
   ["texto terciario (piso) sobre fondo", "color-bg", "color-text-tertiary", 4.5, "texto"],
-  ["link sobre fondo", "color-bg", "color-link", 4.5, "texto"],
+  ["link/acento sobre fondo", "color-bg", "color-link", 4.5, "texto"],
+  ["link/acento sobre pantalla standalone", "color-bg-page", "color-link", 4.5, "texto"],
   ["texto de contraste sobre boton primario", "color-primary", "color-primary-contrast", 4.5, "texto"],
   ["texto blanco sobre boton deshabilitado", "color-primary-muted", "color-text-on-dark", 4.5, "texto"],
   ["texto blanco sobre advertencia (badge offline)", "color-warning", "color-text-on-dark", 4.5, "texto"],
   ["danger sobre fondo", "color-bg", "color-danger", 4.5, "texto"],
   ["success sobre fondo", "color-bg", "color-success", 4.5, "texto"],
-  ["trazo de conector en reposo sobre lienzo", "color-bg", "canvas-edge-stroke", 3, "borde"],
-  ["trazo de conector activo/seleccionado sobre lienzo", "color-bg", "canvas-edge-stroke-active", 3, "borde"],
+  ["borde sobre el lienzo (plano distinto de --color-bg)", "canvas-bg", "color-border", 3, "borde"],
+  ["trazo de conector en reposo sobre el lienzo", "canvas-bg", "canvas-edge-stroke", 3, "borde"],
+  ["trazo de conector activo/seleccionado sobre el lienzo", "canvas-bg", "canvas-edge-stroke-active", 3, "borde"],
 ];
 
 console.log(`Verificando contraste WCAG AA contra ${tokensPath}\n`);
