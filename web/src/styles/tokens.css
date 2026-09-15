@@ -18,6 +18,7 @@
  *   #e8590c + texto blanco        3.58:1  -> --color-warning     6.25:1
  *   #9aa5d8 + texto blanco (deshabilitado) 2.40:1 -> --color-primary-muted 4.98:1
  *   #b1b1b7 trazo de conector (default de React Flow) 2.13:1 -> --canvas-edge-stroke 6.61:1
+ *   #2b8a3e "conectado"/success sobre blanco 4.37:1 -> --color-success 5.38:1 (no llegaba a 4.5)
  * #666 (5.74:1) y #555 (7.46:1) ya pasaban: quedan de piso de referencia,
  * no hace falta bajarlos mas.
  *
@@ -60,7 +61,7 @@
   /* Estado semantico */
   --color-danger: #c92a2a;
   --color-danger-bg: #ffe3e3;
-  --color-success: #2b8a3e;
+  --color-success: #227a34; /* 5.38:1 sobre blanco -- el original (#2b8a3e) daba 4.37:1, no llegaba a 4.5 */
   --color-success-bg: #d3f9d8;
   --color-warning: #a83e08; /* 6.25:1 con texto blanco, antes #e8590c (3.58:1) */
 

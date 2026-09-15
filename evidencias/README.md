@@ -82,6 +82,54 @@ objetos.
 | :--- | :--- |
 | `dia06-web/` | Los cuatro diagramas renderizados con la notación UML completa: rombos, triángulos, líneas punteadas y multiplicidades |
 | `dia11-crear-editar/` | Dos navegadores independientes: uno crea una clase de un dominio nuevo y el otro la ve aparecer **en vivo, sin recargar** |
+| `tokens-contraste/` | Antes/después de reemplazar los colores sueltos por `web/src/styles/tokens.css` |
+
+---
+
+## Tokens de diseño y contraste WCAG AA — 15 de septiembre de 2026
+
+| Archivo | Qué prueba |
+| :--- | :--- |
+| `tokens-contraste/canvas-antes.png` / `canvas-despues.png` | El lienzo de barbería antes y después: los conectores pasan de un gris casi invisible a un trazo de 1,5px con contraste real |
+| `tokens-contraste/login-antes.png` / `login-despues.png` | La pantalla de acceso: bordes de los campos y el link de "Contraseña" antes y después |
+
+**La evidencia primaria es `scripts/check-contrast.mjs`, no las capturas** — misma regla que
+el resto de esta carpeta. Corre la fórmula de contraste relativo de WCAG 2.x contra los
+valores reales de `tokens.css` (no contra números copiados a mano) y falla si alguno queda
+por debajo del piso:
+
+```
+node scripts/check-contrast.mjs
+```
+
+Los colores sueltos que reemplazó (14 checks, todos verificados, 1 corregido en el camino):
+
+| Antes | Contraste | Token | Contraste |
+| :--- | :--- | :--- | :--- |
+| `#ccc` / `#ddd` / `#eee` (bordes) | 1.16:1 – 1.61:1 | `--color-border` | 4.49:1 |
+| `#999` / `#888` (texto) | 2.85:1 / 3.54:1 | `--color-text-tertiary` | 5.33:1 |
+| `#357cda` (link) | 4.16:1 | `--color-link` | 6.70:1 |
+| `#e8590c` + texto blanco | 3.58:1 | `--color-warning` | 6.25:1 |
+| `#9aa5d8` + texto blanco (botón deshabilitado) | 2.40:1 | `--color-primary-muted` | 4.98:1 |
+| `#b1b1b7` trazo de conector (default de React Flow) | 2.13:1 | `--canvas-edge-stroke` | 6.61:1 |
+| `#2b8a3e` (éxito/"conectado") | 4.37:1 — no llegaba a 4.5 | `--color-success` | 5.38:1 |
+
+El último de la tabla no estaba en la lista original de defectos reportados — lo encontró el
+propio script al medir cada token, no una revisión manual. La regla de esta carpeta cumplida
+dos veces en la misma tarea: primero para el trazo del conector, después para un color que
+nadie había señalado todavía.
+
+El trazo del conector lleva además un chequeo de que el estado **seleccionado siga
+distinguiéndose** del de reposo después de subir el contraste de los dos — con `deltaE`
+(CIE76), el mismo criterio usado para la paleta de colaboradores, no con razón de contraste:
+dos colores pueden tener luminancia parecida y ser igual de distinguibles si difieren en tono,
+que es exactamente el caso de un gris de reposo contra un azul de marca seleccionado.
+
+Alcance deliberadamente acotado a esta pasada: **no** incluye el tamaño de fuente de
+atributos/métodos dentro de la caja de clase (quedó en 11px, no en el piso de 13px sugerido
+para el lienzo) porque la caja tiene una altura fija que viene del dato del diagrama, no del
+CSS — subir el tamaño ahí recorta filas enteras sin avisar (verificado, revertido). Se resuelve
+cuando la caja deje de tener una altura heredada del Día 6, junto con las pantallas.
 
 ---
 
