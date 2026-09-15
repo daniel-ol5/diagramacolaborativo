@@ -26,6 +26,13 @@
   background: var(--canvas-bg);
 }
 
+/* El link "React Flow" de la esquina viene con #999 (2.77:1) de fabrica
+   -- encontrado por web/scripts/check-rendered-contrast.mjs, que mide el
+   texto ya renderizado y no solo pares de tokens. */
+.app__canvas .react-flow__attribution a {
+  color: var(--color-text-secondary);
+}
+
 .app__collab-status {
   font-size: var(--font-size-sm);
   padding: 2px var(--space-2);

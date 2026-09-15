@@ -173,6 +173,56 @@ medición.
 
 ---
 
+## El verificador que mide el texto renderizado, no pares de tokens — 15 de septiembre de 2026
+
+Daniel reportó letras ilegibles y superpuestas en las pantallas nuevas. `check-contrast.mjs`
+seguía dando 18/18 — y esa no es una contradicción, es la pista: ese script mide pares de
+tokens ("`--color-text` sobre `--color-bg` da tanto"), no **el texto tal como se pinta de
+verdad**. Un texto puede caer sobre un fondo que nadie emparejó, o quedar detrás de otro
+elemento, y el script de tokens nunca se entera.
+
+`web/scripts/check-rendered-contrast.mjs` (nuevo) carga cada pantalla en un Chrome real, con
+los casos de borde de una lista (nombre largo, sin descripción, vacía, con varios), y para cada
+nodo de texto visible: lee su color computado, camina hacia arriba hasta el primer fondo no
+transparente (el fondo **efectivo**, no el que alguien supuso), calcula el contraste real, y
+guarda su rectángulo para cruzarlo contra los demás y detectar superposiciones.
+
+**Encontró tres fallas reales, ninguna visible para el verificador de tokens:**
+
+| Falla | Antes | Ahora |
+| :--- | :--- | :--- |
+| `.access-page__empty` ("todavía no tiene diagramas") sobre `--color-bg-page` | 4.38:1 | 6.83:1 (pasó a `--color-text-secondary`) |
+| `.access-list__item-meta` sobre `--color-bg-selected` (al pasar el mouse) | 3.57:1 | 5.56:1 (mismo cambio de token) |
+| Link "React Flow" de la esquina del lienzo (estilo de fábrica de la librería) | 2.77:1 | 6.83:1 (override en `App.css`) |
+
+Las dos primeras son del mismo tipo: un token que pasaba el contraste contra el fondo que se
+**pensó**, pero no contra el fondo real donde termina ese texto — el hover de una fila, o una
+pantalla standalone en vez de una tarjeta blanca. Ninguna aparecía en capturas casuales porque
+la diferencia es sutil (grises contra grises) y una porque sólo se ve **al pasar el mouse**.
+
+**Una falla queda, y no se tocó a propósito:** el chip de colaborador ("Dueno") con texto blanco
+fijo sobre el color que asigna el servidor da 3,87:1 con uno de los colores de la paleta nueva
+(`#d55e00`). La paleta de colaboradores es de `[cl1]`, medida contra la tinta del lienzo — este
+caso de uso puntual (texto blanco encima) no estaba en esa medición y se lo reportamos aparte.
+
+**Una sospecha inicial resultó ser del propio verificador, no de la aplicación:** la primera
+versión reportó "superposición" en la página de invitación con un nombre de proyecto largo — al
+mirar la captura (`invite-nombre-largo-sin-superposicion.png`) no hay nada superpuesto. La causa:
+comparar rectángulos de texto por **área absoluta** confunde el roce normal de dos líneas
+adyacentes en un texto que envuelve (`getClientRects()` da un rectángulo por línea) con una
+superposición real. Se corrigió a comparar por **fracción del rectángulo más chico** (≥25%), que
+sigue detectando el caso real — dos cajas puestas una sobre la otra — sin ruido. La misma
+disciplina que ya viene de antes en este proyecto: verificar por otro camino (la captura) antes
+de confiar en un número nuevo.
+
+| Archivo | Qué prueba |
+| :--- | :--- |
+| `verificador-render-real/proyecto-vacio-antes.png` / `-despues.png` | El estado vacío de un proyecto — el contraste cambia, la captura casi no (es la naturaleza del defecto: sutil, no dramático) |
+| `verificador-render-real/canvas-attribution-despues.png` | El link "React Flow" ya corregido, de cerca |
+| `verificador-render-real/invite-nombre-largo-sin-superposicion.png` | La captura que descartó el falso positivo del verificador |
+
+---
+
 ## La regla que ordena esta carpeta
 
 **La evidencia primaria es la aserción automática; la captura ilustra.**

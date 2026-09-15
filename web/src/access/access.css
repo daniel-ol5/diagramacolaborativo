@@ -69,7 +69,11 @@
 }
 
 .access-page__empty {
-  color: var(--color-text-tertiary);
+  /* --color-text-tertiary da 4.83:1 sobre --color-bg (blanco), pero esto
+     se pinta directo sobre --color-bg-page (4.38:1, no llega a 4.5) --
+     medido con web/scripts/check-rendered-contrast.mjs contra el fondo
+     REAL, no contra el par de tokens que se penso al principio. */
+  color: var(--color-text-secondary);
   font-style: italic;
   padding: var(--space-4) 0;
 }
@@ -105,7 +109,10 @@
 
 .access-list__item-meta {
   font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
+  /* text-tertiary pasa 4.83:1 sobre blanco, pero la fila entera cambia a
+     --color-bg-selected al pasar el mouse -- ahi cae a 3.57:1. secondary
+     pasa los dos casos (7.53:1 y 5.56:1). */
+  color: var(--color-text-secondary);
 }
 
 .access-role-badge {
