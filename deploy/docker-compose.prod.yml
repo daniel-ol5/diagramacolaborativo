@@ -1,0 +1,108 @@
+# ModelCollab :: stack de PRODUCCIÓN (AWS EC2, §5.3).
+#
+# ============================ NO VERIFICADO ============================
+# Este archivo NUNCA SE EJECUTÓ. La máquina de desarrollo no tiene Docker
+# instalado (desvío D-01), así que no hay ni una corrida real detrás de esto.
+# Está escrito para que el despliegue sea mecánico y no una investigación en
+# vivo sobre una instancia de AWS, pero la primera vez que se levante va a
+# haber que corregir cosas. Ver deploy/DESPLIEGUE.md.
+# =======================================================================
+#
+# QUÉ LO DIFERENCIA DEL DE DESARROLLO (backend/docker-compose.yml), que es
+# la razón de que sean dos archivos y no uno con variables:
+#
+#   1. PostgreSQL NO publica su puerto. En desarrollo el 5432 sale al host
+#      para poder abrir psql; acá quedaría abierto a internet, y una base de
+#      datos accesible desde afuera con la contraseña en un .env es la forma
+#      más común de perder todo. Sólo el backend la ve, por la red interna.
+#   2. El backend TAMPOCO publica el 8080. Lo único que escucha en la
+#      instancia es Nginx, en 80 y 443. Si el 8080 quedara abierto, se podría
+#      entrar sin pasar por TLS y el WSS sería decorativo.
+#   3. Aparece Nginx, que termina TLS y hace de puerta única.
+#   4. restart: always en vez de unless-stopped: si se reinicia la instancia,
+#      el stack vuelve solo.
+#
+# Uso:  docker compose -f deploy/docker-compose.prod.yml up -d --build
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: modelcollab-postgres
+    environment:
+      POSTGRES_DB: modelcollab
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD (ver deploy/.env)}
+    # SIN ports: la base no sale de la red interna de Docker. Para entrar a mano:
+    #   docker compose -f deploy/docker-compose.prod.yml exec postgres psql -U postgres modelcollab
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # El backend arranca Flyway apenas conecta; sin este gate falla la primera migración.
+      test: ["CMD-SHELL", "pg_isready -U postgres -d modelcollab"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: always
+
+  backend:
+    build:
+      # El contexto es backend/ porque el Dockerfile copia mvnw, pom.xml y src desde ahí.
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: modelcollab-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/modelcollab
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD (ver deploy/.env)}
+      # Sin esto la aplicación no arranca, y es a propósito: con un valor por
+      # defecto, un despliegue que se olvide de configurarlo firma los tokens
+      # con una clave publicada en el repositorio.
+      JWT_SECRET: ${JWT_SECRET:?falta JWT_SECRET (ver deploy/.env)}
+      # Opcional: sin clave, CU16 y CU17 arrancan en modo simulado y lo avisan
+      # en el log. No impide levantar.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    # SIN ports: sólo Nginx habla con el backend, por la red interna.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/v1/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      # 40 s de gracia: el arranque incluye Flyway y el contexto de Spring.
+      start_period: 40s
+    restart: always
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: modelcollab-nginx
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/modelcollab.conf:/etc/nginx/conf.d/default.conf:ro
+      # Certificados de Let's Encrypt, emitidos en la instancia con certbot.
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # Raíz para el desafío HTTP-01 de certbot, que necesita escribir un
+      # archivo bajo /.well-known/acme-challenge/ y que Nginx lo sirva.
+      - certbot_www:/var/www/certbot:ro
+      # El build del frontend. Hay que dejarlo acá antes de levantar; el
+      # instructivo explica de dónde sale.
+      - ./web-dist:/usr/share/nginx/html:ro
+    restart: always
+
+volumes:
+  postgres_data:
+  certbot_www:
+
+# NO EJECUTADO NUNCA. Lo que sí está comprobado en desarrollo y de lo que este
+# archivo depende:
+#   - la aplicación se niega a arrancar sin JWT_SECRET (verificado);
+#   - el broker STOMP manda latidos cada 10 s (medido: 10.0, 10.0, 10.0 s),
+#     que es lo que mantiene viva la conexión a través de Nginx;
+#   - la suite de 346 tests pasa sin PostgreSQL alcanzable (verificado), así
+#     que la imagen se puede construir sin base.
