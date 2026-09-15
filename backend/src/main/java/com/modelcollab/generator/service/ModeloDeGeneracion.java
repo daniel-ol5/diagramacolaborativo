@@ -194,9 +194,10 @@ class ModeloDeGeneracion {
         e.put("nombreOriginal", clase.name());
         e.put("clase", nombresJava.get(clase.id()));
         e.put("tabla", literal(sanitizer.nombreDeTabla(clase.name())));
-        // Ruta REST en plural y en kebab: /api/movimiento-stocks. Se deriva del snake_case ya
-        // saneado, asi que una clase llamada Order da /api/orders sin comillas ni sorpresas.
-        e.put("rutaRest", sanitizer.nombreDeTabla(clase.name()).replace("\"", "").replace('_', '-') + "s");
+        // La regla vive en IdentifierSanitizer y la comparte la app movil, que le pega a estas
+        // mismas rutas. Calculada por separado, un dia dejarian de coincidir y el sintoma
+        // apareceria en el telefono de un usuario final como un 404 sin explicacion.
+        e.put("rutaRest", sanitizer.rutaRest(clase.name()));
         e.put("esAbstracta", clase.isAbstract());
 
         // Herencia: el origen de un INHERITANCE es el hijo (§8.1 y los fixtures del Día 1).

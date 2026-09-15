@@ -28,7 +28,11 @@ class Config {
   );
 
   /// Prefijo de la API REST del backend generado.
-  static const String rutaBase = '/api/v1';
+  ///
+  /// Es '/api' y NO '/api/v1': el backend que genera ModelCollab expone sus
+  /// controladores en @RequestMapping("/api/..."). El '/v1' es del backend de
+  /// ModelCollab, que es otra cosa — la app movil no le habla a ese.
+  static const String rutaBase = '/api';
 
   static String url(String recurso) => '$urlDelBackend$rutaBase$recurso';
 }

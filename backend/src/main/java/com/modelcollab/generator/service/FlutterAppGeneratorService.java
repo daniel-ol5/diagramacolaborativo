@@ -10,6 +10,7 @@ import freemarker.template.Configuration;
 import freemarker.template.Template;
 import java.io.StringWriter;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -77,6 +78,7 @@ public class FlutterAppGeneratorService {
         datos.put("nombreDelDiagrama", nombre);
         datos.put("paquete", nombreDePaquete(nombre));
         datos.put("urlDelBackend", urlDeBackend(urlDelBackend));
+        datos.put("entidades", entidades(modelo));
 
         Map<String, String> archivos = new LinkedHashMap<>();
         archivos.put("pubspec.yaml", render("pubspec.ftl", datos));
@@ -87,6 +89,9 @@ public class FlutterAppGeneratorService {
         archivos.put("lib/nlu/clasificador.dart", render("clasificador.ftl", datos));
         archivos.put("lib/nlu/extractor.dart", render("extractor.ftl", datos));
         archivos.put("lib/voz/servicio_de_voz.dart", render("voz.ftl", datos));
+        archivos.put("lib/api/cliente_api.dart", render("api_cliente.ftl", datos));
+        archivos.put("lib/datos/cola_local.dart", render("cola_local.ftl", datos));
+        archivos.put("lib/ui/pantalla_dictado.dart", render("pantalla_dictado.ftl", datos));
         archivos.put("assets/intents.json", catalogo(modelo));
         return archivos;
     }
@@ -138,6 +143,31 @@ public class FlutterAppGeneratorService {
             limpio = "app_" + limpio;
         }
         return limpio;
+    }
+
+    /**
+     * Las entidades concretas con la ruta REST que expone el backend generado.
+     *
+     * <p>La ruta sale de {@link IdentifierSanitizer#rutaRest}, que es <b>la misma función</b> que
+     * usa el generador de Spring Boot para su {@code @RequestMapping}. Calcularla acá por
+     * separado sería tener la regla escrita dos veces, y el día que dejaran de coincidir el
+     * síntoma no aparecería en ninguno de los dos proyectos: aparecería en el teléfono de un
+     * usuario final como un 404 sin explicación.
+     *
+     * <p>Las abstractas quedan afuera porque el backend generado tampoco les da controlador: no
+     * se instancian por sí solas.
+     */
+    private List<Map<String, String>> entidades(CanonicalModel modelo) {
+        List<Map<String, String>> entidades = new java.util.ArrayList<>();
+        for (com.modelcollab.metamodel.model.ClassEntity clase : modelo.classes()) {
+            if (Boolean.TRUE.equals(clase.isAbstract())) {
+                continue;
+            }
+            entidades.add(Map.of(
+                    "nombre", clase.name(),
+                    "ruta", sanitizer.rutaRest(clase.name())));
+        }
+        return entidades;
     }
 
     private String catalogo(CanonicalModel modelo) {

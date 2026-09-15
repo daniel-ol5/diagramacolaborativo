@@ -138,6 +138,24 @@ public class IdentifierSanitizer {
         return escaparSiHaceFalta(aSnakeCase(soloLetrasYDigitos(nombreDeClase)));
     }
 
+    /**
+     * Ruta REST de una entidad: en plural y en kebab. {@code MovimientoStock} da
+     * {@code movimiento-stocks}.
+     *
+     * <p><b>Vive acá y no en cada generador a propósito.</b> La usan dos: el backend de Spring
+     * Boot, que la expone en su {@code @RequestMapping}, y la app móvil, que le pega. Si cada uno
+     * la calculara por su cuenta podrían divergir — y el síntoma no aparecería en ninguno de los
+     * dos por separado, sino <b>en el teléfono de un usuario final</b>, como un 404 que no dice
+     * nada sobre su causa. Es el mismo error que nos costó el {@code @ManyToOne(mappedBy=...)}:
+     * una regla escrita dos veces que un día deja de coincidir.
+     *
+     * <p>Se deriva del snake_case ya saneado, así que una clase llamada {@code Order} da
+     * {@code orders} sin comillas ni sorpresas.
+     */
+    public String rutaRest(String nombreDeClase) {
+        return nombreDeTabla(nombreDeClase).replace("\"", "").replace('_', '-') + "s";
+    }
+
     /** Nombre de columna listo para {@code @Column(name = …)}, con la misma regla. */
     public String nombreDeColumna(String nombreDeAtributo) {
         return escaparSiHaceFalta(aSnakeCase(soloLetrasYDigitos(nombreDeAtributo)));

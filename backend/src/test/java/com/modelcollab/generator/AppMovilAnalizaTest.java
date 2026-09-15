@@ -128,7 +128,10 @@ class AppMovilAnalizaTest {
         // verde igual. Un arnés que nunca se vio fallar no se sabe qué cubre — y éste corre un
         // proceso externo, que es donde más fácil es que el verde signifique "no llegué a
         // ejecutar nada".
-        archivos.put("lib/roto.dart", """
+        // El archivo roto va en un SUBDIRECTORIO y no en lib/ a secas. Que analyze corra no
+        // prueba que mire lib/ui/ y lib/nlu/, que es donde vive casi toda la app: un arnes que
+        // solo ejercita el primer nivel podria dar verde ignorando nueve de los once archivos.
+        archivos.put("lib/ui/roto.dart", """
             int sumar(int a, int b) => a + b;
 
             void roto() {
