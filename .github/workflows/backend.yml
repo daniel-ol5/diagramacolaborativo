@@ -11,11 +11,17 @@
 # sólo corría cuando alguien se acordaba. Lo primero se arregló agregando un caso que contradice
 # a propósito; lo segundo se arregla acá.
 #
-# NO VERIFICADO: este archivo nunca se ejecutó. GitHub Actions sólo corre en el servidor de
+# NO VERIFICADO, y ahora por partida doble: este archivo nunca se ejecutó. GitHub Actions sólo corre en el servidor de
 # GitHub y el push lo hace Daniel, así que hasta el primer push esto está escrito y no probado.
 # Lo que SÍ está comprobado en la máquina de desarrollo es todo lo que el flujo ejecuta: el
 # comando exacto de Maven, que la suite no necesita PostgreSQL, y que sin JWT_SECRET la
 # aplicación se niega a arrancar (por eso el paso que lo genera).
+#
+# Lo que se AGREGÓ sin verificar es el servicio de PostgreSQL y el `-Dalta-real=true`. El arnés
+# de alta real SÍ está comprobado —corre en esta máquina contra el PostgreSQL local y crea las
+# cinco entidades de la veterinaria— pero que funcione *acá dentro*, contra un contenedor y con
+# el healthcheck de abajo, no lo vio nadie. Es complejidad no probada encima de algo no probado,
+# y conviene tenerlo presente cuando la primera corrida falle: el primer sospechoso es esto.
 
 name: backend
 
@@ -41,6 +47,29 @@ jobs:
     # la hora entera que da el valor por defecto.
     timeout-minutes: 15
 
+    # PostgreSQL para el arnés de alta real, que levanta el backend generado y le hace un POST.
+    #
+    # Va como `services` y no como un `docker run` en un paso: así GitHub Actions ESPERA a que el
+    # healthcheck pase antes de correr nada. Arrancándolo a mano, la suite empieza antes de que la
+    # base acepte conexiones y falla con un error de red que no se parece en nada a "todavía no
+    # estaba lista" — y eso manda a buscar el problema al lugar equivocado.
+    #
+    # Usuario, clave y puerto son los mismos que en la máquina de desarrollo, que es lo que el
+    # arnés espera encontrar.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: 12345678
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
 
@@ -63,11 +92,17 @@ jobs:
           # razón para que la CI tenga un secreto estable, y uno fijo acá terminaría copiado a
           # un despliegue real.
           JWT_SECRET: ci-${{ github.run_id }}-${{ github.run_attempt }}-clave-efimera-hs256-32b
-        # No hace falta levantar PostgreSQL: no hay ningún @SpringBootTest ni @DataJpaTest en la
-        # suite. Los repositorios van mockeados y el arnés de mapeo JPA usa MetadataSources de
-        # Hibernate, que valida el mapeo sin conectarse a ninguna base. Si algún día se agrega un
-        # test de integración, acá va un `services: postgres:`.
-        run: ./mvnw -B clean test
+        # La suite en sí NO necesita PostgreSQL —no hay ningún @SpringBootTest ni @DataJpaTest,
+        # los repositorios van mockeados y el arnés de mapeo usa MetadataSources de Hibernate, que
+        # valida sin conectarse— y eso está comprobado corriendo los 385 contra un puerto muerto.
+        #
+        # El que SÍ lo necesita es el alta real: levanta el backend generado contra una base y le
+        # hace un POST por entidad. Es el único arnés que ejercita lo que compila, mapea bien y
+        # muere en el primer insert.
+        #
+        # Por eso se activa acá y no en local: cuesta ~25 s por diagrama, y en una suite que tarda
+        # dos minutos eso es la diferencia entre correr los tests siempre y dejar de correrlos.
+        run: ./mvnw -B clean test -Dalta-real=true
 
       - name: Informes de las pruebas
         # Con `always()` los informes se suben también cuando la suite falla, que es justo cuando

@@ -101,6 +101,20 @@ public class SecurityConfig {
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
 
+        // Hace falta para que el ZIP se baje con el nombre del diagrama.
+        //
+        // La cabecera Content-Disposition SE MANDA siempre —se la ve con curl -D-— pero el
+        // navegador NO se la deja leer a JavaScript: por especificación, desde fetch() sólo son
+        // legibles unas pocas cabeceras salvo que el servidor las exponga. Sin esta línea, el
+        // `fetch` del lienzo no encuentra el nombre y el usuario se descarga un "download.zip"
+        // en lugar de "barberia.zip".
+        //
+        // EN PRODUCCIÓN NO HACE FALTA: Nginx sirve la web y la API desde el mismo origen, y sin
+        // CORS de por medio la cabecera es legible sola. Queda igual porque es bastante probable
+        // que la demostración se haga en local, y bajarse un "download.zip" delante del tribunal
+        // resta. No se borra pensando que sobra, ni se copia a producción creyendo que hace falta.
+        config.setExposedHeaders(List.of("Content-Disposition"));
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
