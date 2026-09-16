@@ -258,3 +258,30 @@ guardarraíl y muestra el texto completo sin truncar; un comando real ("Crea la 
 atributo total decimal") se aplica y la clase aparece en el lienzo del emisor **y en el de otro
 colaborador conectado al mismo diagrama, sin recargar** — por la misma difusión STOMP que ya
 usa cualquier otra mutación, sin código nuevo para eso. 9/9.
+
+---
+
+## CU17: importar un diagrama desde una foto — 16 de septiembre de 2026
+
+| Archivo | Qué prueba |
+| :--- | :--- |
+| `cu17-importar-foto/modal-de-revision.png` | El modal de revisión completo: aviso de "simulado", el mensaje honesto, las notas del servidor, las clases y atributos editables con checkbox, y las relaciones propuestas |
+
+El requisito central de CU17 es estructural, no cosmético: **el modal tiene que mostrar qué se
+va a crear**, no un "¿aceptar?" a ciegas. El backend lo garantiza con dos endpoints separados
+(analizar nunca escribe) y del lado del cliente cada clase y cada atributo se puede excluir o
+corregir antes de confirmar — la persona no aprueba una foto, aprueba lo que va a terminar en
+el diagrama.
+
+Encontrado y corregido en el camino: el confirm de CU17 aplica todo el borrador fusionado en
+**un solo evento** (`BULK_MERGE`, con el modelo canónico entero como payload, no una operación
+por elemento) para no hacer parpadear a los demás colaboradores — y `useCollaboration.ts`
+todavía no sabía qué hacer con ese tipo de operación: la confirmación funcionaba del lado del
+servidor pero el lienzo del que confirmaba se quedaba igual. Encontrado con una verificación en
+vivo (no leyendo código): el `console.warn` de "operación ajena todavía no se aplica" lo delató.
+Se agregó el caso que reemplaza el canónico entero, mismo criterio que ya usa `OFFLINE_SYNC`.
+
+Verificado en vivo (script aparte, no incluido en el repo): la lectura simulada se muestra con
+su aviso, las notas explican los dos defectos deliberados de la lectura fija (un tipo no
+reconocido, una relación a una clase inexistente), se puede excluir una clase antes de
+confirmar, y tras confirmar las clases aparecen de verdad en el lienzo. 9/9.

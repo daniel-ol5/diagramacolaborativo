@@ -353,6 +353,16 @@ export function useCollaboration(
           case "DELETE_RELATIONSHIP":
             if (body.targetId) deleteRelationshipLocal(body.targetId);
             break;
+          case "BULK_MERGE":
+            // CU17 (importar desde foto, confirmar): un solo evento con el
+            // modelo canonico ENTERO ya fusionado, no una operacion sobre
+            // un elemento -- mismo motivo que OFFLINE_SYNC: entran varias
+            // clases y relaciones de un saque, y reemitirlas una por una
+            // haria parpadear el lienzo de todos los demas colaboradores
+            // (VisionImportService.confirmar). Se reemplaza el canonico
+            // entero, no se aplica como un parche.
+            setModel(body.payload as unknown as CanonicalModel);
+            break;
           default:
             console.warn(`[colaboracion] operacion "${body.op}" ajena todavia no se aplica en este cliente`);
         }

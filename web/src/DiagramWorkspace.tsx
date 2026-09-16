@@ -31,6 +31,7 @@ import type { ValidationReport } from "./generator/types";
 import { ValidationDialog } from "./generator/ValidationDialog";
 import { GenerateBackendModal } from "./generator/GenerateBackendModal";
 import { AiCommandBox } from "./modeling/AiCommandBox";
+import { VisionImportModal } from "./modeling/VisionImportModal";
 import "./App.css";
 
 const nodeTypes = { umlClass: UmlClassNode };
@@ -117,6 +118,7 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
   const [generating, setGenerating] = useState(false);
   const [generatorError, setGeneratorError] = useState<string | null>(null);
   const [showAiCommand, setShowAiCommand] = useState(false);
+  const [showVisionImport, setShowVisionImport] = useState(false);
   const selectNode = usePresentationStore((s) => s.selectNode);
   const selectedNodeId = usePresentationStore((s) => s.selectedNodeId);
   const model = useCanonicalStore((s) => s.model);
@@ -265,6 +267,11 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
             Comando
           </button>
         )}
+        {diagramId && (
+          <button type="button" onClick={() => setShowVisionImport(true)}>
+            Importar foto
+          </button>
+        )}
         {generatorError && <span className="app__collab-warning">⚠ {generatorError}</span>}
 
         {diagramId && (
@@ -360,6 +367,9 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
           onClose={() => setValidationReport(null)}
           onSelectElement={focusElement}
         />
+      )}
+      {diagramId && showVisionImport && (
+        <VisionImportModal diagramId={diagramId} token={session.token} onClose={() => setShowVisionImport(false)} />
       )}
     </div>
   );
