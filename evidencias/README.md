@@ -239,3 +239,22 @@ La distinción importa: *"reintenté la captura hasta que salió bien"* y *"eleg
 que me convenía"* se parecen demasiado desde afuera. Con un verificador determinista que corre
 y falla, la respuesta a *"¿cómo sé que no elegiste la captura favorable?"* deja de ser
 *"porque la miré"*.
+
+---
+
+## CU16: comando de texto sobre el diagrama — 16 de septiembre de 2026
+
+| Archivo | Qué prueba |
+| :--- | :--- |
+| `cu16-comando-ia/comando-ia-guardarrail-y-aplicado.png` | El cuadro de comando con los dos casos: el guardarraíl rechazando "Créame un sistema para un banco" en tono neutro, y un comando real aplicado con la clase resultante ya en el lienzo |
+
+El texto del rechazo se muestra **tal cual lo manda el servidor, sin reescribir ni una palabra**
+— coincide carácter a carácter con §RF-02.6 y con un test del backend. Y no se pinta como
+error: mismo lenguaje visual que una respuesta aplicada (fondo neutro, no `--color-danger`),
+porque es la única respuesta correcta a ese pedido, no una falla.
+
+Verificado en vivo (script aparte, no incluido en el repo): el ejemplo de un clic dispara el
+guardarraíl y muestra el texto completo sin truncar; un comando real ("Crea la clase X con
+atributo total decimal") se aplica y la clase aparece en el lienzo del emisor **y en el de otro
+colaborador conectado al mismo diagrama, sin recargar** — por la misma difusión STOMP que ya
+usa cualquier otra mutación, sin código nuevo para eso. 9/9.

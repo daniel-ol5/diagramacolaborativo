@@ -30,6 +30,7 @@ import { generateBackend, validateDiagram } from "./generator/api";
 import type { ValidationReport } from "./generator/types";
 import { ValidationDialog } from "./generator/ValidationDialog";
 import { GenerateBackendModal } from "./generator/GenerateBackendModal";
+import { AiCommandBox } from "./modeling/AiCommandBox";
 import "./App.css";
 
 const nodeTypes = { umlClass: UmlClassNode };
@@ -115,6 +116,7 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
   const [validating, setValidating] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [generatorError, setGeneratorError] = useState<string | null>(null);
+  const [showAiCommand, setShowAiCommand] = useState(false);
   const selectNode = usePresentationStore((s) => s.selectNode);
   const selectedNodeId = usePresentationStore((s) => s.selectedNodeId);
   const model = useCanonicalStore((s) => s.model);
@@ -258,6 +260,11 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
             Generar backend
           </button>
         )}
+        {diagramId && (
+          <button type="button" onClick={() => setShowAiCommand((v) => !v)}>
+            Comando
+          </button>
+        )}
         {generatorError && <span className="app__collab-warning">⚠ {generatorError}</span>}
 
         {diagramId && (
@@ -287,6 +294,9 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
         <CollaborationToasts />
         {diagramId && <OfflineSyncBadge />}
         <ReconciliationModal />
+        {diagramId && showAiCommand && (
+          <AiCommandBox diagramId={diagramId} token={session.token} onClose={() => setShowAiCommand(false)} />
+        )}
         <CollaborationActionsContext.Provider
           value={{
             requestLock: collaboration.requestLock,

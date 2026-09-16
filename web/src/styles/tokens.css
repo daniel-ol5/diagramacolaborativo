@@ -93,6 +93,7 @@
   --color-success: #227a34;
   --color-success-bg: #d3f9d8;
   --color-warning: #a83e08;
+  --color-warning-bg: #fff4e6; /* 5.76:1 con --color-warning encima */
 
   /* Lienzo UML: es un plano distinto del resto de la interfaz (regla 3),
      con contraste fuerte reservado para su contenido (regla del

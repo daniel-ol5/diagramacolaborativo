@@ -89,6 +89,7 @@ const checks = [
   ["texto blanco sobre advertencia (badge offline)", "color-warning", "color-text-on-dark", 4.5, "texto"],
   ["danger sobre fondo", "color-bg", "color-danger", 4.5, "texto"],
   ["success sobre fondo", "color-bg", "color-success", 4.5, "texto"],
+  ["warning sobre su propio fondo (respuesta fallida de IA)", "color-warning-bg", "color-warning", 4.5, "texto"],
   ["borde sobre el lienzo (plano distinto de --color-bg)", "canvas-bg", "color-border", 3, "borde"],
   ["trazo de conector en reposo sobre el lienzo", "canvas-bg", "canvas-edge-stroke", 3, "borde"],
   ["trazo de conector activo/seleccionado sobre el lienzo", "canvas-bg", "canvas-edge-stroke-active", 3, "borde"],
