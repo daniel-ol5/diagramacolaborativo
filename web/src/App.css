@@ -76,8 +76,9 @@
   border-radius: 10px;
   font-size: 11px;
   /* El color de fondo lo manda el servidor (Participante.color), inline
-     por elemento -- no se toca desde aca (D-XX). El texto blanco es fijo. */
-  color: var(--color-text-on-dark);
+     por elemento -- no se toca desde aca (D-XX). El color del texto
+     tambien es inline (readableTextColor): esa paleta esta medida como
+     trazo contra la tinta del lienzo, no como relleno con texto encima. */
   font-weight: 600;
 }
 

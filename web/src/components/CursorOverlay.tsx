@@ -1,5 +1,6 @@
 import { useViewport } from "reactflow";
 import { useCollaborationStore } from "../store/collaborationStore";
+import { readableTextColor } from "../lib/readableTextColor";
 import "./CursorOverlay.css";
 
 /**
@@ -24,7 +25,10 @@ export function CursorOverlay() {
           }}
         >
           <span className="cursor-overlay__dot" style={{ background: cursor.color }} />
-          <span className="cursor-overlay__label" style={{ background: cursor.color }}>
+          <span
+            className="cursor-overlay__label"
+            style={{ background: cursor.color, color: readableTextColor(cursor.color) }}
+          >
             {cursor.userName}
           </span>
         </div>

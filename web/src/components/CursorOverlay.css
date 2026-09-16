@@ -28,10 +28,11 @@
 .cursor-overlay__label {
   font-family: "Segoe UI", Roboto, sans-serif;
   font-size: 11px;
-  /* El fondo lo manda el servidor (Participante.color), inline por cursor
-     -- el contraste con este texto blanco lo garantiza esa paleta, no esta
-     regla (ver paleta de colaboradores medida contra fondo blanco). */
-  color: var(--color-text-on-dark);
+  /* El fondo lo manda el servidor (Participante.color), inline por cursor.
+     El color del texto tambien es inline (readableTextColor): esa paleta
+     esta medida como TRAZO contra la tinta del lienzo, no como relleno con
+     texto encima -- un color claro con blanco fijo puede no llegar a
+     4.5:1. Negro o blanco, el que contraste mas contra el color puntual. */
   padding: 1px 6px;
   border-radius: 8px;
   white-space: nowrap;

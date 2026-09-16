@@ -24,6 +24,7 @@ import { usePresentationStore } from "./store/presentationStore";
 import { useCollaborationStore } from "./store/collaborationStore";
 import { useCollaboration } from "./hooks/useCollaboration";
 import { CollaborationActionsContext } from "./hooks/collaborationActionsContext";
+import { readableTextColor } from "./lib/readableTextColor";
 import "./App.css";
 
 const nodeTypes = { umlClass: UmlClassNode };
@@ -67,7 +68,11 @@ function RosterPanel() {
   return (
     <div className="app__roster" title={roster.map((p) => p.userName).join(", ")}>
       {roster.map((p) => (
-        <span key={p.userId} className="app__roster-chip" style={{ background: p.color }}>
+        <span
+          key={p.userId}
+          className="app__roster-chip"
+          style={{ background: p.color, color: readableTextColor(p.color) }}
+        >
           {p.userName.split(" ")[0]}
         </span>
       ))}
