@@ -29,9 +29,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * <b>El backend generado se levanta contra un PostgreSQL de verdad y acepta un alta.</b>
@@ -47,12 +48,26 @@ import org.junit.jupiter.api.io.TempDir;
  * en el primer {@code POST}. El guardián estático tapa la instancia que encontramos; esto tapa la
  * familia.
  *
- * <h2>Por qué la veterinaria</h2>
+ * <h2>Los cuatro diagramas, y qué puede romper cada uno</h2>
  *
- * <p>Es el diagrama con <b>herencia y una clase abstracta</b>, o sea el que ejercita exactamente
- * el defecto recién arreglado. Que un {@code Dueno} —cuyos nombres y apellidos viven en
- * {@code Persona}— se cree de verdad contra PostgreSQL convierte ese arreglo de "pasa un test
- * estático" a "probado contra la base".
+ * <p>El orden no es alfabético ni histórico: <b>primero el que puede morir donde ningún arnés
+ * estático mira</b>.
+ *
+ * <ul>
+ *   <li><b>{@code edge-cases}</b> — sus clases se llaman {@code Order}, {@code Group} y
+ *       {@code Table}, que son <b>palabras reservadas de SQL</b>. Si el DDL no las entrecomilla,
+ *       {@code CREATE TABLE order (...)} falla contra PostgreSQL y no falla en ningún otro lado:
+ *       el Java compila, el mapeo de Hibernate es válido y el guardián de arriba lo aprueba.
+ *       Trae además una clase <b>sin clave primaria</b>, donde el generador inyecta una — acá se
+ *       ve si la inyectada funciona de verdad o sólo existe en el código.</li>
+ *   <li><b>{@code veterinaria}</b> — <b>herencia y una clase abstracta</b>, o sea el diagrama que
+ *       ejercita el defecto recién arreglado. Que un {@code Dueno} —cuyos nombres y apellidos
+ *       viven en {@code Persona}— se cree de verdad convierte ese arreglo de "pasa un test
+ *       estático" a "probado contra la base".</li>
+ *   <li><b>{@code barberia}</b> — muchos-a-muchos con tabla intermedia, y una composición.</li>
+ *   <li><b>{@code inventario}</b> — dos paquetes y una cadena de referencias más larga, que es
+ *       lo que obliga al orden topológico de abajo a ser correcto de verdad.</li>
+ * </ul>
  *
  * <h2>Manda sólo lo obligatorio, y eso es deliberado</h2>
  *
@@ -63,10 +78,10 @@ import org.junit.jupiter.api.io.TempDir;
  *
  * <h2>Opt-in, y por qué</h2>
  *
- * <p>Cuesta cerca de un minuto y medio: empaquetar con Maven, arrancar Spring Boot y sembrar.
- * Metido en la suite de todos los días la llevaría de dos minutos a seis, y una suite que tarda
- * seis minutos es una suite que la gente deja de correr. Se activa con
- * {@code -Dalta-real=true} y en CI, donde lento no molesta.
+ * <p>Cuesta unos 25 segundos por diagrama —empaquetar con Maven, arrancar Spring Boot y sembrar—,
+ * o sea cerca de dos minutos los cuatro. Metido en la suite de todos los días la llevaría de dos
+ * minutos a cuatro, y una suite que tarda el doble es una suite que la gente deja de correr. Se
+ * activa con {@code -Dalta-real=true} y en CI, donde lento no molesta.
  */
 @EnabledIfSystemProperty(
         named = "alta-real",
@@ -82,9 +97,10 @@ class AltaRealTest {
     private static final int PUERTO = 8099;
 
     private final ObjectMapper mapper = JacksonConfig.canonicalObjectMapper();
+    private final IdentifierSanitizer sanitizer = new IdentifierSanitizer();
 
     private final SpringBootGeneratorService backend = new SpringBootGeneratorService(
-            new FreeMarkerConfig().freemarkerConfiguration(), new IdentifierSanitizer());
+            new FreeMarkerConfig().freemarkerConfiguration(), sanitizer);
 
     /** Un campo del RequestDTO: su tipo Java y, si es una referencia, a qué entidad apunta. */
     private record Campo(
@@ -101,18 +117,27 @@ class AltaRealTest {
      */
     private int contador = 0;
 
-    @Test
-    @DisplayName("La veterinaria se levanta contra PostgreSQL y acepta un alta por entidad")
-    void laVeterinariaAceptaAltas(@TempDir Path destino) throws Exception {
-        CanonicalModel modelo = leer("reference-diagrams/veterinaria.json");
-        Map<String, String> generado = backend.generar(modelo, "com.empresa.app", "veterinaria");
+    @ParameterizedTest(name = "{0} se levanta contra PostgreSQL y acepta un alta por entidad")
+    @ValueSource(strings = {
+        // edge-cases va primero a propósito: es el único que puede morir en el CREATE TABLE, y
+        // si algo se va a romper conviene saberlo antes de gastar 75 segundos en los otros tres.
+        "edge-cases.json",
+        "reference-diagrams/veterinaria.json",
+        "reference-diagrams/barberia.json",
+        "reference-diagrams/inventario.json",
+    })
+    @DisplayName("El backend generado se levanta contra PostgreSQL y acepta un alta por entidad")
+    void elDiagramaAceptaAltas(String fixture, @TempDir Path destino) throws Exception {
+        String nombre = fixture.substring(fixture.lastIndexOf('/') + 1).replace(".json", "");
+        CanonicalModel modelo = leer(fixture);
+        Map<String, String> generado = backend.generar(modelo, "com.empresa.app", nombre);
         escribir(generado, destino);
 
         Map<String, List<Campo>> porEntidad = camposObligatorios(generado);
         Map<String, String> rutas = rutasRest(generado);
         assertThat(porEntidad).as("no se generó ningún DTO").isNotEmpty();
 
-        String base = "alta_real_" + System.currentTimeMillis();
+        String base = "alta_real_" + nombre.replace('-', '_') + "_" + System.currentTimeMillis();
         crearBase(base);
         Process servidor = null;
         try {
@@ -130,15 +155,19 @@ class AltaRealTest {
                 idsCreados.put(entidad, id);
             }
 
-            // Dueno es el que importa: sus nombres y apellidos viven en Persona, y hasta el
-            // arreglo de hoy no había por dónde mandarlos.
-            assertThat(idsCreados).containsKeys("Dueno", "Veterinario", "Mascota", "Consulta");
+            // Se compara contra EL DIAGRAMA, no contra una lista escrita a mano. En el medio hay
+            // dos traducciones —modelo a Java, Java a DTO— y si alguna se come una clase por el
+            // camino, el bucle de arriba simplemente no la intenta y el verde no dice nada. Esto
+            // es lo que impide que el arnés pase habiendo creado menos de lo que debía.
+            assertThat(idsCreados.keySet())
+                    .as("no se creó una fila por cada clase concreta de %s", nombre)
+                    .containsExactlyInAnyOrderElementsOf(concretas(modelo));
 
             // Se imprime lo que se creó: un verde no dice QUE probó, y este arnés puede pasar
             // sin haber hecho nada si el parseo devuelve una lista vacía. Con esto, la corrida
             // muestra el alta de cada entidad y el orden en que hubo que hacerlas.
-            System.out.println("ALTA REAL contra PostgreSQL — " + idsCreados.size()
-                    + " entidad(es) creadas en este orden:");
+            System.out.println("ALTA REAL contra PostgreSQL — " + nombre + ": "
+                    + idsCreados.size() + " entidad(es) creadas en este orden:");
             idsCreados.forEach((entidad, id) ->
                     System.out.println("   " + entidad + " -> " + id));
         } finally {
@@ -148,6 +177,19 @@ class AltaRealTest {
             }
             borrarBase(base);
         }
+    }
+
+    /**
+     * Las clases del diagrama que tienen que terminar existiendo como fila.
+     *
+     * <p>Las abstractas quedan afuera porque no se instancian: {@code Persona} no tiene DTO ni
+     * ruta, y exigirla haría fallar a la veterinaria por un motivo inventado.
+     */
+    private List<String> concretas(CanonicalModel modelo) {
+        return modelo.classes().stream()
+                .filter(clase -> !Boolean.TRUE.equals(clase.isAbstract()))
+                .map(clase -> sanitizer.nombreDeClase(clase.name()))
+                .toList();
     }
 
     // ----------------------------------------------------------- el sembrado
