@@ -25,6 +25,11 @@ import { useCollaborationStore } from "./store/collaborationStore";
 import { useCollaboration } from "./hooks/useCollaboration";
 import { CollaborationActionsContext } from "./hooks/collaborationActionsContext";
 import { readableTextColor } from "./lib/readableTextColor";
+import { triggerDownload } from "./lib/download";
+import { generateBackend, validateDiagram } from "./generator/api";
+import type { ValidationReport } from "./generator/types";
+import { ValidationDialog } from "./generator/ValidationDialog";
+import { GenerateBackendModal } from "./generator/GenerateBackendModal";
 import "./App.css";
 
 const nodeTypes = { umlClass: UmlClassNode };
@@ -105,6 +110,11 @@ interface Props {
 export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
   const [showNewClass, setShowNewClass] = useState(false);
   const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
+  const [validationReport, setValidationReport] = useState<{ report: ValidationReport; blocked: boolean } | null>(null);
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [generatorError, setGeneratorError] = useState<string | null>(null);
   const selectNode = usePresentationStore((s) => s.selectNode);
   const selectedNodeId = usePresentationStore((s) => s.selectedNodeId);
   const model = useCanonicalStore((s) => s.model);
@@ -172,6 +182,47 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
     setShowNewClass(false);
   }
 
+  function focusElement(elementId: string) {
+    selectNode(elementId);
+    reactFlowRef.current?.fitView({ nodes: [{ id: elementId }], duration: 400, maxZoom: 1.2 });
+  }
+
+  async function handleValidate() {
+    if (!diagramId) return;
+    setValidating(true);
+    setGeneratorError(null);
+    try {
+      const report = await validateDiagram(diagramId, session.token);
+      setValidationReport({ report, blocked: false });
+    } catch (e) {
+      setGeneratorError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setValidating(false);
+    }
+  }
+
+  async function handleGenerate(basePackage: string) {
+    if (!diagramId) return;
+    setGenerating(true);
+    setGeneratorError(null);
+    try {
+      const resultado = await generateBackend(diagramId, session.token, basePackage);
+      if (resultado.ok) {
+        triggerDownload(resultado.blob, resultado.filename);
+        setShowGenerateModal(false);
+      } else {
+        // El mismo informe que "Validar" -- errores bloqueantes impidieron
+        // la descarga, y este dialogo es el que ya sabe mostrar por que.
+        setShowGenerateModal(false);
+        setValidationReport({ report: resultado.report, blocked: true });
+      }
+    } catch (e) {
+      setGeneratorError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setGenerating(false);
+    }
+  }
+
   function handleConnect(connection: Connection) {
     if (!connection.source || !connection.target || !model) return;
     if (connection.source === connection.target) return; // una clase no se conecta consigo misma
@@ -196,6 +247,18 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
             + Clase
           </button>
         )}
+
+        {diagramId && (
+          <button type="button" onClick={handleValidate} disabled={validating}>
+            {validating ? "Validando…" : "Validar"}
+          </button>
+        )}
+        {diagramId && (
+          <button type="button" onClick={() => setShowGenerateModal(true)}>
+            Generar backend
+          </button>
+        )}
+        {generatorError && <span className="app__collab-warning">⚠ {generatorError}</span>}
 
         {diagramId && (
           <span
@@ -271,6 +334,21 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
             setPendingConnection(null);
           }}
           onClose={() => setPendingConnection(null)}
+        />
+      )}
+      {showGenerateModal && (
+        <GenerateBackendModal
+          onGenerate={handleGenerate}
+          onClose={() => setShowGenerateModal(false)}
+          generating={generating}
+        />
+      )}
+      {validationReport && (
+        <ValidationDialog
+          report={validationReport.report}
+          blocked={validationReport.blocked}
+          onClose={() => setValidationReport(null)}
+          onSelectElement={focusElement}
         />
       )}
     </div>
