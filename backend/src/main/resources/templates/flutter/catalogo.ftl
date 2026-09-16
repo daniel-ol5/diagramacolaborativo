@@ -13,12 +13,21 @@ import 'package:flutter/services.dart' show rootBundle;
 class Ranura {
   const Ranura({
     required this.nombre,
+    required this.campo,
     required this.tipo,
     required this.obligatoria,
     this.referencia,
   });
 
+  /// Como se llama para la persona: "cliente".
   final String nombre;
+
+  /// Con que clave viaja al servidor: "clienteId".
+  ///
+  /// Para un atributo son iguales. Para una referencia NO, y mandar el nombre
+  /// hablado como clave hace que el servidor descarte el dato y rechace la
+  /// peticion por el campo obligatorio que falta.
+  final String campo;
 
   /// Tipo del metamodelo: dice que analizador local usar.
   final String tipo;
@@ -32,6 +41,7 @@ class Ranura {
   factory Ranura.desdeJson(Map<String, dynamic> json) {
     return Ranura(
       nombre: json['name'] as String,
+      campo: json['field'] as String,
       tipo: json['type'] as String,
       // El backend omite los campos nulos, asi que "required" puede no venir.
       obligatoria: json['required'] as bool? ?? false,

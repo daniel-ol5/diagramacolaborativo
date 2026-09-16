@@ -135,8 +135,63 @@ class ModeloDeGeneracion {
             resultado.add(entidad);
         }
         resolverTipoDeIdHeredado(resultado, tipos);
+        resolverCamposHeredados(resultado);
         resolverReferencias(resultado);
         return resultado;
+    }
+
+    /**
+     * Los campos que el DTO tiene que llevar: <b>los propios MAS los heredados</b>.
+     *
+     * <h2>Por que el DTO no lleva lo mismo que la entidad</h2>
+     *
+     * <p>La entidad declara solo sus campos, y eso esta bien: en JPA el padre declara los suyos y
+     * la hija los hereda. Pero el DTO de entrada no describe una clase — describe <b>lo que el
+     * cliente esta obligado a enviar</b>, y para crear un {@code Dueno} hay que mandar tambien
+     * sus nombres y apellidos, que viven en {@code Persona}.
+     *
+     * <p>Sin esto, {@code DuenoRequestDTO} sale con {@code direccion}, {@code email} y
+     * {@code fechaAlta}, y sin {@code nombres}. Como {@code Persona.nombres} es
+     * {@code nullable = false}, <b>el API generado no puede crear un Dueno</b>: no hay por donde
+     * mandar el dato y el insert viola el NOT NULL.
+     *
+     * <p>Y lo peor es que compila. El arnes lo daba por bueno porque compilar y mapear bien no
+     * dicen nada sobre las restricciones de la base: el fallo aparece recien contra un PostgreSQL
+     * real, en el primer POST. Lo encontro la confrontacion del catalogo de intenciones de la app
+     * movil contra estos DTO — un test escrito para lo nuevo, que senialo lo viejo.
+     *
+     * <p>Los ancestros van PRIMERO y en orden de raiz a hoja, que es como se lee un formulario:
+     * nombre y apellido antes que la direccion.
+     */
+    @SuppressWarnings("unchecked")
+    private static void resolverCamposHeredados(List<Map<String, Object>> entidades) {
+        Map<String, Map<String, Object>> porNombre = new HashMap<>();
+        entidades.forEach(e -> porNombre.put((String) e.get("clase"), e));
+
+        for (Map<String, Object> entidad : entidades) {
+            List<Map<String, Object>> cadena = new ArrayList<>();
+            Map<String, Object> actual = entidad;
+            int guarda = 0;
+            // La guarda corta una herencia circular. El validador la rechaza, pero este
+            // generador puede recibir un diagrama que nadie valido, y colgarse seria peor.
+            while (actual != null && guarda++ < 32) {
+                cadena.add(0, actual);
+                actual = porNombre.get((String) actual.get("extiende"));
+            }
+
+            List<Map<String, Object>> camposDto = new ArrayList<>();
+            Set<String> vistos = new LinkedHashSet<>();
+            for (Map<String, Object> nivel : cadena) {
+                for (Map<String, Object> campo
+                        : (List<Map<String, Object>>) nivel.get("campos")) {
+                    // Si la hija redefine un campo del padre, gana el de la hija.
+                    if (vistos.add((String) campo.get("campo"))) {
+                        camposDto.add(campo);
+                    }
+                }
+            }
+            entidad.put("camposDto", camposDto);
+        }
     }
 
     /**
@@ -513,6 +568,11 @@ class ModeloDeGeneracion {
         for (Map<String, Object> ref : (List<Map<String, Object>>) entidad.get("referencias")) {
             agregarSiSeImporta((String) ref.get("tipoDelId"), deDatos);
         }
+        // Y los tipos de los campos HEREDADOS, que la entidad no declara y el DTO si: sin esto,
+        // un padre con una fecha deja a la hija declarando un LocalDate que nunca importa.
+        for (Map<String, Object> campo : (List<Map<String, Object>>) entidad.get("camposDto")) {
+            agregarSiSeImporta((String) campo.get("tipo"), deDatos);
+        }
         entidad.put("importesDto", new ArrayList<>(deDatos));
 
         // El servicio suma los DTO que aparecen en las firmas de los metodos del UML.
@@ -711,12 +771,13 @@ class ModeloDeGeneracion {
      * Nombre del campo de una relación. Se usa el rol del diagrama si existe —es lo que el
      * modelador quiso decir— y si no se deriva del nombre de la clase, en plural si es colección.
      */
+    /**
+     * Delega en {@link IdentifierSanitizer}, donde vive la regla. La comparte la app movil, que
+     * tiene que rellenar exactamente estos campos: calculada por separado, un dia dejaria de
+     * coincidir y el sintoma seria una orden dictada que el servidor rechaza siempre.
+     */
     private String nombreDeCampoDeRelacion(String rol, String claseDelOtro, boolean esColeccion) {
-        if (rol != null && !rol.isBlank()) {
-            return sanitizer.nombreDeCampo(rol);
-        }
-        String base = sanitizer.nombreDeCampo(claseDelOtro);
-        return esColeccion ? base + "s" : base;
+        return sanitizer.nombreDeCampoDeRelacion(rol, claseDelOtro, esColeccion);
     }
 
     private static void agregarImporte(String tipo, Set<String> usados) {

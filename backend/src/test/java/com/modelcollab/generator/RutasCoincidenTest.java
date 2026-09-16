@@ -58,7 +58,7 @@ class RutasCoincidenTest {
             new FreeMarkerConfig().freemarkerConfiguration(), sanitizer);
 
     private final FlutterAppGeneratorService movil = new FlutterAppGeneratorService(
-            new NluIntentGeneratorService(new SpanishNounInflector()),
+            new NluIntentGeneratorService(new SpanishNounInflector(), new IdentifierSanitizer()),
             sanitizer,
             JacksonConfig.canonicalObjectMapper());
 

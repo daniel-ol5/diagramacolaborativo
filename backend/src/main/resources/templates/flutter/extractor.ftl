@@ -19,7 +19,11 @@ import 'clasificador.dart';
 class Extractor {
   const Extractor();
 
-  /// Devuelve nombre de ranura -> valor, ya en el formato que espera la API.
+  /// Devuelve CAMPO -> valor, con la clave que espera la API.
+  ///
+  /// La clave es ranura.campo y no ranura.nombre: para una referencia son
+  /// distintos —"cliente" contra "clienteId"— y usar el nombre hablado hace
+  /// que el servidor descarte el dato.
   ///
   /// Las ranuras que no se encuentran NO se inventan: quedan afuera, y quien
   /// llama decide si preguntar por las obligatorias que faltan. Rellenar con
@@ -31,7 +35,7 @@ class Extractor {
     for (final Ranura ranura in reconocido.intencion.ranuras) {
       final String? valor = _porTipo(ranura, texto);
       if (valor != null && valor.isNotEmpty) {
-        valores[ranura.nombre] = valor;
+        valores[ranura.campo] = valor;
       }
     }
     return valores;

@@ -22,6 +22,7 @@ class Pendiente {
     required this.entidad,
     required this.accion,
     required this.datos,
+    required this.referencias,
     required this.creadoEn,
   });
 
@@ -29,6 +30,11 @@ class Pendiente {
   final String entidad;
   final String accion;
   final Map<String, dynamic> datos;
+
+  /// Campos cuyo valor es todavia un NOMBRE dictado y no un identificador:
+  /// campo -> entidad contra la que hay que resolverlo.
+  final Map<String, String> referencias;
+
   final DateTime creadoEn;
 }
 
@@ -51,6 +57,7 @@ class ColaLocal {
             entidad TEXT NOT NULL,
             accion TEXT NOT NULL,
             datos TEXT NOT NULL,
+            referencias TEXT NOT NULL,
             creado_en INTEGER NOT NULL
           )
         ''');
@@ -63,12 +70,14 @@ class ColaLocal {
   Future<int> encolar(
     String entidad,
     String accion,
-    Map<String, dynamic> datos,
-  ) async {
+    Map<String, dynamic> datos, {
+    Map<String, String> referencias = const <String, String>{},
+  }) async {
     return _db.insert(_tabla, <String, Object?>{
       'entidad': entidad,
       'accion': accion,
       'datos': jsonEncode(datos),
+      'referencias': jsonEncode(referencias),
       'creado_en': DateTime.now().millisecondsSinceEpoch,
     });
   }
@@ -88,6 +97,12 @@ class ColaLocal {
             entidad: fila['entidad']! as String,
             accion: fila['accion']! as String,
             datos: jsonDecode(fila['datos']! as String) as Map<String, dynamic>,
+            referencias:
+                (jsonDecode(fila['referencias']! as String) as Map<String, dynamic>)
+                    .map(
+                      (String clave, dynamic valor) =>
+                          MapEntry<String, String>(clave, valor as String),
+                    ),
             creadoEn: DateTime.fromMillisecondsSinceEpoch(
               fila['creado_en']! as int,
             ),
@@ -112,7 +127,16 @@ class ColaLocal {
       try {
         switch (pendiente.accion) {
           case 'CREATE':
-            await api.crear(pendiente.entidad, pendiente.datos);
+            final Map<String, dynamic>? datos = await _resolver(api, pendiente);
+            if (datos == null) {
+              // No se pudo resolver un nombre dictado contra una entidad que
+              // existe. Se CORTA en vez de descartar: mandar la peticion sin
+              // ese campo la haria rechazar por el servidor, y descartarla
+              // perderia una orden que la persona dio. Queda para el proximo
+              // intento, cuando quiza ese cliente ya exista.
+              return enviadas;
+            }
+            await api.crear(pendiente.entidad, datos);
           case 'DELETE':
             final Object? id = pendiente.datos['id'];
             if (id == null) {
@@ -135,6 +159,41 @@ class ColaLocal {
       }
     }
     return enviadas;
+  }
+
+  /// Cambia los nombres dictados por los identificadores que espera la API.
+  ///
+  /// Se hace ACA y no al confirmar, a proposito: al confirmar puede no haber
+  /// conexion, y resolver necesita preguntarle al servidor. Haciendolo al
+  /// sincronizar, el circuito es el mismo con red y sin red — que es
+  /// justamente lo que la app promete.
+  ///
+  /// Devuelve null si alguna referencia no se pudo resolver.
+  Future<Map<String, dynamic>?> _resolver(
+    ClienteApi api,
+    Pendiente pendiente,
+  ) async {
+    if (pendiente.referencias.isEmpty) {
+      return pendiente.datos;
+    }
+    final Map<String, dynamic> datos = Map<String, dynamic>.of(pendiente.datos);
+
+    for (final MapEntry<String, String> referencia
+        in pendiente.referencias.entries) {
+      final Object? dictado = datos[referencia.key];
+      if (dictado == null) {
+        continue;
+      }
+      final String? id = await api.resolverId(
+        referencia.value,
+        dictado.toString(),
+      );
+      if (id == null) {
+        return null;
+      }
+      datos[referencia.key] = id;
+    }
+    return datos;
   }
 
   Future<void> cerrar() => _db.close();

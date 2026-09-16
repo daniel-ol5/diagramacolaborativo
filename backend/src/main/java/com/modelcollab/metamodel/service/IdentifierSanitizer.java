@@ -161,6 +161,38 @@ public class IdentifierSanitizer {
         return escaparSiHaceFalta(aSnakeCase(soloLetrasYDigitos(nombreDeAtributo)));
     }
 
+    /**
+     * Nombre del campo que una clase le da a la otra punta de una relacion.
+     *
+     * <p>Si la relacion declara un rol, manda el rol: una {@code Cita} con {@code targetRole}
+     * "titular" tiene un campo {@code titular} y no {@code cliente}. Si no lo declara, se usa el
+     * nombre de la otra clase.
+     *
+     * <p><b>Vive aca porque la comparten tres cosas</b>: el campo de la entidad JPA, el campo del
+     * DTO de entrada, y la ranura de la app movil que va a rellenarlo por voz. Cuando esto
+     * estaba escrito solo en el generador de Java, la app derivaba el nombre por su cuenta
+     * ignorando el rol — y mandaba {@code cliente} donde el servidor esperaba {@code titularId}.
+     */
+    public String nombreDeCampoDeRelacion(String rol, String claseDelOtro, boolean esColeccion) {
+        if (rol != null && !rol.isBlank()) {
+            return nombreDeCampo(rol);
+        }
+        String base = nombreDeCampo(claseDelOtro);
+        return esColeccion ? base + "s" : base;
+    }
+
+    /**
+     * El campo del DTO que lleva el identificador de la otra punta: {@code clienteId}.
+     *
+     * <p>Es <b>lo que viaja por el cable</b>, y por eso la app movil tiene que usar exactamente
+     * esta cadena como clave del JSON. Mandar la ranura con su nombre hablado —{@code cliente}—
+     * hace que el servidor descarte el dato y rechace la peticion por el campo obligatorio que
+     * falta, sin que el usuario pueda hacer nada al respecto.
+     */
+    public String campoDeReferencia(String rol, String claseDelOtro) {
+        return nombreDeCampoDeRelacion(rol, claseDelOtro, false) + "Id";
+    }
+
     /** Nombre de tabla intermedia de un MANY_TO_MANY, con la misma regla. */
     public String nombreDeTablaIntermedia(String origen, String destino) {
         return escaparSiHaceFalta(

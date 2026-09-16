@@ -106,9 +106,13 @@ public class NluIntentGeneratorService {
             AttributeType.INTEGER, AttributeType.BIGINT, AttributeType.UUID);
 
     private final SpanishNounInflector palabras;
+    private final com.modelcollab.metamodel.service.IdentifierSanitizer sanitizer;
 
-    public NluIntentGeneratorService(SpanishNounInflector palabras) {
+    public NluIntentGeneratorService(
+            SpanishNounInflector palabras,
+            com.modelcollab.metamodel.service.IdentifierSanitizer sanitizer) {
         this.palabras = palabras;
+        this.sanitizer = sanitizer;
     }
 
     public IntentCatalog generar(CanonicalModel modelo) {
@@ -251,9 +255,16 @@ public class NluIntentGeneratorService {
         ClassEntity otro = porId.get(soyOrigen ? r.targetClassId() : r.sourceClassId());
         Multiplicity extremoDelOtro = soyOrigen ? r.targetMultiplicity() : r.sourceMultiplicity();
 
-        String nombre = enMinusculaInicial(otro.name());
-        return java.util.Optional.of(
-                IntentSlot.deRelacion(nombre, otro.name(), extremoDelOtro == Multiplicity.ONE_ONE));
+        // El rol de la relacion manda sobre el nombre de la clase, y la regla es la MISMA que usa
+        // el generador del backend para nombrar ese campo. Antes esto derivaba el nombre por su
+        // cuenta e ignoraba el rol: con targetRole "titular", el DTO esperaba titularId y la
+        // ranura decia cliente.
+        String rol = soyOrigen ? r.targetRole() : r.sourceRole();
+        String nombre = sanitizer.nombreDeCampoDeRelacion(rol, otro.name(), false);
+        String campo = sanitizer.campoDeReferencia(rol, otro.name());
+
+        return java.util.Optional.of(IntentSlot.deRelacion(
+                nombre, campo, otro.name(), extremoDelOtro == Multiplicity.ONE_ONE));
     }
 
     /**
@@ -294,11 +305,4 @@ public class NluIntentGeneratorService {
         }
     }
 
-    private static String enMinusculaInicial(String nombre) {
-        if (nombre == null || nombre.isBlank()) {
-            return "referencia";
-        }
-        String limpio = nombre.strip();
-        return Character.toLowerCase(limpio.charAt(0)) + limpio.substring(1);
-    }
 }

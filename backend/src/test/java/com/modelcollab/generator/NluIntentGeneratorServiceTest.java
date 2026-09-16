@@ -10,6 +10,7 @@ import com.modelcollab.generator.dto.IntentSlot;
 import com.modelcollab.generator.service.NluIntentGeneratorService;
 import com.modelcollab.generator.service.SpanishNounInflector;
 import com.modelcollab.metamodel.model.CanonicalModel;
+import com.modelcollab.metamodel.service.IdentifierSanitizer;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -33,7 +34,7 @@ class NluIntentGeneratorServiceTest {
 
     private final ObjectMapper mapper = JacksonConfig.canonicalObjectMapper();
     private final NluIntentGeneratorService generador =
-            new NluIntentGeneratorService(new SpanishNounInflector());
+            new NluIntentGeneratorService(new SpanishNounInflector(), new IdentifierSanitizer());
 
     private CanonicalModel leer(String recurso) throws Exception {
         try (InputStream in = getClass().getClassLoader().getResourceAsStream(recurso)) {

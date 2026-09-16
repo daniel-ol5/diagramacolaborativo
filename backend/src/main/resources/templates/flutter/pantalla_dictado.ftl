@@ -106,10 +106,20 @@ class _PantallaDictadoState extends State<PantallaDictado> {
       return;
     }
 
+    // Que campos llevan todavia un nombre dictado en vez de un identificador.
+    // La cola los resuelve al sincronizar, porque resolver necesita preguntarle
+    // al servidor y aca puede no haber conexion.
+    final Map<String, String> referencias = <String, String>{
+      for (final Ranura ranura in reconocido.intencion.ranuras)
+        if (ranura.referencia != null && _datos.containsKey(ranura.campo))
+          ranura.campo: ranura.referencia!,
+    };
+
     await cola.encolar(
       reconocido.intencion.entidad,
       reconocido.intencion.accion,
       _datos,
+      referencias: referencias,
     );
     final int enviadas = await cola.sincronizar(_api);
 
@@ -168,11 +178,11 @@ class _PantallaDictadoState extends State<PantallaDictado> {
                       ListTile(
                         dense: true,
                         title: Text(ranura.nombre),
-                        subtitle: Text(_datos[ranura.nombre] ?? '(sin dato)'),
+                        subtitle: Text(_datos[ranura.campo] ?? '(sin dato)'),
                         // Lo que falta y es obligatorio se marca: confirmar
                         // sin eso deja un registro a medias en el servidor.
                         trailing: ranura.obligatoria &&
-                                !_datos.containsKey(ranura.nombre)
+                                !_datos.containsKey(ranura.campo)
                             ? const Icon(Icons.error_outline)
                             : null,
                       ),

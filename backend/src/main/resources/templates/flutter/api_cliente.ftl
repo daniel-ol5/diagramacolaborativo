@@ -65,6 +65,58 @@ class ClienteApi {
     return cuerpo is List<dynamic> ? cuerpo : <dynamic>[];
   }
 
+  /// Busca el id de una entidad a partir del nombre que se dicto.
+  ///
+  /// "con Carlos" llega como texto y el servidor espera un identificador. Se
+  /// trae la lista y se compara contra CUALQUIER campo de texto: el diagrama
+  /// no dice cual es el nombre de una entidad —puede llamarse nombre, razon
+  /// social o descripcion— y adivinarlo por el nombre del atributo acertaria
+  /// en la barberia y fallaria en el siguiente dominio.
+  ///
+  /// Devuelve null si no encuentra ninguno o si hay mas de uno: ante dos
+  /// "Carlos" no se elige por sorteo, se le pregunta a la persona.
+  Future<String?> resolverId(String entidad, String texto) async {
+    final String buscado = _plano(texto);
+    if (buscado.isEmpty) {
+      return null;
+    }
+    final List<dynamic> filas = await listar(entidad);
+    String? encontrado;
+
+    for (final dynamic fila in filas) {
+      if (fila is! Map<String, dynamic>) {
+        continue;
+      }
+      final bool coincide = fila.entries.any(
+        (MapEntry<String, dynamic> campo) =>
+            campo.key != 'id' &&
+            campo.value is String &&
+            _plano(campo.value as String) == buscado,
+      );
+      if (!coincide) {
+        continue;
+      }
+      if (encontrado != null) {
+        return null; // ambiguo
+      }
+      encontrado = fila['id']?.toString();
+    }
+    return encontrado;
+  }
+
+  /// Minusculas y sin tildes, para comparar lo dictado con lo guardado.
+  static String _plano(String texto) {
+    const String con = 'áàäâéèëêíìïîóòöôúùüûñ';
+    const String sin = 'aaaaeeeeiiiioooouuuun';
+    final StringBuffer salida = StringBuffer();
+    for (final int unidad in texto.toLowerCase().trim().runes) {
+      final String caracter = String.fromCharCode(unidad);
+      final int indice = con.indexOf(caracter);
+      salida.write(indice >= 0 ? sin[indice] : caracter);
+    }
+    return salida.toString();
+  }
+
   Future<void> eliminar(String entidad, String id) async {
     final http.Response respuesta =
         await _http.delete(_uri(entidad, '/$id')).timeout(_espera);

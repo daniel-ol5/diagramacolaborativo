@@ -68,7 +68,7 @@ class AppMovilAnalizaTest {
 
     private final ObjectMapper mapper = JacksonConfig.canonicalObjectMapper();
     private final FlutterAppGeneratorService generador = new FlutterAppGeneratorService(
-            new NluIntentGeneratorService(new SpanishNounInflector()),
+            new NluIntentGeneratorService(new SpanishNounInflector(), new IdentifierSanitizer()),
             new IdentifierSanitizer(),
             JacksonConfig.canonicalObjectMapper());
 

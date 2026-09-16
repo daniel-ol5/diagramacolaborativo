@@ -14,8 +14,8 @@ import ${importe};
  * <p>NO editar a mano: este archivo se regenera desde el diagrama.
  */
 public record ${clase}ResponseDTO(
-        ${tipoDelIdEfectivo} id<#if campos?size gt 0 || referencias?size gt 0>,</#if>
-<#list campos as c>
+        ${tipoDelIdEfectivo} id<#if camposDto?size gt 0 || referencias?size gt 0>,</#if>
+<#list camposDto as c>
         ${t[c.tipo]} ${c.campo}<#if c_has_next || referencias?size gt 0>,</#if>
 </#list>
 <#list referencias as r>

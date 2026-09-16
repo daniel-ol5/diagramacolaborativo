@@ -10,7 +10,7 @@ import ${importe};
  * <p>NO editar a mano: este archivo se regenera desde el diagrama.
  */
 public record ${clase}RequestDTO(
-<#list campos as c>
+<#list camposDto as c>
 <#if !c.nullable && c.tipo == "String">
         @jakarta.validation.constraints.NotBlank
 <#elseif !c.nullable>
