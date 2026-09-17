@@ -34,6 +34,17 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 @RestControllerAdvice
 public class SubidaDemasiadoGrandeHandler {
 
+    // ATIENDE UNA SOLA EXCEPCION, Y ESO ES LA MITAD DEL DISENIO.
+    //
+    // Es el primer @ControllerAdvice del proyecto, y un advice global es justo el tipo de cosa
+    // que puede devorar codigos de estado sin que nadie lo note: este proyecto ya tuvo un
+    // incidente asi —la cadena de seguridad reevaluaba el reenvio a /error y TODA respuesta de
+    // error salia convertida en un 403 con cuerpo vacio—. Por eso aca no hay ningun manejador
+    // de Exception, ni de RuntimeException, ni nada que pueda tapar un 409, un 422 o un 401 que
+    // su controlador ya contesta bien. Si algun dia hace falta otro manejador global, que sea
+    // igual de especifico o que se justifique en su propio comentario.
+
+
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, String>> demasiadoGrande(MaxUploadSizeExceededException e) {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)

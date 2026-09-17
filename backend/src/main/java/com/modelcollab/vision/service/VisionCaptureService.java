@@ -64,6 +64,17 @@ public class VisionCaptureService {
      * sacó la foto, y si esa persona no lo tiene abierto, el mensaje se emite contra un canal que
      * nadie escucha y se pierde en silencio. Eso es lo peor que puede pasar acá, porque desde el
      * teléfono se vería idéntico a un éxito.
+     *
+     * <h2>LIMITACIÓN CONOCIDA: queda una ventana de carrera, y está abierta a propósito</h2>
+     *
+     * <p>Entre la pregunta y la difusión, la persona puede cerrar la pestaña. En ese caso la
+     * lectura <b>ya se pagó</b>, el mensaje se pierde igual, y el teléfono dice que salió bien.
+     *
+     * <p>No está cerrada porque cerrarla bien exige que el navegador <b>acuse recibo</b>, y eso
+     * es protocolo nuevo en el cliente de colaboración. El costo no lo justifica: la ventana pasó
+     * de "siempre" —que es lo que era sin la pregunta— a unos milisegundos, y el uso real de esto
+     * es una laptop abierta y el celular en la mano. Queda escrito para que sea un agujero
+     * conocido y no uno ignorado.
      */
     public VisionCaptureResponse recibir(UUID diagramId, UUID userId, byte[] imagen) {
         if (!estaMirando(diagramId, userId)) {
