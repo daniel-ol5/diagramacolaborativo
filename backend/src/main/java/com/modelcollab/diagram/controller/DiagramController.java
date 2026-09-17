@@ -12,6 +12,8 @@ import com.modelcollab.diagram.repository.DiagramRepository;
 import com.modelcollab.diagram.service.OfflineReconciliationService;
 import com.modelcollab.diagram.service.PreGenerationValidatorService;
 import com.modelcollab.generator.service.FlutterAppGeneratorService;
+import com.modelcollab.generator.dto.SchemaPreview;
+import com.modelcollab.generator.service.SchemaPreviewService;
 import com.modelcollab.generator.service.SpringBootGeneratorService;
 import com.modelcollab.generator.service.ZipPackagingService;
 import com.modelcollab.metamodel.model.CanonicalModel;
@@ -48,6 +50,7 @@ public class DiagramController {
     private final OfflineReconciliationService reconciliationService;
     private final PreGenerationValidatorService validatorService;
     private final SpringBootGeneratorService generatorService;
+    private final SchemaPreviewService schemaPreviewService;
     private final FlutterAppGeneratorService movilService;
     private final ZipPackagingService zipService;
     private final IdentifierSanitizer sanitizer;
@@ -60,6 +63,7 @@ public class DiagramController {
             OfflineReconciliationService reconciliationService,
             PreGenerationValidatorService validatorService,
             SpringBootGeneratorService generatorService,
+            SchemaPreviewService schemaPreviewService,
             FlutterAppGeneratorService movilService,
             ZipPackagingService zipService,
             IdentifierSanitizer sanitizer,
@@ -70,6 +74,7 @@ public class DiagramController {
         this.reconciliationService = reconciliationService;
         this.validatorService = validatorService;
         this.generatorService = generatorService;
+        this.schemaPreviewService = schemaPreviewService;
         this.movilService = movilService;
         this.zipService = zipService;
         this.sanitizer = sanitizer;
@@ -114,6 +119,40 @@ public class DiagramController {
     public ValidationReportDTO validar(@PathVariable UUID diagramId, Principal emisor) {
         exigirMembresia(diagramId, userId(emisor));
         return validatorService.validar(diagramId);
+    }
+
+    // ------------------------------------ CU15: vista previa del esquema fisico
+
+    /**
+     * El esquema de base de datos que el diagrama va a producir (CU15).
+     *
+     * <h2>Devuelve el resultado, no las reglas</h2>
+     *
+     * <p>La vista Entidad-Relación necesita los nombres físicos —tabla, columna, clave foránea,
+     * tabla intermedia— y hasta ahora el navegador sólo tenía dos caminos: reimplementar el
+     * saneador de identificadores en TypeScript, o inventarlos. Ninguno de los dos es inofensivo:
+     * son <b>dos listas distintas de palabras reservadas</b>, prefijos por dígito inicial y casos
+     * de borde que divergen en silencio.
+     *
+     * <p>Y exponer esas funciones tampoco habría alcanzado, porque el cliente seguiría teniendo
+     * que saber <b>cómo se ensamblan</b>: qué columna nace de qué relación, de qué lado según
+     * {@code owningSide}, cuándo aparece una tabla intermedia. Eso es la misma divergencia mudada
+     * de las funciones a la composición. Acá viaja el esquema armado: el cliente dibuja.
+     *
+     * <p>Sale del mismo modelo que renderiza el ZIP, así que no hay dos cuentas que puedan
+     * separarse. Lo comprueba {@code VistaPreviaCoincideConElZipTest} contra el Java realmente
+     * generado, que es el hueco que compartir el modelo no cierra.
+     *
+     * <p>Lo lee <b>cualquier miembro, VIEWER incluido</b>, por el mismo criterio que validar y
+     * generar: es una lectura y no toca el diagrama.
+     */
+    @GetMapping("/{diagramId}/schema-preview")
+    public SchemaPreview vistaPreviaDelEsquema(
+            @PathVariable UUID diagramId, Principal emisor) {
+
+        exigirMembresia(diagramId, userId(emisor));
+        return schemaPreviewService.calcular(
+                validatorService.estadoDe(diagramId), traer(diagramId).getMutationVersion());
     }
 
     // --------------------------------------------- CU14: generar backend (ZIP)

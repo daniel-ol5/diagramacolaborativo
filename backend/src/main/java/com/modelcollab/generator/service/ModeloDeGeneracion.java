@@ -284,6 +284,7 @@ class ModeloDeGeneracion {
             // §11.2.2: inyección automática cuando el modelador no definió clave primaria.
             Map<String, Object> id = new LinkedHashMap<>();
             id.put("tipo", "Long");
+            id.put("tipoCanonico", AttributeType.BIGINT.name());
             id.put("campo", "id");
             id.put("columna", "id");
             id.put("generacion", "IDENTITY");
@@ -607,6 +608,9 @@ class ModeloDeGeneracion {
         agregarImporte(tipo, usados);
         Map<String, Object> id = new LinkedHashMap<>();
         id.put("tipo", tipo);
+        // El tipo tal como lo dibujo el modelador. El Java ya perdio la diferencia entre VARCHAR
+        // y TEXT —los dos son String— y la vista previa del esquema necesita distinguirlos.
+        id.put("tipoCanonico", pk.type().name());
         id.put("campo", sanitizer.nombreDeCampo(pk.name()));
         id.put("columna", literal(sanitizer.nombreDeColumna(pk.name())));
         // La estrategia sigue al tipo: una PK UUID con IDENTITY no arranca, y una Long con
@@ -627,6 +631,7 @@ class ModeloDeGeneracion {
         String campo = sanitizer.nombreDeCampo(atributo.name());
         Map<String, Object> c = new LinkedHashMap<>();
         c.put("tipo", tipo);
+        c.put("tipoCanonico", atributo.type().name());
         c.put("campo", campo);
         c.put("nombreOriginal", atributo.name());
         c.put("getter", sanitizer.enMayusculaInicial(campo));
