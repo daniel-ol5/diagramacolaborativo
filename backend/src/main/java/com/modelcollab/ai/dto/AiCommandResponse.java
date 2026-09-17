@@ -12,13 +12,28 @@ import java.util.List;
  * <p>{@code operations} son las frases legibles de lo que se hizo, una por operación. No es
  * adorno: <b>el que dictó por voz no vio lo que escribió</b>, y necesita que el sistema le diga
  * qué entendió, o no tiene forma de enterarse de que "Factura" salió "Fractura".
+ *
+ * <h2>{@code simulated}: el simulado no disimula</h2>
+ *
+ * <p>Dice si contestó un modelo de verdad o el cliente simulado, igual que en
+ * {@code VisionProposalResponse}. Sin este campo <b>una respuesta enlatada se ve exactamente
+ * igual que una real</b>, y alguien —un tribunal incluido— puede creer que está viendo funcionar
+ * algo que no está conectado. Cuando aparezca la clave de Gemini el valor pasa a {@code false}
+ * solo y el aviso desaparece de la interfaz sin que nadie toque nada.
+ *
+ * <p><b>Lo pone el controlador al salir, no estas fábricas</b>, y es deliberado: hay tres puertas
+ * por las que sale una respuesta —la normal y dos manejadores de excepción— y si cada sitio que
+ * construye una tuviera que acordarse del dato, el que se olvidara diría {@code false}, o sea
+ * <i>"esto lo contestó un modelo real"</i>. La omisión miente en la dirección peligrosa. Por eso
+ * el valor se estampa en un solo lugar de salida y hay un test que recorre las tres puertas.
  */
 public record AiCommandResponse(
         boolean applied,
         String reason,
         String message,
         List<String> operations,
-        Long mutationVersion) {
+        Long mutationVersion,
+        boolean simulated) {
 
     /** Pidió generar un dominio entero (RF-02.6). */
     public static final String GENERAR_DOMINIO = "GENERATE_DOMAIN";
@@ -41,10 +56,21 @@ public record AiCommandResponse(
 
     public static AiCommandResponse aplicada(
             List<String> operaciones, String mensaje, long mutationVersion) {
-        return new AiCommandResponse(true, null, mensaje, operaciones, mutationVersion);
+        return new AiCommandResponse(true, null, mensaje, operaciones, mutationVersion, false);
     }
 
     public static AiCommandResponse rechazada(String motivo, String mensaje) {
-        return new AiCommandResponse(false, motivo, mensaje, List.of(), null);
+        return new AiCommandResponse(false, motivo, mensaje, List.of(), null, false);
+    }
+
+    /**
+     * La misma respuesta, diciendo de dónde salió.
+     *
+     * <p>Es lo último que se le hace antes de serializarla. Ver la nota de arriba sobre por qué
+     * vive acá y no en cada fábrica.
+     */
+    public AiCommandResponse conSimulado(boolean simulado) {
+        return new AiCommandResponse(
+                applied, reason, message, operations, mutationVersion, simulado);
     }
 }

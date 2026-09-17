@@ -76,7 +76,23 @@ public class AiCommandController {
         log.debug("Comando de IA en {} ({}): aplicado={} motivo={}",
                 diagramId, cliente.descripcion(),
                 resultado.respuesta().applied(), resultado.respuesta().reason());
-        return ResponseEntity.ok(resultado.respuesta());
+        return responder(HttpStatus.OK, resultado.respuesta());
+    }
+
+    /**
+     * La única salida: toda respuesta se estampa acá con de dónde salió.
+     *
+     * <p><b>Existe para que no haya que acordarse.</b> Hay tres puertas —ésta y los dos
+     * manejadores de excepción— y el campo {@code simulated} tiene que decir la verdad en las
+     * tres. Si cada una lo pusiera por su cuenta, la que se olvidara diría {@code false}, que
+     * significa <i>"esto lo contestó un modelo real"</i>: la omisión miente, y miente en la
+     * dirección peligrosa. Es la misma familia de error que el {@code mappedBy} y que el prefijo
+     * {@code /api} — una regla que varios sitios tienen que respetar y nadie confronta—, así que
+     * se resuelve igual: un solo lugar, y un test que recorre las tres puertas.
+     */
+    private ResponseEntity<AiCommandResponse> responder(
+            HttpStatus estado, AiCommandResponse cuerpo) {
+        return ResponseEntity.status(estado).body(cuerpo.conSimulado(cliente.esSimulado()));
     }
 
     /**
@@ -89,8 +105,7 @@ public class AiCommandController {
      */
     @ExceptionHandler(ComandoRechazadoException.class)
     public ResponseEntity<AiCommandResponse> rechazo(ComandoRechazadoException e) {
-        return ResponseEntity.ok(
-                AiCommandResponse.rechazada(e.getMotivo(), e.getMessage()));
+        return responder(HttpStatus.OK, AiCommandResponse.rechazada(e.getMotivo(), e.getMessage()));
     }
 
     /**
@@ -104,8 +119,8 @@ public class AiCommandController {
     @ExceptionHandler(RespuestaDeIaInvalidaException.class)
     public ResponseEntity<AiCommandResponse> falloDeLaIa(RespuestaDeIaInvalidaException e) {
         log.warn("El servicio de IA rompió el contrato: {}", e.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-                .body(AiCommandResponse.rechazada(e.getMotivo(), e.getMessage()));
+        return responder(
+                HttpStatus.BAD_GATEWAY, AiCommandResponse.rechazada(e.getMotivo(), e.getMessage()));
     }
 
     private void exigirPermisoDeEscritura(UUID diagramId, UUID userId) {
