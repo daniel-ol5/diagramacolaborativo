@@ -3,8 +3,10 @@ package com.modelcollab.vision.controller;
 import com.modelcollab.ai.service.RespuestaDeIaInvalidaException;
 import com.modelcollab.project.model.ProjectRole;
 import com.modelcollab.project.repository.ProjectMemberRepository;
+import com.modelcollab.vision.dto.VisionCaptureResponse;
 import com.modelcollab.vision.dto.VisionConfirmRequest;
 import com.modelcollab.vision.dto.VisionProposalResponse;
+import com.modelcollab.vision.service.VisionCaptureService;
 import com.modelcollab.vision.service.VisionImageValidator;
 import com.modelcollab.vision.service.VisionImportService;
 import com.modelcollab.vision.service.VisionMerger;
@@ -45,14 +47,17 @@ public class VisionController {
     private static final Logger log = LoggerFactory.getLogger(VisionController.class);
 
     private final VisionImportService importService;
+    private final VisionCaptureService captureService;
     private final ProjectMemberRepository projectMemberRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
     public VisionController(
             VisionImportService importService,
+            VisionCaptureService captureService,
             ProjectMemberRepository projectMemberRepository,
             SimpMessagingTemplate messagingTemplate) {
         this.importService = importService;
+        this.captureService = captureService;
         this.projectMemberRepository = projectMemberRepository;
         this.messagingTemplate = messagingTemplate;
     }
@@ -84,6 +89,42 @@ public class VisionController {
         return importService.analizar(diagramId, imagen);
     }
 
+    /**
+     * Recibe una foto sacada desde el celular y empuja la propuesta al navegador (RF-03.5).
+     *
+     * <h2>El teléfono manda bytes y nada más</h2>
+     *
+     * <p>Es el mismo POST autenticado que cualquier otro y usa <b>el camino de visión de
+     * CU17 sin modificar</b>. El teléfono no habla STOMP, no recibe nada de ese canal y no conoce
+     * el modelo canónico: si en algún momento necesitara conocerlo, el diseño estaría mal.
+     *
+     * <p>Exige permiso de escritura por lo mismo que {@link #analizar}: la lectura se paga y sólo
+     * le sirve a quien después va a poder confirmarla.
+     *
+     * <p>Si nadie tiene ese diagrama abierto, <b>responde 200 igual</b> con {@code delivered:
+     * false}. No es un error del teléfono ni del servidor: es la limitación honesta de no guardar
+     * nada. Un 4xx haría que la app lo tratara como un fallo y ofreciera reintentar, cuando lo
+     * que hay que hacer es abrir el diagrama en la computadora.
+     */
+    @PostMapping("/api/v1/diagrams/{diagramId}/vision-capture")
+    public VisionCaptureResponse capturar(
+            @PathVariable UUID diagramId,
+            @RequestParam("image") MultipartFile archivo,
+            Principal emisor) {
+
+        UUID userId = userId(emisor);
+        exigirPermisoDeEscritura(diagramId, userId);
+
+        byte[] imagen;
+        try {
+            imagen = archivo == null ? null : archivo.getBytes();
+        } catch (IOException e) {
+            throw new VisionImageValidator.ImagenRechazadaException(
+                    "No se pudo leer la foto que mandaste.");
+        }
+        return captureService.recibir(diagramId, userId, imagen);
+    }
+
     /** Aplica lo que la persona revisó y confirmó, como un único evento para la sala. */
     @PostMapping("/api/v1/diagrams/{diagramId}/vision-import/confirm")
     public ResponseEntity<Map<String, Object>> confirmar(
@@ -111,22 +152,11 @@ public class VisionController {
                 "mutationVersion", resultado.mutationVersion()));
     }
 
-    /**
-     * Un archivo tan grande que Spring lo corta antes de que llegue el controlador.
-     *
-     * <p>Sin este manejador la respuesta es un <b>413 con el cuerpo vacío</b>: el usuario sube
-     * una foto, no pasa nada y no hay ningún texto que leer. El límite de Spring está puesto por
-     * encima del que aplica el validador justamente para que casi siempre hable el validador,
-     * que explica cuánto pesa y qué hacer; esto es la red por si alguien sube algo absurdo.
-     */
-    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
-    public ResponseEntity<Map<String, String>> demasiadoGrande(
-            org.springframework.web.multipart.MaxUploadSizeExceededException e) {
-        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
-                .body(Map.of("reason", "INVALID_IMAGE",
-                        "message", "La imagen es demasiado grande. El máximo son 8 MB: "
-                                + "sacale resolución y volvé a intentar."));
-    }
+    // El manejador de MaxUploadSizeExceededException vivia aca y NO SE EJECUTABA NUNCA: esa
+    // excepcion la lanza el resolvedor de multipart antes de que se elija un controlador, asi que
+    // un @ExceptionHandler local no la puede ver. Se mudo a SubidaDemasiadoGrandeHandler, que es
+    // un @RestControllerAdvice. Lo encontro una verificacion contra el servidor real con un
+    // archivo de 11 MB: devolvia 413 con el cuerpo vacio, justo lo que pretendia evitar.
 
     /** La imagen no sirve y quien la subió puede arreglarlo: 400. */
     @ExceptionHandler(VisionImageValidator.ImagenRechazadaException.class)
