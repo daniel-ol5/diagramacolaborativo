@@ -288,39 +288,62 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
         {toolbarLeft}
 
         {diagramId && (
-          <button type="button" className="app__new-class-btn" onClick={() => setShowNewClass(true)}>
-            + Clase
-          </button>
+          <div className="app__toolbar-group" aria-label="Construir el modelo">
+            <button type="button" className="app__new-class-btn" onClick={() => setShowNewClass(true)}>
+              + Clase
+            </button>
+            <button type="button" onClick={() => setShowAiCommand((v) => !v)}>
+              Comando
+            </button>
+            <button type="button" onClick={() => setShowVisionImport(true)}>
+              Importar foto
+            </button>
+          </div>
+        )}
+
+        {model && (
+          <div className="app__toolbar-group app__view-toggle" role="group" aria-label="Cómo se ve">
+            <button
+              type="button"
+              className={`app__view-toggle-btn${viewMode === "uml" ? " app__view-toggle-btn--active" : ""}`}
+              onClick={() => setViewMode("uml")}
+              title="Notación UML"
+            >
+              UML
+            </button>
+            <button
+              type="button"
+              className={`app__view-toggle-btn${viewMode === "er" ? " app__view-toggle-btn--active" : ""}`}
+              onClick={() => setViewMode("er")}
+              title="Notación Entidad-Relación (esquema físico)"
+            >
+              Entidad-Relación
+            </button>
+          </div>
         )}
 
         {diagramId && (
-          <button type="button" onClick={handleValidate} disabled={validating}>
-            {validating ? "Validando…" : "Validar"}
-          </button>
+          <div className="app__toolbar-group" aria-label="Sacar algo del modelo">
+            <button type="button" className="app__toolbar-btn--fixed" onClick={handleValidate} disabled={validating}>
+              {validating ? "Validando…" : "Validar"}
+            </button>
+            <button type="button" onClick={() => setShowGenerateModal(true)}>
+              Generar backend
+            </button>
+          </div>
         )}
-        {diagramId && (
-          <button type="button" onClick={() => setShowGenerateModal(true)}>
-            Generar backend
-          </button>
-        )}
-        {diagramId && (
-          <button type="button" onClick={() => setShowAiCommand((v) => !v)}>
-            Comando
-          </button>
-        )}
-        {diagramId && (
-          <button type="button" onClick={() => setShowVisionImport(true)}>
-            Importar foto
-          </button>
-        )}
-        {model && (
-          <button type="button" onClick={() => setViewMode(viewMode === "uml" ? "er" : "uml")} title="Mismo modelo, otra notacion">
-            Vista: {viewMode === "uml" ? "UML" : "Entidad-Relación"}
-          </button>
-        )}
-        {viewMode === "er" && !schemaPreview && !schemaError && <span className="app__collab-warning">Cargando esquema…</span>}
-        {schemaError && <span className="app__collab-warning">⚠ {schemaError}</span>}
-        {generatorError && <span className="app__collab-warning">⚠ {generatorError}</span>}
+
+        <div className="app__toolbar-status">
+          {viewMode === "er" && !schemaPreview && !schemaError && <span className="app__collab-warning">Cargando esquema…</span>}
+          {schemaError && <span className="app__collab-warning">⚠ {schemaError}</span>}
+          {generatorError && <span className="app__collab-warning">⚠ {generatorError}</span>}
+          {collaboration.sequenceGap && (
+            <span className="app__collab-warning">
+              ⚠ se perdió al menos un evento (esperaba #{collaboration.sequenceGap.esperaba}, llegó #
+              {collaboration.sequenceGap.llego})
+            </span>
+          )}
+        </div>
 
         {diagramId && (
           <span
@@ -335,12 +358,6 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
           </span>
         )}
         {diagramId && <RosterPanel />}
-        {collaboration.sequenceGap && (
-          <span className="app__collab-warning">
-            ⚠ se perdió al menos un evento (esperaba #{collaboration.sequenceGap.esperaba}, llegó #
-            {collaboration.sequenceGap.llego})
-          </span>
-        )}
 
         <span className="app__session">{session.email}</span>
       </header>

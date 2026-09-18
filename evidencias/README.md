@@ -319,3 +319,38 @@ Verificado en vivo con dos scripts aparte (no incluidos en el repo):
 `npm run build`, `npm run lint` y `node scripts/check-contrast.mjs` (19/19) sin advertencias
 nuevas; `check-rendered-contrast.mjs` completo (claro y oscuro) sigue en `TODO OK` después de
 este cambio.
+
+---
+
+## Rediseño de la barra del lienzo — 17 de septiembre de 2026
+
+| Archivo | Qué prueba |
+| :--- | :--- |
+| `cu15-vista-er/vista-er-barberia.png` (ya existente) | La barra **antes**: seis botones en una fila sin agrupar, y el botón único "Vista: UML" ↔ "Vista: Entidad-Relación" que cambiaba de ancho al tocarlo |
+| `barra-herramientas/despues-normal.png` | La barra **después**, a 1400px: tres grupos separados por función (Construir el modelo / Cómo se ve / Sacar algo del modelo), con el control segmentado UML · Entidad-Relación |
+| `barra-herramientas/despues-angosto-400px.png` | La misma barra a 400px de ancho, sin zoom: los grupos envuelven a su propia fila en vez de desbordar horizontalmente |
+
+Dos reportes concretos de Daniel, los dos sobre lo mismo: un elemento que cambia de tamaño
+según un estado transitorio corre todo lo que está a su derecha.
+
+- El botón de vista pasaba de "Vista: UML" (10 caracteres) a "Vista: Entidad-Relación" (23) --
+  ahora es un control segmentado con las DOS etiquetas siempre en el DOM; sólo cambia cuál mitad
+  está resaltada, nunca el ancho total.
+- "Validar" ↔ "Validando…" tenía el mismo problema en miniatura -- se midió el ancho real del
+  string más largo ya renderizado (`ch` no alcanza, la tipografía no es monoespaciada) y se fijó
+  como `min-width` del botón.
+- Los avisos transitorios (esquema cargando, error de validar/generar, hueco de secuencia) antes
+  eran `<span>` sueltos intercalados entre botones; ahora viven en un contenedor propio
+  (`.app__toolbar-status`) que sólo crece hacia la derecha, nunca empuja un botón de lugar.
+
+Verificado en vivo (script aparte, no incluido en el repo), en los dos viewports:
+
+- A 1400px: el `getBoundingClientRect()` del control segmentado y de lo que está a su derecha
+  (estado de colaboración) es **idéntico, pixel a pixel**, antes y después de alternar
+  UML/Entidad-Relación. Mismo chequeo para "Validar"/"Validando…": 96px fijos en los dos
+  estados.
+- A 400px, sin zoom: `document.documentElement.scrollWidth` no excede el ancho del viewport --
+  los grupos envuelven en vez de generar scroll horizontal de página.
+
+4/4. `npm run build`, `npm run lint`, `node scripts/check-contrast.mjs` (19/19) y
+`check-rendered-contrast.mjs` completo (claro y oscuro) en `TODO OK` sin regresiones.

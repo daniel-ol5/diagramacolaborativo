@@ -7,6 +7,7 @@
 
 .app__toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   padding: 6px var(--space-3);
@@ -14,6 +15,77 @@
   border-bottom: 1px solid var(--color-border);
   font-family: "Segoe UI", Roboto, sans-serif;
   font-size: var(--font-size-base);
+}
+
+/* Tres grupos por función (construir / notación / sacar del modelo), no una
+   fila plana de 6 botones sin jerarquía -- separados por un borde fino, no
+   solo por espacio, para que la agrupación se note incluso en una fila que
+   ya envuelve en pantallas angostas. */
+.app__toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-right: var(--space-2);
+  border-right: 1px solid var(--color-border);
+}
+
+/* Control segmentado UML / Entidad-Relación: las DOS etiquetas estan
+   siempre en el DOM (a diferencia del boton unico anterior, que alternaba
+   "Vista: UML" <-> "Vista: Entidad-Relación" y por eso cambiaba de ancho
+   cada vez que se tocaba -- reporte directo de Daniel). El ancho total no
+   se mueve nunca, solo cambia cual mitad esta resaltada. */
+.app__view-toggle {
+  padding: 2px;
+  gap: 0;
+  border-right: none;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.app__view-toggle-btn {
+  border: none;
+  background: transparent;
+  padding: 3px 10px;
+  font-size: var(--font-size-sm);
+  border-radius: 4px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.app__view-toggle-btn--active {
+  background: var(--color-primary);
+  color: var(--color-primary-contrast);
+}
+
+/* "Validar" <-> "Validando…" es el mismo tipo de salto: ancho reservado de
+   antemano por el string mas largo de los dos, para que tocar el boton no
+   corra todo lo que esta a la derecha. */
+.app__toolbar-btn--fixed {
+  /* "Validar" (7 caracteres) vs "Validando…" (10 caracteres): con un boton
+     de ancho automatico, tocarlo corre todo lo que esta a la derecha. `ch`
+     no alcanza aca (la tipografia no es monoespaciada) -- el numero sale de
+     medir el mas largo de los dos ya renderizado, no de una cuenta de
+     caracteres. */
+  min-width: 96px;
+}
+
+/* Reserva de espacio para los avisos transitorios (esquema cargando, error
+   de validar/generar, hueco de secuencia): un contenedor propio en vez de
+   <span> sueltos intercalados entre botones, para que aparecer/desaparecer
+   nunca mueva un boton de lugar -- solo crece hacia la derecha, en el mismo
+   lugar donde ya varia el estado de colaboracion (roster, sesion). */
+.app__toolbar-status {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.app__toolbar-status .app__collab-warning {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app__canvas {
