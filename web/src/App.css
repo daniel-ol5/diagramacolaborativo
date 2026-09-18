@@ -72,14 +72,26 @@
 .app__roster-chip {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   padding: 2px var(--space-2);
   border-radius: 10px;
   font-size: 11px;
-  /* El color de fondo lo manda el servidor (Participante.color), inline
-     por elemento -- no se toca desde aca (D-XX). El color del texto
-     tambien es inline (readableTextColor): esa paleta esta medida como
-     trazo contra la tinta del lienzo, no como relleno con texto encima. */
   font-weight: 600;
+  /* El color de colaborador NO rellena el fondo: es un punto (ver
+     .app__roster-chip-dot) y el texto se queda en los colores normales de
+     la interfaz. Esa paleta esta medida como trazo contra la tinta del
+     lienzo, no como relleno con texto encima -- con relleno, la
+     legibilidad dependia de cual de los ocho colores le tocara a cada
+     colaborador (uno daba 4.41:1, por debajo del piso de 4.5). */
+  background: var(--color-bg-subtle);
+  color: var(--color-text);
+}
+
+.app__roster-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .app__session {

@@ -1,10 +1,44 @@
 :root {
-  color-scheme: light dark;
+  /* La paleta de este proyecto es clara y unica: tokens.css no define ningun
+     valor alternativo para modo oscuro -- no hay bloque prefers-color-scheme en
+     ninguna parte de src/.
+
+     Declarar "light dark" (herencia de la plantilla de Vite) era entonces una
+     afirmacion falsa, y tenia una consecuencia concreta: con el sistema
+     operativo en modo oscuro, el color de texto POR DEFECTO del navegador pasa
+     a blanco, mientras todos los fondos siguen saliendo claros desde los
+     tokens. Cualquier texto que no fijara su propio color quedaba blanco sobre
+     gris claro -- invisible. Los nombres de proyecto de la lista fueron el caso
+     visible; la causa era global. */
+  color-scheme: light;
+
+  /* El color base se declara explicitamente y no se hereda del navegador. Esto
+     es lo que evita que el problema vuelva: aunque alguien reactive el modo
+     oscuro, el texto sin color propio cae en un token, no en un default de UA. */
+  color: var(--color-text);
+
   font: 14px/145% system-ui, "Segoe UI", Roboto, sans-serif;
 }
 
 body {
   margin: 0;
+  color: var(--color-text);
+}
+
+/*
+ * <button> (y el resto de los controles de formulario) NO hereda `color`
+ * del body -- el stylesheet del navegador les fija su propio color de
+ * sistema (ButtonText/Canvas), pensado para verse "nativo" sin importar el
+ * resto de la pagina. Es el mismo bug del color-scheme, solo que por otro
+ * mecanismo: un control sin color propio cae en un default del navegador,
+ * no en un token. check-rendered-contrast.mjs lo encontro en botones sin
+ * clase (Compartir, Generar, Agregar, Copiar enlace) -- ninguno estaba
+ * roto todavia (color-scheme:light los mantiene legibles), pero dependian
+ * del mismo default que ya causo el problema una vez.
+ */
+button {
+  color: inherit;
+  font: inherit;
 }
 
 #root {
