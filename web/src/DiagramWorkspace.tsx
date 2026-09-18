@@ -24,7 +24,6 @@ import { usePresentationStore } from "./store/presentationStore";
 import { useCollaborationStore } from "./store/collaborationStore";
 import { useCollaboration } from "./hooks/useCollaboration";
 import { CollaborationActionsContext } from "./hooks/collaborationActionsContext";
-import { readableTextColor } from "./lib/readableTextColor";
 import { triggerDownload } from "./lib/download";
 import { generateBackend, validateDiagram } from "./generator/api";
 import type { ValidationReport } from "./generator/types";
@@ -32,10 +31,16 @@ import { ValidationDialog } from "./generator/ValidationDialog";
 import { GenerateBackendModal } from "./generator/GenerateBackendModal";
 import { AiCommandBox } from "./modeling/AiCommandBox";
 import { VisionImportModal } from "./modeling/VisionImportModal";
+import { ErTableNode } from "./modeling/ErTableNode";
+import { ErRelationshipEdge } from "./modeling/ErRelationshipEdge";
+import { ErMarkerDefs } from "./modeling/ErMarkerDefs";
+import { toErNodes } from "./modeling/toErNodes";
+import { toErEdges } from "./modeling/toErEdges";
+import { fetchSchemaPreview, type SchemaPreview } from "./modeling/schemaPreviewApi";
 import "./App.css";
 
-const nodeTypes = { umlClass: UmlClassNode };
-const edgeTypes = { umlRelationship: UmlRelationshipEdge };
+const nodeTypes = { umlClass: UmlClassNode, erTable: ErTableNode };
+const edgeTypes = { umlRelationship: UmlRelationshipEdge, erRelationship: ErRelationshipEdge };
 
 /** Toasts de lock: se auto-descartan, no se acumulan uno atrás del otro. */
 function CollaborationToasts() {
@@ -75,11 +80,13 @@ function RosterPanel() {
   return (
     <div className="app__roster" title={roster.map((p) => p.userName).join(", ")}>
       {roster.map((p) => (
-        <span
-          key={p.userId}
-          className="app__roster-chip"
-          style={{ background: p.color, color: readableTextColor(p.color) }}
-        >
+        <span key={p.userId} className="app__roster-chip">
+          {/* El color de colaborador identifica, no rellena: un punto alcanza. La
+              paleta esta medida como trazo, no como fondo con texto encima --
+              con relleno, la legibilidad del texto dependia de cual de los ocho
+              colores le tocara (uno daba 4.41:1, por debajo de 4.5). Con el
+              punto, el texto siempre esta en el color normal de la interfaz. */}
+          <span className="app__roster-chip-dot" style={{ background: p.color }} aria-hidden="true" />
           {p.userName.split(" ")[0]}
         </span>
       ))}
@@ -121,8 +128,12 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
   const [showVisionImport, setShowVisionImport] = useState(false);
   const selectNode = usePresentationStore((s) => s.selectNode);
   const selectedNodeId = usePresentationStore((s) => s.selectedNodeId);
+  const viewMode = usePresentationStore((s) => s.viewMode);
+  const setViewMode = usePresentationStore((s) => s.setViewMode);
   const model = useCanonicalStore((s) => s.model);
   const reactFlowRef = useRef<ReactFlowInstance | null>(null);
+  const [schemaPreview, setSchemaPreview] = useState<SchemaPreview | null>(null);
+  const [schemaError, setSchemaError] = useState<string | null>(null);
 
   const collaboration = useCollaboration(diagramId, session.token, session.userId);
 
@@ -136,8 +147,38 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo cuando cambia el mensaje
   }, [collaboration.error]);
 
-  const nodes = useMemo(() => (model ? toFlowNodes(model) : []), [model]);
-  const edges = useMemo(() => (model ? toFlowEdges(model) : []), [model]);
+  // La vista ER se dibuja con el esquema fisico que YA calculo el servidor
+  // (GET .../schema-preview: nombres, columnas, PK/FK ya resueltas del
+  // lado correcto) -- se pide de nuevo cada vez que el modelo cambia de
+  // version, para que la vista ER no se quede mostrando un esquema viejo
+  // mientras el resto del lienzo sigue en vivo.
+  useEffect(() => {
+    if (viewMode !== "er" || !diagramId || !model) return;
+    let cancelado = false;
+    setSchemaError(null);
+    fetchSchemaPreview(diagramId, session.token)
+      .then((preview) => {
+        if (!cancelado) setSchemaPreview(preview);
+      })
+      .catch((e) => {
+        if (!cancelado) setSchemaError(e instanceof Error ? e.message : String(e));
+      });
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- se re-pide por version, no por identidad de `model`
+  }, [viewMode, diagramId, model?.mutationVersion, session.token]);
+
+  const nodes = useMemo(() => {
+    if (!model) return [];
+    if (viewMode === "uml") return toFlowNodes(model);
+    return schemaPreview ? toErNodes(model, schemaPreview) : [];
+  }, [model, viewMode, schemaPreview]);
+  const edges = useMemo(() => {
+    if (!model) return [];
+    if (viewMode === "uml") return toFlowEdges(model);
+    return schemaPreview ? toErEdges(model, schemaPreview) : [];
+  }, [model, viewMode, schemaPreview]);
 
   const handleNodeClick: NodeMouseHandler = (_event, node) => {
     selectNode(node.id);
@@ -272,6 +313,13 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
             Importar foto
           </button>
         )}
+        {model && (
+          <button type="button" onClick={() => setViewMode(viewMode === "uml" ? "er" : "uml")} title="Mismo modelo, otra notacion">
+            Vista: {viewMode === "uml" ? "UML" : "Entidad-Relación"}
+          </button>
+        )}
+        {viewMode === "er" && !schemaPreview && !schemaError && <span className="app__collab-warning">Cargando esquema…</span>}
+        {schemaError && <span className="app__collab-warning">⚠ {schemaError}</span>}
         {generatorError && <span className="app__collab-warning">⚠ {generatorError}</span>}
 
         {diagramId && (
@@ -298,6 +346,7 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
       </header>
       <div className="app__canvas">
         <UmlMarkerDefs />
+        <ErMarkerDefs />
         <CollaborationToasts />
         {diagramId && <OfflineSyncBadge />}
         <ReconciliationModal />
@@ -318,7 +367,7 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
           }}
         >
           <ReactFlow
-            key={diagramId ?? "demo"}
+            key={`${diagramId ?? "demo"}:${viewMode}`}
             nodes={nodes}
             edges={edges}
             nodeTypes={nodeTypes}

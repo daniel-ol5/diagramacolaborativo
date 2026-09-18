@@ -285,3 +285,37 @@ Verificado en vivo (script aparte, no incluido en el repo): la lectura simulada 
 su aviso, las notas explican los dos defectos deliberados de la lectura fija (un tipo no
 reconocido, una relación a una clase inexistente), se puede excluir una clase antes de
 confirmar, y tras confirmar las clases aparecen de verdad en el lienzo. 9/9.
+
+---
+
+## CU15: alternar entre vista UML y vista Entidad-Relación — 17 de septiembre de 2026
+
+| Archivo | Qué prueba |
+| :--- | :--- |
+| `cu15-vista-er/vista-er-barberia.png` | El diagrama Barbería (seed dev) en vista ER: seis tablas reales, con `cita_servicio` como tabla intermedia (`PK,FK` en sus dos columnas compuestas) y las cuatro variantes de pata de gallo dibujadas |
+| `cu15-vista-er/vista-er-herencia-pk-fk.png` | El caso de riesgo señalado por el backend: una relación INHERITANCE real (`Persona` ← `Empleado`) donde la columna `id` del hijo es **PK y FK a la vez** |
+
+Mismo principio que CU14 ("vos dibujás, el servidor calcula"): la forma física de cada tabla
+—nombre, columnas, de qué lado va cada clave foránea, nombre de una tabla intermedia, la
+columna compartida de una herencia JOINED— sale entera de
+`GET /api/v1/diagrams/{id}/schema-preview`. El cliente no reimplementa ninguna regla de
+nombrado SQL; sólo dibuja lo que ese endpoint ya devuelve. Lo único que el cliente sigue
+leyendo del modelo canónico son las multiplicidades de cada relación (para elegir el símbolo de
+pata de gallo), porque eso no es un dato físico de la base — es un dato de la relación UML, y a
+falta de una relación declarada (el caso típico: la FK que la herencia sintetiza sola) se usa
+`1..1`/`1..1`, que además es lo correcto para una clave compartida, no sólo un relleno.
+
+Verificado en vivo con dos scripts aparte (no incluidos en el repo):
+
+- Contra el diagrama Barbería ya sembrado: la cantidad de tablas, cada nombre/comillas, cada
+  badge `PK`/`FK`/`PK,FK`, la marca de tabla intermedia y la cantidad de aristas coinciden
+  **exactamente** con lo que devuelve `schema-preview` — comparado campo por campo contra la
+  respuesta real de la API, no contra una suposición. 14/14.
+- Contra un diagrama nuevo creado en el momento (dos clases arrastradas y conectadas de verdad
+  por el mouse, no inyectadas): una relación INHERITANCE real produce una columna con
+  `primaryKey: true` y `references` a la vez, y `ErTableNode` la muestra como `PK,FK`, el caso
+  que el backend específicamente pidió confirmar antes de dar CU15 por cerrado. 11/11.
+
+`npm run build`, `npm run lint` y `node scripts/check-contrast.mjs` (19/19) sin advertencias
+nuevas; `check-rendered-contrast.mjs` completo (claro y oscuro) sigue en `TODO OK` después de
+este cambio.

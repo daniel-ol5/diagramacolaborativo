@@ -1,0 +1,10 @@
+.react-flow__edge-erRelationship .react-flow__edge-path {
+  stroke: var(--canvas-edge-stroke);
+  stroke-width: var(--canvas-edge-stroke-width);
+}
+
+.react-flow__edge-erRelationship.selected .react-flow__edge-path,
+.react-flow__edge-erRelationship:hover .react-flow__edge-path {
+  stroke: var(--canvas-edge-stroke-active);
+  stroke-width: calc(var(--canvas-edge-stroke-width) + 0.5px);
+}
