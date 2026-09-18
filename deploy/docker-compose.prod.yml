@@ -104,5 +104,6 @@ volumes:
 #   - la aplicación se niega a arrancar sin JWT_SECRET (verificado);
 #   - el broker STOMP manda latidos cada 10 s (medido: 10.0, 10.0, 10.0 s),
 #     que es lo que mantiene viva la conexión a través de Nginx;
-#   - la suite de 346 tests pasa sin PostgreSQL alcanzable (verificado), así
-#     que la imagen se puede construir sin base.
+#   - la suite de 400 tests pasa sin PostgreSQL alcanzable (medido de nuevo el
+#     17/09 apuntando la base a un puerto muerto), así que la imagen se puede
+#     construir sin base.
