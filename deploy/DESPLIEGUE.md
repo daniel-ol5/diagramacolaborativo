@@ -569,7 +569,7 @@ que es de lo que depende que el despliegue funcione:
 | Sin latidos, una sala inactiva no manda **ningún** byte | Se revirtió el arreglo y se midió: `heart-beat: 0,0` y cero frames en 26 s |
 | Los tres límites de tamaño de foto contestan **con texto** | Verificado por HTTP con archivos reales de 4,99 / 9,20 / 11,24 MB |
 | Una propuesta de foto llega al navegador | Suscriptor STOMP real contra el servidor levantado (`evidencias/verificar-captura.mjs`) |
-| La suite pasa sin PostgreSQL alcanzable | 400 tests en verde con la base apuntando a un puerto muerto |
+| La suite pasa sin PostgreSQL alcanzable | 402 tests en verde con la base apuntando a un puerto muerto |
 | El ZIP generado compila y su mapeo JPA es válido | El arnés lo compila de verdad en cada corrida |
 | El backend generado **arranca contra PostgreSQL y acepta un alta** | Cuatro diagramas de referencia, una fila por entidad, base creada y borrada en cada corrida |
 | La vista previa del esquema coincide con el ZIP | Comparación contra el Java realmente generado, probada en rojo tres veces |
