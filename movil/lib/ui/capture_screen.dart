@@ -3,15 +3,14 @@ import 'package:flutter/material.dart';
 import '../models/diagram_summary.dart';
 import '../services/config_service.dart';
 import 'login_screen.dart';
+import 'photo_capture_screen.dart';
 import 'project_list_screen.dart';
+import 'voice_command_screen.dart';
 
 /// Pantalla principal despues de elegir destino: microfono y camara con
 /// direccion de envio, nada mas -- el punto de partida real de un uso
 /// tipico ("parado frente a la pizarra"), donde cambiar de diagrama tiene
 /// que ser UN toque, no volver a entrar.
-///
-/// Los botones de voz y foto son placeholders todavia (puntos 3 y 4 de la
-/// cola); ESTA pantalla ya es la de verdad, no un borrador.
 class CaptureScreen extends StatelessWidget {
   const CaptureScreen({
     super.key,
@@ -63,13 +62,21 @@ class CaptureScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               FilledButton.icon(
-                onPressed: null, // punto 3 de la cola
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => VoiceCommandScreen(sesion: sesion, diagramaId: diagrama.id),
+                  ),
+                ),
                 icon: const Icon(Icons.mic),
                 label: const Text('Dictar un comando'),
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
-                onPressed: null, // punto 4 de la cola
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => PhotoCaptureScreen(sesion: sesion, diagramaId: diagrama.id),
+                  ),
+                ),
                 icon: const Icon(Icons.camera_alt),
                 label: const Text('Sacar una foto'),
               ),

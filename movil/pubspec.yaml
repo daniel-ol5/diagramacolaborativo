@@ -36,6 +36,13 @@ dependencies:
   # (ver lib/services/config_service.dart) -- una app instalada no se puede
   # recompilar para apuntar a otro servidor, a diferencia de una pagina web.
   shared_preferences: ^2.3.2
+  # STT: reconocimiento de voz del sistema, con el modelo de idioma ya instalado.
+  speech_to_text: ^7.0.0
+  # TTS: confirmacion hablada de lo que respondio el asistente.
+  flutter_tts: ^4.2.0
+  # Camara para el punto 4: sacar la foto y subirla. La app NUNCA revisa ni
+  # corrige la propuesta -- eso pasa en la computadora.
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:
