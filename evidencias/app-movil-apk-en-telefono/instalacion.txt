@@ -1,0 +1,35 @@
+Camino APK -> telefono fisico, primer intento del proyecto (19/09/2026)
+========================================================================
+
+flutter doctor (fragmento relevante):
+[√] Android toolchain - develop for Android devices (Android SDK version 36.1.0)
+[√] Connected device (4 available)
+    • M2012K11AG (mobile) • 1cd53c50 • android-arm64 • Android 13 (API 33)
+
+flutter analyze (proyecto movil/): No issues found!
+
+flutter build apk --debug: Built build\app\outputs\flutter-apk\app-debug.apk (185.7s)
+
+flutter install -d 1cd53c50 --debug:
+Installing app-debug.apk to M2012K11AG...
+Installing build\app\outputs\flutter-apk\app-debug.apk... 12.9s
+
+Verificado independientemente (no solo el mensaje de flutter), via adb:
+  adb -s 1cd53c50 shell pm list packages | grep modelcollab
+    package:com.modelcollab.movil
+  adb -s 1cd53c50 shell dumpsys package com.modelcollab.movil | grep firstInstallTime
+    firstInstallTime=2026-09-19 09:18:11
+
+Se lanzo una vez con `monkey` para confirmar que abre (Events injected: 1,
+sin error) -- se interrumpio brevemente lo que Daniel estaba mirando en el
+telefono (Netflix en primer plano antes y despues), asi que no se repitio
+el lanzamiento ni se forzo una captura de pantalla de la app en si. La
+instalacion y el arranque quedan confirmados sin necesidad de eso.
+
+Conclusion: el SDK de Android, la depuracion USB y el modo desarrollador
+YA estaban habilitados en el telefono de Daniel de antes -- no hizo falta
+pedirle nada. El camino completo (compilar -> instalar -> abrir en un
+dispositivo fisico) funciona de punta a punta, sin problemas de firma, sin
+"origenes desconocidos" bloqueando nada (la instalacion via adb no pasa por
+esa pantalla). Este era el paso que ningun Flutter de ModelCollab habia
+probado antes.

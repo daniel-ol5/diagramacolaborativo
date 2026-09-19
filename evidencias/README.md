@@ -354,3 +354,32 @@ Verificado en vivo (script aparte, no incluido en el repo), en los dos viewports
 
 4/4. `npm run build`, `npm run lint`, `node scripts/check-contrast.mjs` (19/19) y
 `check-rendered-contrast.mjs` completo (claro y oscuro) en `TODO OK` sin regresiones.
+
+---
+
+## App móvil: primer APK instalado en un teléfono físico — 19 de septiembre de 2026
+
+| Archivo | Qué prueba |
+| :--- | :--- |
+| `app-movil-apk-en-telefono/instalacion.txt` | La salida real de `flutter analyze`, `flutter build apk --debug` y `flutter install`, más la confirmación independiente por `adb` (no solo el mensaje de Flutter) de que el paquete quedó instalado y arrancó |
+
+Ningún Flutter de este proyecto había corrido nunca en un dispositivo físico — sólo pasaron el
+análisis estático. Antes de escribir una sola pantalla real de la app acompañante (login,
+selector de proyecto/diagrama, voz, foto), había que probar el camino completo — compilar,
+instalar, arrancar — en el teléfono real donde se va a hacer la defensa, porque ese era el único
+riesgo genuinamente desconocido: si algo fallaba (firma, depuración USB, orígenes desconocidos,
+el SDK sin instalar), mejor encontrarlo temprano que la noche antes.
+
+Resultado: **no hubo ningún obstáculo**. `flutter doctor` ya mostraba el toolchain de Android en
+verde con las licencias aceptadas, y el teléfono de Daniel ya aparecía como dispositivo
+conectado (depuración USB ya habilitada de antes) — no hizo falta pedirle que cambiara nada.
+
+Verificado con `adb`, no sólo con el mensaje de éxito de `flutter install`: `pm list packages`
+confirma el paquete instalado y `dumpsys package` confirma la hora de instalación. Se lanzó una
+vez con `monkey` para probar que abre, sin errores — eso interrumpió brevemente lo que Daniel
+estaba mirando en el teléfono en ese momento, así que no se repitió el lanzamiento ni se forzó
+una captura de pantalla de la app en uso: la instalación y el arranque ya estaban confirmados
+sin necesidad de eso.
+
+El proyecto queda en `movil/` (Flutter, sólo plataforma Android), con una única pantalla ("hola")
+como punto de partida. `flutter analyze`: sin advertencias.
