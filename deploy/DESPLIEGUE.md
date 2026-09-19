@@ -277,6 +277,92 @@ sed -i "s|RUTA_DE_NGINX|$(pwd)/nginx-1.27.4|g" deploy/nginx/modelcollab-local-wi
 > igual. Sirve para que el reinicio deje de ser lo único que separa al proyecto
 > de tener algo que mostrar.
 
+## B.0.ter PUBLICAR EL BACKEND REAL — decisión de Daniel, no un paso del ensayo
+
+> **Esto no está ejecutado y no lo va a ejecutar nadie por su cuenta.** Abrir un
+> túnel contra el stack real **publica en internet** lo que haya detrás. Las
+> pruebas de más arriba se hicieron a propósito contra un servidor de juguete,
+> justamente para no tener que tomar esta decisión sin tomarla.
+
+**Antes de publicar hay dos condiciones, y las dos están incumplidas hoy.**
+
+### Condición 1 — Las credenciales sembradas están publicadas en GitHub
+
+`scripts/seed-dev.sql` crea tres usuarios y **dice la contraseña en texto plano
+en un comentario**: `owner@modelcollab.dev`, `editor@…` y `viewer@…` comparten
+`Modelcollab1!`. **Esos tres usuarios existen ahora mismo en la base local**, y
+el primero es dueño del proyecto de demostración.
+
+Publicar así es dejar una credencial publicada apuntando a un sistema
+publicado: **cualquiera que encuentre la dirección entra como dueño**, borra
+diagramas o invita a quien quiera.
+
+```sql
+-- Cambiar la clave de los tres ANTES de publicar. El hash se genera aparte;
+-- la aplicación usa BCrypt costo 10.
+UPDATE users SET password_hash = '<hash nuevo>'
+WHERE email IN ('owner@modelcollab.dev','editor@modelcollab.dev','viewer@modelcollab.dev');
+```
+
+**Qué tenés que ver:** que la contraseña vieja **ya no entra**.
+
+```bash
+curl -s -o /dev/null -w '%{http_code}
+' -X POST http://localhost:8091/api/v1/auth/login   -H 'Content-Type: application/json'   -d '{"email":"owner@modelcollab.dev","password":"Modelcollab1!"}'
+```
+
+Tiene que dar **401**. Si da 200, la clave publicada sigue sirviendo y **no se
+publica nada**.
+
+### Condición 2 — El secreto con el que corre el backend
+
+Si el backend está corriendo con un secreto que alguien pueda leer —el que
+vivía en `application.yml` y quedó en el historial del repositorio, o uno
+escrito en un chat o en este documento— entonces **no hace falta ni la
+contraseña**: con ese secreto cualquiera **se fabrica un token válido para
+cualquier usuario**.
+
+**Hoy el backend local corre con un secreto de desarrollo compartido entre
+sesiones**, puesto para que los reinicios no tiren la sesión de nadie. Sirve
+para trabajar; **no sirve para publicar**.
+
+```bash
+# Bajar el backend y volver a levantarlo con uno nuevo y de un solo uso.
+(cd backend && JWT_SECRET="$(openssl rand -base64 48)" ./mvnw spring-boot:run)
+```
+
+**Qué tenés que ver:** que **el token que tenías antes deja de servir** — todas
+las sesiones abiertas se caen y hay que entrar de nuevo. Si tu sesión sigue
+viva, el backend no se reinició con el secreto nuevo.
+
+### Y una cosa que NO es una condición pero conviene saber
+
+- **El registro es abierto.** Cualquiera con la dirección puede crearse una
+  cuenta. No entra a ningún proyecto ajeno, pero la aplicación no es privada.
+- **La base tiene usuarios de prueba acumulados** de los arneses de
+  verificación. No son datos de nadie, pero se publican igual.
+
+### ⚠️ La dirección rara no es seguridad
+
+El túnel gratuito da un nombre aleatorio y difícil de adivinar. **Eso es demora,
+no seguridad** — y es exactamente el argumento con el que uno se convence de
+saltarse las dos condiciones de arriba. Una dirección no adivinada hoy es una
+dirección indexada mañana: alcanza con que alguien la pegue en un chat que
+previsualiza enlaces.
+
+### El procedimiento, una vez cumplidas las dos condiciones
+
+1. Cambiar las claves sembradas y **comprobar el 401**.
+2. Reiniciar el backend con un `JWT_SECRET` nuevo y **comprobar que la sesión
+   vieja se cayó**.
+3. Levantar el túnel **contra Nginx** (paso B.1), no contra el 8080.
+4. Correr las comprobaciones de B.2 contra la dirección pública.
+5. **Anotar la dirección y no reiniciar el túnel** hasta que termine la defensa.
+6. **Bajar el túnel cuando termine.** Publicado hasta que haga falta, no para
+   siempre.
+
+---
+
 ## B.1 El túnel apunta a Nginx, NUNCA al backend
 
 **Este es el error natural y hay que decirlo antes de que pase.** El backend en
