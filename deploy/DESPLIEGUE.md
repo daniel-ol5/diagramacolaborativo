@@ -19,6 +19,20 @@ De una instancia limpia de Ubuntu a la aplicación andando con HTTPS y WSS.
 
 ---
 
+## Tres caminos, y cuál conviene
+
+| | Qué necesita | Cuándo usarlo |
+| :--- | :--- | :--- |
+| **A — AWS** | Tarjeta de crédito, un dominio, y que el DNS propague | El mejor si hay crédito: dirección estable y nadie tiene que dejar una máquina prendida |
+| **B — Túnel desde la máquina de Daniel** | Docker local y la laptop prendida | **Sin tarjeta, sin dominio, sin certificado que emitir.** Da una dirección HTTPS real |
+| **C — Sólo local** | Docker local | Para ensayar. No sirve para mostrarle a nadie que no esté sentado ahí |
+
+**Los tres necesitan Docker andando**, así que el "Ensayo local" de acá abajo es
+el primer paso de todos, sin excepción. El túnel reemplaza al servidor; **no
+reemplaza al stack**.
+
+---
+
 ## Cómo leer esto
 
 Cada paso tiene dos cosas además del comando:
@@ -189,7 +203,107 @@ intentos confunde el próximo.
 
 ---
 
-# PASO 0 — Los tres que más probablemente fallen
+# CAMINO B — PUBLICAR CON UN TÚNEL, SIN SERVIDOR
+
+**Para cuando no hay instancia.** Un túnel publica el stack que corre en la
+máquina de Daniel en una dirección `https://…` real, con certificado válido.
+
+**Lo que elimina es justamente lo que más probablemente arruine la noche:** no
+hay tarjeta de crédito, no hay dominio que registrar, no hay DNS que propagar y
+**no hay certificado que emitir** — o sea que desaparece el límite de cinco
+intentos por hora de Let's Encrypt, que es la trampa más cara del camino A.
+
+## B.0 Esto NO esquiva Docker
+
+El túnel reemplaza al servidor, **no al stack**. Hay que tener el "Ensayo local"
+de arriba funcionando —incluidas las dos características de Windows y el
+reinicio del paso L.0— antes de abrir ningún túnel. Si el stack local no
+levanta, el túnel publica un puerto muerto.
+
+## B.1 El túnel apunta a Nginx, NUNCA al backend
+
+**Este es el error natural y hay que decirlo antes de que pase.** El backend en
+el 8080 sirve la API y nada más: apuntando el túnel ahí, el navegador recibe
+JSON donde espera la aplicación, no hay frontend que cargar y no hay forma de
+que funcione. Quien sirve las dos cosas desde un mismo origen es **Nginx**.
+
+```bash
+# El puerto del ensayo local, el del contenedor de Nginx. NO el 8080.
+./cloudflared.exe tunnel --url http://localhost:8090
+```
+
+**Qué tenés que ver:** una línea con una dirección
+`https://algo-algo-algo.trycloudflare.com`.
+
+> `cloudflared` es un único ejecutable, sin instalación ni cuenta:
+> `https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe`
+
+## B.2 Probar el WebSocket a través del túnel — **paso propio, no un detalle**
+
+**Es lo único de este camino que puede romperse sin avisar.** Un túnel puede
+servir páginas perfectamente y **no negociar la actualización a WebSocket**, y
+el síntoma sería *"la página carga pero los cambios no llegan"* — idéntico al
+de otras dos causas distintas del índice de fallas, así que manda a buscar al
+lugar equivocado.
+
+```bash
+curl -sI -o /dev/null -w '%{http_code}
+'   -H "Connection: Upgrade" -H "Upgrade: websocket"   -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ=="   https://ALGO.trycloudflare.com/ws
+```
+
+**Qué tenés que ver:** `101`. Cualquier otra cosa —`200`, `400`, `426`— es el
+túnel o Nginx comiéndose el upgrade.
+
+**Y después, la prueba que vale:** abrir el lienzo desde **otra red** (el
+celular con datos móviles), editar, y ver el cambio en la laptop.
+
+> ### Lo que ya está medido, y lo que no
+>
+> El 19/09 probé un túnel de Cloudflare contra un servidor de juguete —**no
+> contra el backend del proyecto: publicar datos reales en internet para
+> contestar esta pregunta no hacía falta**— y dio:
+>
+> - HTTPS con certificado válido, aceptado sin excepciones.
+> - **La actualización a WebSocket se negocia**, y los frames viajan en las dos
+>   direcciones.
+> - La conexión **sigue abierta después de 70 segundos sin tráfico**, que es lo
+>   que mata a una sala inactiva detrás de un intermediario con el tiempo de
+>   espera por defecto de 60 s.
+>
+> El script está en `evidencias/probar-tunel-ws.mjs`.
+>
+> **Lo que NO está probado es el salto por Nginx**, porque eso necesita el stack
+> levantado y Docker todavía no arranca en esta máquina. O sea: el túnel deja
+> pasar WebSocket — comprobado; que Nginx lo haga es lo que comprueba el `curl`
+> de arriba, y sigue sin ejecutarse nunca.
+
+## B.3 El frontend no hay que tocarlo
+
+Comprobado en `web/src/services/config.ts`: en el build de producción la API
+sale **relativa al origen** y el WebSocket elige `wss:` o `ws:` **en tiempo de
+ejecución**, según el protocolo con el que el navegador cargó la página. La
+aplicación sigue al origen desde el que la sirvieron, así que **el mismo build
+funciona a través del túnel sin recompilar ni cambiar ninguna variable**.
+
+## B.4 Las limitaciones, sin adornos
+
+- **La laptop tiene que quedar prendida, con el túnel corriendo, durante toda
+  la defensa.** Si se suspende, se cierra la terminal o se corta el wifi, el
+  sitio desaparece para todos.
+- **⚠️ LA DIRECCIÓN CAMBIA CADA VEZ QUE SE REINICIA EL TÚNEL.** Una dirección
+  gratuita de `trycloudflare.com` se sortea al arrancar. **Reiniciar el túnel
+  diez minutos antes de la defensa deja muertos todos los enlaces repartidos**,
+  incluidas las invitaciones que ya se mandaron. Levantalo **una vez**, anotá la
+  dirección, y **no lo toques**.
+- Todo el tráfico pasa por la conexión de la casa: si sube poco, la demostración
+  va lenta para quien mire de afuera.
+- Es un dominio de terceros y se ve como tal en la barra del navegador.
+
+---
+
+# CAMINO A — AWS
+
+## PASO 0 — Los tres que más probablemente fallen
 
 **Unos 25 minutos, y sirven para enterarte temprano.** Los tres son
 independientes del resto: si alguno no sale, mejor saberlo antes de invertir
@@ -729,7 +843,13 @@ que es de lo que depende que el despliegue funcione:
 | El ZIP generado compila y su mapeo JPA es válido | El arnés lo compila de verdad en cada corrida |
 | El backend generado **arranca contra PostgreSQL y acepta un alta** | Cuatro diagramas de referencia, una fila por entidad, base creada y borrada en cada corrida |
 | La vista previa del esquema coincide con el ZIP | Comparación contra el Java realmente generado, probada en rojo tres veces |
+| Un túnel sirve HTTPS válido y **deja pasar WebSocket** | Túnel real contra un servidor de juguete: handshake completado, frames en las dos direcciones, y la conexión viva tras 70 s sin tráfico (`evidencias/probar-tunel-ws.mjs`) |
 
 Lo que **no** está comprobado, y es lo que hay que mirar primero si algo sale
 mal: **todo lo que toca Docker, Nginx, TLS y el DNS**. Ninguna línea de esas
-cuatro cosas corrió nunca.
+cuatro cosas corrió nunca — y en esta máquina Docker **todavía no arranca**, por
+lo que dice el paso L.0.
+
+La única de esas cuatro que tiene algo medido es el transporte del túnel, y
+**sólo el tramo del túnel**: que Nginx deje pasar la actualización a WebSocket
+sigue sin ejecutarse.
