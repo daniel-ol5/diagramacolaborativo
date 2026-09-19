@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Attribute, CanonicalModel, ClassEntity, Method, Relationship } from "../types/canonical";
+import type { Attribute, CanonicalModel, ClassEntity, Method, Package, Relationship } from "../types/canonical";
 
 /**
  * Slice del estado CANONICO: lo que viaja al servidor y se persiste en el
@@ -19,6 +19,7 @@ interface CanonicalState {
   setModel: (model: CanonicalModel) => void;
   updateClassPosition: (classId: string, x: number, y: number) => void;
   renameClass: (classId: string, name: string) => void;
+  resizeClass: (classId: string, width: number, height: number) => void;
   addClass: (classEntity: ClassEntity) => void;
   /** Cascada identica a borrarClase() del servidor: relaciones huerfanas y membresia de paquete. */
   deleteClass: (classId: string) => void;
@@ -30,6 +31,9 @@ interface CanonicalState {
   deleteMethod: (methodId: string) => void;
   addRelationship: (relationship: Relationship) => void;
   deleteRelationship: (relId: string) => void;
+  addPackage: (paquete: Package) => void;
+  updatePackage: (paquete: Package) => void;
+  deletePackage: (packageId: string) => void;
 }
 
 export const useCanonicalStore = create<CanonicalState>((set) => ({
@@ -56,6 +60,19 @@ export const useCanonicalStore = create<CanonicalState>((set) => ({
         model: {
           ...state.model,
           classes: state.model.classes.map((c) => (c.id === classId ? { ...c, name } : c)),
+        },
+      };
+    }),
+
+  resizeClass: (classId, width, height) =>
+    set((state) => {
+      if (!state.model) return state;
+      return {
+        model: {
+          ...state.model,
+          classes: state.model.classes.map((c) =>
+            c.id === classId ? { ...c, width, height } : c,
+          ),
         },
       };
     }),
@@ -186,6 +203,43 @@ export const useCanonicalStore = create<CanonicalState>((set) => ({
         model: {
           ...state.model,
           relationships: state.model.relationships.filter((r) => r.id !== relId),
+        },
+      };
+    }),
+
+  // `packages` es opcional en el canonico (§7): un diagrama sin paquetes no
+  // lleva la clave. Por eso las tres funciones tratan `undefined` como lista
+  // vacia en vez de asumir que existe.
+  addPackage: (paquete) =>
+    set((state) => {
+      if (!state.model) return state;
+      const actuales = state.model.packages ?? [];
+      if (actuales.some((p) => p.id === paquete.id)) return state;
+      return { model: { ...state.model, packages: [...actuales, paquete] } };
+    }),
+
+  updatePackage: (paquete) =>
+    set((state) => {
+      if (!state.model) return state;
+      return {
+        model: {
+          ...state.model,
+          // Reemplazo completo, no parche: el servidor hace lo mismo
+          // (UPDATE_PACKAGE convierte el payload entero a Package), y si acá
+          // se fusionara, un classIds mas corto no llegaria a borrar nada.
+          packages: (state.model.packages ?? []).map((p) => (p.id === paquete.id ? paquete : p)),
+        },
+      };
+    }),
+
+  deletePackage: (packageId) =>
+    set((state) => {
+      if (!state.model) return state;
+      return {
+        model: {
+          ...state.model,
+          // Las clases del paquete NO se borran: quedan sin paquete (§8.1).
+          packages: (state.model.packages ?? []).filter((p) => p.id !== packageId),
         },
       };
     }),
