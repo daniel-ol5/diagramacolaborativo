@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { Attribute } from "../types/canonical";
+import type { Attribute, Method } from "../types/canonical";
 
 /**
  * Subconjunto de UseCollaborationResult que UmlClassNode necesita para el
@@ -17,6 +17,9 @@ export interface CollaborationActions {
   addAttribute: (classId: string, attribute: Attribute) => void;
   updateAttribute: (attribute: Attribute) => void;
   deleteAttribute: (attrId: string) => void;
+  addMethod: (classId: string, method: Method) => void;
+  updateMethod: (method: Method) => void;
+  deleteMethod: (methodId: string) => void;
   deleteRelationship: (relId: string) => void;
 }
 

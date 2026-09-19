@@ -380,6 +380,9 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
             addAttribute: collaboration.addAttribute,
             updateAttribute: collaboration.updateAttribute,
             deleteAttribute: collaboration.deleteAttribute,
+            addMethod: collaboration.addMethod,
+            updateMethod: collaboration.updateMethod,
+            deleteMethod: collaboration.deleteMethod,
             deleteRelationship: collaboration.deleteRelationship,
           }}
         >

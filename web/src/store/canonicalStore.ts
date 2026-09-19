@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Attribute, CanonicalModel, ClassEntity, Relationship } from "../types/canonical";
+import type { Attribute, CanonicalModel, ClassEntity, Method, Relationship } from "../types/canonical";
 
 /**
  * Slice del estado CANONICO: lo que viaja al servidor y se persiste en el
@@ -25,6 +25,9 @@ interface CanonicalState {
   addAttribute: (classId: string, attribute: Attribute) => void;
   updateAttribute: (attribute: Attribute) => void;
   deleteAttribute: (attrId: string) => void;
+  addMethod: (classId: string, method: Method) => void;
+  updateMethod: (method: Method) => void;
+  deleteMethod: (methodId: string) => void;
   addRelationship: (relationship: Relationship) => void;
   deleteRelationship: (relId: string) => void;
 }
@@ -120,6 +123,49 @@ export const useCanonicalStore = create<CanonicalState>((set) => ({
           classes: state.model.classes.map((c) =>
             c.attributes.some((a) => a.id === attrId)
               ? { ...c, attributes: c.attributes.filter((a) => a.id !== attrId) }
+              : c,
+          ),
+        },
+      };
+    }),
+
+  addMethod: (classId, method) =>
+    set((state) => {
+      if (!state.model) return state;
+      return {
+        model: {
+          ...state.model,
+          classes: state.model.classes.map((c) =>
+            c.id === classId ? { ...c, methods: [...c.methods, method] } : c,
+          ),
+        },
+      };
+    }),
+
+  updateMethod: (method) =>
+    set((state) => {
+      if (!state.model) return state;
+      return {
+        model: {
+          ...state.model,
+          classes: state.model.classes.map((c) =>
+            c.methods.some((m) => m.id === method.id)
+              ? { ...c, methods: c.methods.map((m) => (m.id === method.id ? method : m)) }
+              : c,
+          ),
+        },
+      };
+    }),
+
+  deleteMethod: (methodId) =>
+    set((state) => {
+      if (!state.model) return state;
+      return {
+        model: {
+          ...state.model,
+          classes: state.model.classes.map((c) =>
+            c.methods.some((m) => m.id === methodId)
+              ? { ...c, methods: c.methods.filter((m) => m.id !== methodId) }
               : c,
           ),
         },

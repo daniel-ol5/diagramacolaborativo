@@ -4,7 +4,7 @@ import { WS_URL } from "../services/config";
 import { useCanonicalStore } from "../store/canonicalStore";
 import { useCollaborationStore } from "../store/collaborationStore";
 import { useOfflineStore } from "../store/offlineStore";
-import type { Attribute, CanonicalModel, ClassEntity, Relationship } from "../types/canonical";
+import type { Attribute, CanonicalModel, ClassEntity, Method, Relationship } from "../types/canonical";
 import type { OfflineOperation } from "../types/offline";
 import {
   esBroadcastDeMutacion,
@@ -85,6 +85,12 @@ export interface UseCollaborationResult {
   updateAttribute: (attribute: Attribute) => void;
   /** DELETE_ATTRIBUTE. Requiere lock sobre attrId. */
   deleteAttribute: (attrId: string) => void;
+  /** ADD_METHOD. Requiere lock sobre classId (la clase, no el metodo todavia inexistente). */
+  addMethod: (classId: string, method: Method) => void;
+  /** UPDATE_METHOD. Requiere lock sobre method.id — reemplazo completo, no parche. */
+  updateMethod: (method: Method) => void;
+  /** DELETE_METHOD. Requiere lock sobre methodId. */
+  deleteMethod: (methodId: string) => void;
   /** ADD_RELATIONSHIP. No requiere lock. El id lo genera el llamador. */
   addRelationship: (relationship: Relationship) => void;
   /** DELETE_RELATIONSHIP. Requiere lock sobre relId. */
@@ -122,6 +128,9 @@ export function useCollaboration(
   const addAttributeLocal = useCanonicalStore((s) => s.addAttribute);
   const updateAttributeLocal = useCanonicalStore((s) => s.updateAttribute);
   const deleteAttributeLocal = useCanonicalStore((s) => s.deleteAttribute);
+  const addMethodLocal = useCanonicalStore((s) => s.addMethod);
+  const updateMethodLocal = useCanonicalStore((s) => s.updateMethod);
+  const deleteMethodLocal = useCanonicalStore((s) => s.deleteMethod);
   const addRelationshipLocal = useCanonicalStore((s) => s.addRelationship);
   const deleteRelationshipLocal = useCanonicalStore((s) => s.deleteRelationship);
   const setMyUserId = useCollaborationStore((s) => s.setMyUserId);
@@ -347,6 +356,15 @@ export function useCollaboration(
           case "DELETE_ATTRIBUTE":
             if (body.targetId) deleteAttributeLocal(body.targetId);
             break;
+          case "ADD_METHOD":
+            if (body.targetId) addMethodLocal(body.targetId, body.payload as unknown as Method);
+            break;
+          case "UPDATE_METHOD":
+            updateMethodLocal(body.payload as unknown as Method);
+            break;
+          case "DELETE_METHOD":
+            if (body.targetId) deleteMethodLocal(body.targetId);
+            break;
           case "ADD_RELATIONSHIP":
             addRelationshipLocal(body.payload as unknown as Relationship);
             break;
@@ -492,6 +510,9 @@ export function useCollaboration(
     addAttributeLocal,
     updateAttributeLocal,
     deleteAttributeLocal,
+    addMethodLocal,
+    updateMethodLocal,
+    deleteMethodLocal,
     addRelationshipLocal,
     deleteRelationshipLocal,
   ]);
@@ -608,6 +629,24 @@ export function useCollaboration(
     publishMutate("DELETE_ATTRIBUTE", attrId, {});
   }
 
+  function addMethod(classId: string, method: Method) {
+    useCollaborationStore.getState().setEditingTargetId(null);
+    addMethodLocal(classId, method);
+    publishMutate("ADD_METHOD", classId, method as unknown as Record<string, unknown>);
+  }
+
+  function updateMethod(method: Method) {
+    useCollaborationStore.getState().setEditingTargetId(null);
+    updateMethodLocal(method);
+    publishMutate("UPDATE_METHOD", method.id, method as unknown as Record<string, unknown>);
+  }
+
+  function deleteMethod(methodId: string) {
+    useCollaborationStore.getState().setEditingTargetId(null);
+    deleteMethodLocal(methodId);
+    publishMutate("DELETE_METHOD", methodId, {});
+  }
+
   function addRelationship(relationship: Relationship) {
     addRelationshipLocal(relationship);
     publishMutate("ADD_RELATIONSHIP", null, relationship as unknown as Record<string, unknown>);
@@ -636,6 +675,9 @@ export function useCollaboration(
     addAttribute,
     updateAttribute,
     deleteAttribute,
+    addMethod,
+    updateMethod,
+    deleteMethod,
     addRelationship,
     deleteRelationship,
   };
