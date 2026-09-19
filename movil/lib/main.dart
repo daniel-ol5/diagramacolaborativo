@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'models/diagram_summary.dart';
 import 'services/config_service.dart';
-import 'ui/home_screen.dart';
+import 'ui/capture_screen.dart';
 import 'ui/login_screen.dart';
+import 'ui/project_list_screen.dart';
 
 void main() {
   runApp(const ModelCollabMovilApp());
@@ -21,8 +23,11 @@ class ModelCollabMovilApp extends StatelessWidget {
   }
 }
 
-/// Si ya hay un token guardado, entra directo -- no vuelve a pedir login
-/// cada vez que se abre la app.
+/// Sin sesion guardada, pide login. Con sesion Y un ultimo destino
+/// guardado, entra directo a la pantalla de captura -- el caso real es
+/// "parado frente a la pizarra", no "elegir proyecto de nuevo cada vez que
+/// se abre la app". Con sesion pero sin destino todavia (primera vez),
+/// muestra el selector.
 class _SplashRouter extends StatefulWidget {
   const _SplashRouter();
 
@@ -34,14 +39,33 @@ class _SplashRouterState extends State<_SplashRouter> {
   @override
   void initState() {
     super.initState();
-    ConfigService.sesionGuardada().then((sesion) {
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => sesion == null ? const LoginScreen() : HomeScreen(sesion: sesion),
-        ),
-      );
-    });
+    _decidirRuta();
+  }
+
+  Future<void> _decidirRuta() async {
+    final sesion = await ConfigService.sesionGuardada();
+    if (!mounted) return;
+
+    if (sesion == null) {
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
+      return;
+    }
+
+    final destino = await ConfigService.ultimoDestino();
+    if (!mounted) return;
+
+    if (destino == null) {
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => ProjectListScreen(sesion: sesion)));
+      return;
+    }
+
+    Navigator.of(context).pushReplacement(MaterialPageRoute(
+      builder: (_) => CaptureScreen(
+        sesion: sesion,
+        proyectoNombre: destino.proyectoNombre,
+        diagrama: DiagramSummary(id: destino.diagramaId, projectId: destino.proyectoId, name: destino.diagramaNombre),
+      ),
+    ));
   }
 
   @override

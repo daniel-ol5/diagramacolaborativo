@@ -18,6 +18,10 @@ class ConfigService {
   static const String _claveUserId = 'user_id';
   static const String _claveEmail = 'email';
   static const String _claveNombre = 'nombre_completo';
+  static const String _claveUltimoProyectoId = 'ultimo_proyecto_id';
+  static const String _claveUltimoProyectoNombre = 'ultimo_proyecto_nombre';
+  static const String _claveUltimoDiagramaId = 'ultimo_diagrama_id';
+  static const String _claveUltimoDiagramaNombre = 'ultimo_diagrama_nombre';
 
   /// Sin nada guardado todavia, un placeholder de LAN -- no localhost: dentro
   /// del telefono, "localhost" es el telefono mismo, nunca la maquina donde
@@ -62,7 +66,9 @@ class ConfigService {
   /// Cerrar sesion borra el token pero NO la direccion del servidor -- es
   /// una preferencia del dispositivo, no de la persona logueada, y
   /// mantenerla evita que alguien tenga que volver a escribirla para
-  /// entrar de nuevo al mismo servidor.
+  /// entrar de nuevo al mismo servidor. Tampoco borra el ultimo destino: si
+  /// la misma persona vuelve a entrar, sigue parada frente al mismo
+  /// diagrama.
   static Future<void> cerrarSesion() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_claveToken);
@@ -70,6 +76,50 @@ class ConfigService {
     await prefs.remove(_claveEmail);
     await prefs.remove(_claveNombre);
   }
+
+  /// Caso real: parado frente a la pizarra, con el celular en la mano. Si
+  /// para sacar una foto hay que entrar, elegir proyecto y elegir diagrama
+  /// cada vez, la funcion es incomoda justo donde tiene que ser rapida --
+  /// por eso el ultimo destino se recuerda y la pantalla principal ofrece
+  /// ir directo ahi, con el cambio de diagrama a un toque de distancia.
+  static Future<UltimoDestino?> ultimoDestino() async {
+    final prefs = await SharedPreferences.getInstance();
+    final proyectoId = prefs.getString(_claveUltimoProyectoId);
+    final proyectoNombre = prefs.getString(_claveUltimoProyectoNombre);
+    final diagramaId = prefs.getString(_claveUltimoDiagramaId);
+    final diagramaNombre = prefs.getString(_claveUltimoDiagramaNombre);
+    if (proyectoId == null || proyectoNombre == null || diagramaId == null || diagramaNombre == null) {
+      return null;
+    }
+    return UltimoDestino(
+      proyectoId: proyectoId,
+      proyectoNombre: proyectoNombre,
+      diagramaId: diagramaId,
+      diagramaNombre: diagramaNombre,
+    );
+  }
+
+  static Future<void> guardarUltimoDestino(UltimoDestino destino) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_claveUltimoProyectoId, destino.proyectoId);
+    await prefs.setString(_claveUltimoProyectoNombre, destino.proyectoNombre);
+    await prefs.setString(_claveUltimoDiagramaId, destino.diagramaId);
+    await prefs.setString(_claveUltimoDiagramaNombre, destino.diagramaNombre);
+  }
+}
+
+class UltimoDestino {
+  const UltimoDestino({
+    required this.proyectoId,
+    required this.proyectoNombre,
+    required this.diagramaId,
+    required this.diagramaNombre,
+  });
+
+  final String proyectoId;
+  final String proyectoNombre;
+  final String diagramaId;
+  final String diagramaNombre;
 }
 
 class Sesion {

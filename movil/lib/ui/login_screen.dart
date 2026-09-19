@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
 import '../services/config_service.dart';
-import 'home_screen.dart';
+import 'project_list_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -52,7 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => HomeScreen(sesion: sesion)),
+        MaterialPageRoute(builder: (_) => ProjectListScreen(sesion: sesion)),
       );
     } on AuthException catch (e) {
       setState(() => _error = e.mensaje);
