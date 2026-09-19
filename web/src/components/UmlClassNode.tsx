@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { Handle, Position, type NodeProps } from "reactflow";
-import type { Attribute, ClassEntity } from "../types/canonical";
+import type { Attribute, ClassEntity, Method } from "../types/canonical";
 import { visibilitySymbol, methodSignature } from "../lib/uml";
 import { useCollaborationActions } from "../hooks/collaborationActionsContext";
 import { useCollaborationStore } from "../store/collaborationStore";
 import { useOfflineStore } from "../store/offlineStore";
 import { AttributeFormModal } from "./AttributeFormModal";
+import { MethodFormModal } from "./MethodFormModal";
 import "./UmlClassNode.css";
 
 type Pending =
@@ -13,12 +14,19 @@ type Pending =
   | { kind: "add-attribute" }
   | { kind: "edit-attribute"; attribute: Attribute }
   | { kind: "delete-attribute"; attribute: Attribute }
+  | { kind: "add-method" }
+  | { kind: "edit-method"; method: Method }
+  | { kind: "delete-method"; method: Method }
   | { kind: "delete-class" }
   | null;
 
 function lockTargetOf(pending: Pending, classId: string): string | null {
   if (!pending) return null;
   if (pending.kind === "edit-attribute" || pending.kind === "delete-attribute") return pending.attribute.id;
+  // Un metodo se bloquea por SU id, igual que un atributo: dos personas pueden
+  // tocar dos metodos distintos de la misma clase a la vez. Bloquear la clase
+  // entera seria mas simple y convertiria cada edicion en exclusiva.
+  if (pending.kind === "edit-method" || pending.kind === "delete-method") return pending.method.id;
   return classId;
 }
 
@@ -81,6 +89,11 @@ export function UmlClassNode({ data, selected }: NodeProps<ClassEntity>) {
       const ok = window.confirm(`¿Borrar el atributo "${pending.attribute.name}"?`);
       if (ok) actions?.deleteAttribute(pending.attribute.id);
       else actions?.releaseLock(pending.attribute.id);
+      setPending(null);
+    } else if (pending.kind === "delete-method") {
+      const ok = window.confirm(`¿Borrar el método "${pending.method.name}"?`);
+      if (ok) actions?.deleteMethod(pending.method.id);
+      else actions?.releaseLock(pending.method.id);
       setPending(null);
     } else if (pending.kind === "delete-class") {
       const ok = window.confirm(`¿Borrar la clase "${data.name}" y sus relaciones?`);
@@ -253,10 +266,41 @@ export function UmlClassNode({ data, selected }: NodeProps<ClassEntity>) {
         ) : (
           data.methods.map((method) => (
             <div key={method.id} className="uml-class-node__row">
-              {methodSignature(method)}
+              {/* Se reusan las clases de la fila de atributo a proposito: los
+                  dos verificadores de contraste ya cubren esos colores, y una
+                  clase nueva seria un par de colores sin medir. */}
+              <span className="uml-class-node__attr-text">{methodSignature(method)}</span>
+              <span className="uml-class-node__attr-actions nodrag">
+                <button
+                  type="button"
+                  className="uml-class-node__mini-btn"
+                  onClick={() => start({ kind: "edit-method", method }, method.id)}
+                  title="Editar método"
+                >
+                  ✎
+                </button>
+                <button
+                  type="button"
+                  className="uml-class-node__mini-btn"
+                  onClick={() => start({ kind: "delete-method", method }, method.id)}
+                  title="Borrar método"
+                >
+                  🗑
+                </button>
+              </span>
             </div>
           ))
         )}
+        <button
+          type="button"
+          className="uml-class-node__add-attr nodrag"
+          onClick={(e) => {
+            stop(e);
+            start({ kind: "add-method" }, data.id);
+          }}
+        >
+          + método
+        </button>
       </div>
 
       {pending?.kind === "add-attribute" && confirmed && (
@@ -273,6 +317,25 @@ export function UmlClassNode({ data, selected }: NodeProps<ClassEntity>) {
           initial={pending.attribute}
           onSubmit={(attribute) => {
             actions?.updateAttribute(attribute);
+            setPending(null);
+          }}
+          onClose={cancelPending}
+        />
+      )}
+      {pending?.kind === "add-method" && confirmed && (
+        <MethodFormModal
+          onSubmit={(method) => {
+            actions?.addMethod(data.id, method);
+            setPending(null);
+          }}
+          onClose={cancelPending}
+        />
+      )}
+      {pending?.kind === "edit-method" && confirmed && (
+        <MethodFormModal
+          initial={pending.method}
+          onSubmit={(method) => {
+            actions?.updateMethod(method);
             setPending(null);
           }}
           onClose={cancelPending}
