@@ -174,11 +174,19 @@ MC_PUERTO_WEB=9000 docker compose -f deploy/docker-compose.prod.yml   -f deploy/
 ```bash
 curl -sS http://localhost:8090/api/v1/health
 
-curl -sI -o /dev/null -w '%{http_code}
-'   -H "Connection: Upgrade" -H "Upgrade: websocket"   -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ=="   http://localhost:8090/ws
+curl -s -o /dev/null -w '%{http_code}\n' --max-time 5 -X GET \
+  -H "Connection: Upgrade" -H "Upgrade: websocket" \
+  -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+  http://localhost:8090/ws
 ```
 
 **Qué tenés que ver:** la respuesta de salud, y `101` en el WebSocket.
+
+> **Dos detalles del comando que cuestan una hora si faltan.** Tiene que ser
+> **`-X GET`**: con `-sI` curl manda un **HEAD**, y un endpoint de WebSocket
+> contesta **405 aunque todo funcione** — comprobado acá, el mismo destino da
+> 405 con HEAD y 101 con GET. Y el **`--max-time`** está porque un 101 exitoso
+> deja la conexión abierta y curl se queda esperando para siempre.
 
 ```bash
 docker compose -f deploy/docker-compose.prod.yml -f deploy/docker-compose.local.yml   logs backend | grep "Started "
@@ -213,12 +221,61 @@ hay tarjeta de crédito, no hay dominio que registrar, no hay DNS que propagar y
 **no hay certificado que emitir** — o sea que desaparece el límite de cinco
 intentos por hora de Let's Encrypt, que es la trampa más cara del camino A.
 
-## B.0 Esto NO esquiva Docker
+## B.0 El túnel reemplaza al servidor, NO al stack
 
-El túnel reemplaza al servidor, **no al stack**. Hay que tener el "Ensayo local"
-de arriba funcionando —incluidas las dos características de Windows y el
-reinicio del paso L.0— antes de abrir ningún túnel. Si el stack local no
-levanta, el túnel publica un puerto muerto.
+Si el stack local no levanta, el túnel publica un puerto muerto. Hay **dos
+formas** de tener el stack, y la segunda existe justamente porque la primera
+depende de un reinicio:
+
+| | Qué hace falta | Cuándo |
+| :--- | :--- | :--- |
+| **Con Docker** | El "Ensayo local" de arriba, con sus dos características de Windows y el reinicio | Es lo más parecido a lo que va a correr en la instancia |
+| **Sin Docker** | Nginx portable + el backend con `mvnw` + el PostgreSQL ya instalado | **No pide instalar nada, ni permisos, ni reiniciar** |
+
+### B.0.bis Sin Docker: Nginx nativo
+
+**Para que tener algo publicado no dependa de un reinicio.** Nginx para Windows
+es un zip portable, y el resto del stack ya existe en la máquina: el backend se
+levanta con `mvnw` y PostgreSQL está instalado. Lo único que faltaba era algo
+que **unificara el origen** — que sirva el frontend y haga de intermediario
+para `/api` y `/ws`.
+
+```bash
+# 1. Nginx portable (no se instala)
+curl -sSL -o nginx.zip https://nginx.org/download/nginx-1.27.4.zip && unzip -q nginx.zip
+
+# 2. Las dos rutas en la configuración derivada
+sed -i "s|RUTA_DEL_REPO|$(pwd)|g" deploy/nginx/modelcollab-local-windows.conf
+sed -i "s|RUTA_DE_NGINX|$(pwd)/nginx-1.27.4|g" deploy/nginx/modelcollab-local-windows.conf
+
+# 3. El frontend construido
+(cd web && npm ci && npm run build)
+
+# 4. El backend, en otra terminal
+(cd backend && JWT_SECRET="$(openssl rand -base64 48)" ./mvnw spring-boot:run)
+
+# 5. Nginx, con el prefijo en SU carpeta para que los logs no caigan en el repo
+./nginx-1.27.4/nginx.exe -p "$(pwd)/nginx-1.27.4/"   -c "$(pwd)/deploy/nginx/modelcollab-local-windows.conf"
+```
+
+**Qué tenés que ver**, todo contra `http://localhost:8091`:
+
+| Comprobación | Qué tiene que dar |
+| :--- | :--- |
+| `curl -sI localhost:8091/` | `200` y `text/html` |
+| `curl -sI localhost:8091/invite/prueba` | `200` — si da 404, falta el `try_files` |
+| `curl -s localhost:8091/api/v1/health` | el JSON de salud |
+| el `curl` de WebSocket de B.2 contra `localhost:8091/ws` | `101` |
+
+**Para bajarlo:** `./nginx-1.27.4/nginx.exe -p "$(pwd)/nginx-1.27.4/" -s stop`
+
+> **Medido el 19/09, los cuatro en verde**, con el backend real detrás. La
+> configuración está derivada de `modelcollab-sin-tls.conf` y el propio archivo
+> lista los cinco cambios y por qué.
+>
+> **Esto no reemplaza a Docker**: el despliegue en la instancia lo necesita
+> igual. Sirve para que el reinicio deje de ser lo único que separa al proyecto
+> de tener algo que mostrar.
 
 ## B.1 El túnel apunta a Nginx, NUNCA al backend
 
@@ -247,12 +304,20 @@ de otras dos causas distintas del índice de fallas, así que manda a buscar al
 lugar equivocado.
 
 ```bash
-curl -sI -o /dev/null -w '%{http_code}
-'   -H "Connection: Upgrade" -H "Upgrade: websocket"   -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ=="   https://ALGO.trycloudflare.com/ws
+curl -s -o /dev/null -w '%{http_code}\n' --max-time 5 -X GET \
+  -H "Connection: Upgrade" -H "Upgrade: websocket" \
+  -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+  https://ALGO.trycloudflare.com/ws
 ```
 
-**Qué tenés que ver:** `101`. Cualquier otra cosa —`200`, `400`, `426`— es el
-túnel o Nginx comiéndose el upgrade.
+**Qué tenés que ver:** `101`. Un `200`, `400` o `426` sí es el túnel o Nginx
+comiéndose el upgrade.
+
+> **Dos detalles del comando que cuestan una hora si faltan.** Tiene que ser
+> **`-X GET`**: con `-sI` curl manda un **HEAD**, y un endpoint de WebSocket
+> contesta **405 aunque todo funcione** — comprobado acá, el mismo destino da
+> 405 con HEAD y 101 con GET. Y el **`--max-time`** está porque un 101 exitoso
+> deja la conexión abierta y curl se queda esperando para siempre.
 
 **Y después, la prueba que vale:** abrir el lienzo desde **otra red** (el
 celular con datos móviles), editar, y ver el cambio en la laptop.
@@ -650,13 +715,19 @@ curl -sI http://DOMINIO.EJEMPLO | head -1
 
 ```bash
 # 3. El WebSocket levanta a través de Nginx
-curl -sI -o /dev/null -w '%{http_code}\n' \
+curl -s -o /dev/null -w '%{http_code}\n' --max-time 5 -X GET \
   -H "Connection: Upgrade" -H "Upgrade: websocket" \
   -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
   https://DOMINIO.EJEMPLO/ws
 ```
 **Qué tenés que ver:** `101`. Un `400` o un `200` significa que a `location /ws`
 le faltan las cabeceras de Upgrade.
+
+> **Dos detalles del comando que cuestan una hora si faltan.** Tiene que ser
+> **`-X GET`**: con `-sI` curl manda un **HEAD**, y un endpoint de WebSocket
+> contesta **405 aunque todo funcione** — comprobado acá, el mismo destino da
+> 405 con HEAD y 101 con GET. Y el **`--max-time`** está porque un 101 exitoso
+> deja la conexión abierta y curl se queda esperando para siempre.
 
 ```bash
 # 4. Una ruta del frontend que no es un archivo
@@ -844,12 +915,24 @@ que es de lo que depende que el despliegue funcione:
 | El backend generado **arranca contra PostgreSQL y acepta un alta** | Cuatro diagramas de referencia, una fila por entidad, base creada y borrada en cada corrida |
 | La vista previa del esquema coincide con el ZIP | Comparación contra el Java realmente generado, probada en rojo tres veces |
 | Un túnel sirve HTTPS válido y **deja pasar WebSocket** | Túnel real contra un servidor de juguete: handshake completado, frames en las dos direcciones, y la conexión viva tras 70 s sin tráfico (`evidencias/probar-tunel-ws.mjs`) |
+| **Nginx** deja pasar la actualización a WebSocket | Nginx nativo delante del backend real: `101` con GET (y `405` con HEAD, que es lo que engañaba al comando viejo) |
+| El túnel **a través de Nginx** también la deja pasar | La cadena entera medida: navegador → túnel → Nginx → destino, con handshake, frames y 70 s de silencio |
+| Nginx sirve el frontend y no rompe las invitaciones | `/` da 200 con `text/html`, `/invite/prueba` da 200 por el `try_files`, y `/api/v1/health` llega al backend |
 
 Lo que **no** está comprobado, y es lo que hay que mirar primero si algo sale
 mal: **todo lo que toca Docker, Nginx, TLS y el DNS**. Ninguna línea de esas
 cuatro cosas corrió nunca — y en esta máquina Docker **todavía no arranca**, por
 lo que dice el paso L.0.
 
-La única de esas cuatro que tiene algo medido es el transporte del túnel, y
-**sólo el tramo del túnel**: que Nginx deje pasar la actualización a WebSocket
-sigue sin ejecutarse.
+De esas cuatro, **Nginx dejó de estar sin ejecutar**: la variante nativa corrió
+el 19/09 con el backend real detrás, y la cadena completa a través del túnel
+también. Lo que sigue intacto y sin correr nunca es **Docker, TLS y el DNS**.
+
+Un detalle sobre el alcance, para no venderlo de más: la cadena a través del
+túnel se midió con un **servidor de juguete** del otro lado de Nginx, no con el
+backend real. Abrir un túnel publica en internet lo que haya detrás, y el
+backend de desarrollo tiene usuarios y diagramas de verdad: exponerlos para
+contestar una pregunta sobre el transporte no hacía falta. Los dos tramos están
+medidos por separado —túnel → Nginx y Nginx → backend— y sólo falta que
+coincidan en el tiempo, que es una decisión de publicar, no una incógnita
+técnica.
