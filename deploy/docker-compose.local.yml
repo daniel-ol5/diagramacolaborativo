@@ -1,0 +1,83 @@
+# ModelCollab :: override para ENSAYAR el stack de producción en Windows.
+#
+# ## PARA QUÉ
+#
+# `docker-compose.prod.yml` no puede levantarse tal cual fuera de la instancia:
+# monta `/etc/letsencrypt`, que en Windows no existe, y usa una configuración de
+# Nginx que exige certificados. Este archivo cambia sólo eso.
+#
+# **El de producción no se toca.** Es el que va a correr en la instancia, ya
+# está revisado, y un archivo que se edita para probar en otro lado es un
+# archivo que llega distinto al día del despliegue.
+#
+# ## POR QUÉ VALE ENSAYAR ACÁ ANTES DE LA INSTANCIA
+#
+# Lo que más probablemente falle es **la construcción de la imagen, que compila
+# el proyecto con Maven adentro**. Eso se puede provocar en esta máquina, con
+# más memoria que una `t3.small`, con el repositorio a mano y sin depender de
+# que exista ninguna instancia. Si falla allá, se depura por SSH en una máquina
+# chica y de madrugada; si falla acá, se arregla ahora.
+#
+# Lo que este ensayo NO prueba, y conviene tenerlo claro: el certificado, el
+# DNS, el grupo de seguridad de AWS y el comportamiento de Nginx con TLS. Esas
+# cuatro cosas siguen sin ejecutarse nunca.
+#
+# ## USO
+#
+#   # 1. Los secretos, una sola vez
+#   #    (en Git Bash; en PowerShell ver deploy/DESPLIEGUE.md)
+#   printf 'POSTGRES_PASSWORD=%s\nJWT_SECRET=%s\nGEMINI_API_KEY=\n' \
+#     "$(openssl rand -base64 32)" "$(openssl rand -base64 48)" > deploy/.env
+#
+#   # 2. Sólo la imagen del backend: es el paso largo y el que puede fallar
+#   docker compose -f deploy/docker-compose.prod.yml -f deploy/docker-compose.local.yml \
+#     --env-file deploy/.env build backend
+#
+#   # 3. El stack entero
+#   docker compose -f deploy/docker-compose.prod.yml -f deploy/docker-compose.local.yml \
+#     --env-file deploy/.env up -d
+#
+#   # Queda en http://localhost:8090 (o en MC_PUERTO_WEB, ver abajo)
+#
+# ## SI EL PUERTO ESTÁ OCUPADO
+#
+# En Windows el 80 suele estar tomado (IIS, o el propio Docker) y el 8080 lo
+# ocupa cualquier backend de desarrollo que haya quedado vivo. Por eso el valor
+# por defecto es **8090**, y se cambia sin editar nada:
+#
+#   MC_PUERTO_WEB=9000 docker compose -f ... -f ... up -d
+#
+# Si aun así dice `port is already allocated`, el puerto elegido está tomado por
+# otra cosa: `netstat -ano | findstr :8090` dice por quién.
+
+services:
+  backend:
+    # En la instancia queremos que el stack vuelva solo después de un reinicio.
+    # Acá no: un contenedor que se reinicia solo mientras se ensaya esconde
+    # justamente el fallo que se está buscando.
+    restart: "no"
+
+  nginx:
+    # !override reemplaza la lista entera en vez de agregarse a la de
+    # producción. Sin esto, el 80 y el 443 de allá seguirían publicados y el
+    # `up` fallaría en Windows por el 80 ocupado — que es el error que este
+    # archivo existe para evitar.
+    ports: !override
+      - "${MC_PUERTO_WEB:-8090}:80"
+
+    volumes: !override
+      # Sin TLS: `server_name _` atiende cualquier nombre, así que sirve para
+      # localhost sin reemplazar ningún dominio.
+      - ./nginx/modelcollab-sin-tls.conf:/etc/nginx/conf.d/default.conf:ro
+      # Se conserva: el desafío de Let's Encrypt no molesta y así la diferencia
+      # con producción es exactamente una línea, la del certificado.
+      - certbot_www:/var/www/certbot:ro
+      # El build de Vite. Si no existe, Docker crea una carpeta vacía y Nginx
+      # sirve 404 en `/` — la API y el WebSocket funcionan igual, así que para
+      # ensayar el backend no hace falta. Ver el instructivo.
+      - ./web-dist:/usr/share/nginx/html:ro
+
+    restart: "no"
+
+  postgres:
+    restart: "no"

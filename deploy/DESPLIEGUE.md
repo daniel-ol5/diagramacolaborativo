@@ -37,6 +37,158 @@ probablemente falle.
 
 ---
 
+# ENSAYO LOCAL, ANTES DE TOCAR LA INSTANCIA
+
+**Hacé esto primero.** Lo que más probablemente falle de todo el despliegue es
+**la construcción de la imagen, que compila el proyecto con Maven adentro**, y
+eso se puede provocar en la máquina de desarrollo: hay más memoria que en una
+`t3.small`, el repositorio está a mano, y no depende de que exista ninguna
+instancia. Si falla allá, se depura por SSH de madrugada; si falla acá, se
+arregla ahora.
+
+**Lo que este ensayo NO prueba**, y conviene tenerlo clarísimo: el certificado,
+el DNS, el grupo de seguridad de AWS y el comportamiento de Nginx con TLS.
+Esas cuatro cosas siguen sin ejecutarse nunca.
+
+## L.0 Que Docker pueda arrancar un motor Linux
+
+**Este paso existe porque ya nos frenó.** En esta máquina Docker Desktop estaba
+instalado y corriendo, y aun así **ningún comando funcionaba**: contestaba
+`500 Internal Server Error ... check if the server supports the requested API
+version`, que suena a versiones y no lo es.
+
+```powershell
+(Get-CimInstance Win32_ComputerSystem).HypervisorPresent
+Get-CimInstance Win32_Processor | Select-Object VirtualizationFirmwareEnabled
+Get-CimInstance Win32_OptionalFeature -Filter "Name='VirtualMachinePlatform' OR Name='Microsoft-Windows-Subsystem-Linux'" | Select-Object Name, InstallState
+```
+
+**Qué tenés que ver:** `HypervisorPresent` en `True`,
+`VirtualizationFirmwareEnabled` en `True`, y las dos características con
+`InstallState = 1` (habilitadas).
+
+**Si `VirtualizationFirmwareEnabled` es `False`:** la virtualización está
+apagada en el BIOS/UEFI. Hay que entrar y habilitarla (en AMD se llama **SVM
+Mode**; en Intel, **VT-x** o **Intel Virtualization Technology**).
+
+**Si las características dicen `2` (deshabilitadas)** — que es lo que pasó acá —
+hay que habilitarlas en una **PowerShell como Administrador** y **reiniciar**:
+
+```powershell
+dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+# reiniciar Windows, y despues:
+wsl --install --no-distribution
+```
+
+`--no-distribution` alcanza: Docker Desktop trae su propia distribución y no
+hace falta instalar Ubuntu.
+
+**Recién cuando esto responde, seguí:**
+
+```bash
+docker version
+```
+
+**Qué tenés que ver:** las dos secciones, Client **y Server**. Si sólo aparece
+Client, el motor sigue sin arrancar.
+
+## L.1 Los secretos
+
+```bash
+printf 'POSTGRES_PASSWORD=%s
+JWT_SECRET=%s
+GEMINI_API_KEY=
+'   "$(openssl rand -base64 32)" "$(openssl rand -base64 48)" > deploy/.env
+cat deploy/.env
+```
+
+**Qué tenés que ver:** tres líneas, las dos primeras con valores largos.
+
+## L.2 La imagen del backend — **el paso que importa**
+
+```bash
+docker compose -f deploy/docker-compose.prod.yml -f deploy/docker-compose.local.yml   --env-file deploy/.env build backend
+```
+
+Tarda **entre 5 y 15 minutos la primera vez** y pasa un rato largo sin imprimir
+nada mientras Maven baja las dependencias. **No está colgado.**
+
+**Qué tenés que ver:** la última línea diciendo que la imagen se construyó, sin
+ningún `ERROR`.
+
+**Si no lo ves:**
+
+| Lo que dice | Qué pasó | Qué hacer |
+| :--- | :--- | :--- |
+| `Killed`, o el build corta sin explicación | Se quedó sin memoria | Subirle memoria a Docker Desktop (Settings → Resources), 4 GB o más |
+| `./mvnw: not found` o `bad interpreter` | El `mvnw` entró con finales de línea de Windows | `backend/.gitattributes` ya lo fuerza a LF; comprobar con `git ls-files --eol backend/mvnw` |
+| Errores de red bajando dependencias | Conexión | Reintentar; el build reusa lo ya bajado |
+
+**Este es el resultado que hay que reportar antes que cualquier otra cosa.**
+Todo lo demás del despliegue depende de que esta imagen se construya.
+
+## L.3 Revisar el compose combinado
+
+```bash
+docker compose -f deploy/docker-compose.prod.yml -f deploy/docker-compose.local.yml   --env-file deploy/.env config | grep -E "published|letsencrypt|sin-tls"
+```
+
+**Qué tenés que ver:** el puerto publicado (`8090` por defecto) y
+`modelcollab-sin-tls.conf`. **No tiene que aparecer `letsencrypt` ni el 443**:
+si aparecen, el override no se está aplicando y el `up` va a fallar.
+
+## L.4 Levantar
+
+```bash
+docker compose -f deploy/docker-compose.prod.yml -f deploy/docker-compose.local.yml   --env-file deploy/.env up -d
+docker compose -f deploy/docker-compose.prod.yml -f deploy/docker-compose.local.yml ps
+```
+
+**Qué tenés que ver:** los tres servicios `Up`, con `postgres` y `backend` en
+`(healthy)`.
+
+**Si dice `port is already allocated`:** algo ocupa el 8090. Se cambia sin
+editar nada:
+
+```bash
+MC_PUERTO_WEB=9000 docker compose -f deploy/docker-compose.prod.yml   -f deploy/docker-compose.local.yml --env-file deploy/.env up -d
+```
+
+## L.5 Las comprobaciones que sí se pueden hacer acá
+
+```bash
+curl -sS http://localhost:8090/api/v1/health
+
+curl -sI -o /dev/null -w '%{http_code}
+'   -H "Connection: Upgrade" -H "Upgrade: websocket"   -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ=="   http://localhost:8090/ws
+```
+
+**Qué tenés que ver:** la respuesta de salud, y `101` en el WebSocket.
+
+```bash
+docker compose -f deploy/docker-compose.prod.yml -f deploy/docker-compose.local.yml   logs backend | grep "Started "
+```
+
+**Qué tenés que ver:** `Started BackendApplication`. Un contenedor `Up` sólo
+dice que el proceso no terminó.
+
+**Sobre la página en `/`:** si no copiaste el build de Vite a `deploy/web-dist`,
+Nginx devuelve 404 ahí. **No es un fallo del ensayo**: la API y el WebSocket
+andan igual, y lo que se está probando es el backend. Para probar la web
+también, hacé el paso 6 de más abajo antes de levantar.
+
+## L.6 Bajar
+
+```bash
+docker compose -f deploy/docker-compose.prod.yml -f deploy/docker-compose.local.yml down -v
+```
+
+El `-v` acá sí conviene: son datos de ensayo y dejar la base sucia entre
+intentos confunde el próximo.
+
+---
+
 # PASO 0 — Los tres que más probablemente fallen
 
 **Unos 25 minutos, y sirven para enterarte temprano.** Los tres son
@@ -443,8 +595,12 @@ No hace falta reemplazar ningún dominio: esa configuración atiende cualquier
 nombre, **así que funciona con la IP pelada de la instancia**, que es
 justamente el caso en el que uno termina acá.
 
-Y avisarle a quien mantiene `web/` que el cliente tiene que hablar `http://` y
-`ws://` en vez de `https://` y `wss://`, y rehacer el build del paso 6.
+**Y el frontend NO hay que recompilarlo.** Lo verifiqué en `web/src/services/
+config.ts`: en producción la API sale relativa al origen y el WebSocket elige
+el esquema **en tiempo de ejecución**, siguiendo el protocolo con el que el
+navegador cargó la página (`wss:` si entró por HTTPS, `ws:` si entró por HTTP).
+O sea que el mismo build sirve para las dos ramas y no hay nada que rehacer a
+la madrugada.
 
 ## Qué se pierde, dicho sin adornos
 
