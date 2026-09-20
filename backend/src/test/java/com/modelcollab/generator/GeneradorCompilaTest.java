@@ -62,6 +62,7 @@ class GeneradorCompilaTest {
         "reference-diagrams/barberia.json",
         "reference-diagrams/veterinaria.json",
         "reference-diagrams/inventario.json",
+        "reference-diagrams/recursivas.json",
         // Un diagrama cuyo owningSide CONTRADICE las multiplicidades. Es el caso que rompio de
         // verdad: con 1..1 -> 1..* y owningSide=SOURCE, el lado de la coleccion salia con
         // @ManyToOne(mappedBy = "..."), que no existe en JPA, y el ZIP no compilaba.
@@ -195,6 +196,7 @@ class GeneradorCompilaTest {
         "reference-diagrams/barberia.json",
         "reference-diagrams/veterinaria.json",
         "reference-diagrams/inventario.json",
+        "reference-diagrams/recursivas.json",
         "reference-diagrams/owning-side-contradictorio.json",
         "edge-cases.json",
     })

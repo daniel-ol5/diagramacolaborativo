@@ -62,6 +62,7 @@ class XmiRoundTripTest {
         "reference-diagrams/barberia.json",
         "reference-diagrams/veterinaria.json",
         "reference-diagrams/inventario.json",
+        "reference-diagrams/recursivas.json",
         "edge-cases.json",
     })
     @DisplayName("Exportar y reimportar devuelve EXACTAMENTE el mismo modelo canónico")

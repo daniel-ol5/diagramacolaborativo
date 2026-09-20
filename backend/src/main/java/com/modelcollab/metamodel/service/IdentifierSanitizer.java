@@ -1,5 +1,6 @@
 package com.modelcollab.metamodel.service;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import org.springframework.stereotype.Component;
@@ -191,6 +192,52 @@ public class IdentifierSanitizer {
      */
     public String campoDeReferencia(String rol, String claseDelOtro) {
         return nombreDeCampoDeRelacion(rol, claseDelOtro, false) + "Id";
+    }
+
+    /**
+     * La columna de clave foranea que nace de una relacion: {@code titular_id}, no
+     * {@code cliente_id}.
+     *
+     * <p>Manda el ROL cuando existe, igual que {@link #campoDeReferencia}. Antes la columna se
+     * derivaba del nombre de la clase y el campo del DTO del rol, asi que un diagrama con roles
+     * producia {@code titularId} en el DTO y {@code cliente_id} en la base — dos nombres para la
+     * misma cosa, y la vista ER mostrando uno mientras el ZIP creaba el otro.
+     */
+    public String columnaDeFkDeRelacion(String rol, String nombreDeClase) {
+        // Se arma sobre el nombre ya saneado y se vuelve a pasar por el saneador, porque
+        // "order_id" no es reservada aunque "order" si lo sea.
+        return nombreDeColumna(nombreDeCampoDeRelacion(rol, nombreDeClase, false) + "Id");
+    }
+
+    /**
+     * Las DOS columnas de una tabla intermedia, garantizadas distintas.
+     *
+     * <h2>El caso que obliga a que esto sea una sola funcion</h2>
+     *
+     * <p>Una relacion muchos-a-muchos <b>de una clase consigo misma</b> —{@code Materia} es
+     * prerrequisito de {@code Materia}— produce una intermedia cuyas dos columnas apuntan a la
+     * misma tabla. Derivandolas por separado del nombre de la clase, las dos salen
+     * {@code materia_id}: <b>un CREATE TABLE con dos columnas del mismo nombre, que ni siquiera
+     * se puede ejecutar</b>. Es el caso que estaba roto y que nadie habia probado.
+     *
+     * <p>Si los roles alcanzan para distinguirlas, mandan los roles. Si no —una recursiva sin
+     * roles— se desempata con {@code origen} y {@code destino}, que es arbitrario pero
+     * deterministico y legible en un diagrama entidad-relacion.
+     *
+     * @return exactamente dos nombres, en el orden origen, destino
+     */
+    public List<String> columnasDeTablaIntermedia(
+            String rolOrigen, String claseOrigen, String rolDestino, String claseDestino) {
+
+        String origen = columnaDeFkDeRelacion(rolOrigen, claseOrigen);
+        String destino = columnaDeFkDeRelacion(rolDestino, claseDestino);
+        if (!origen.equals(destino)) {
+            return List.of(origen, destino);
+        }
+        String base = nombreDeCampo(claseOrigen);
+        return List.of(
+                nombreDeColumna(base + "OrigenId"),
+                nombreDeColumna(base + "DestinoId"));
     }
 
     /** Nombre de tabla intermedia de un MANY_TO_MANY, con la misma regla. */

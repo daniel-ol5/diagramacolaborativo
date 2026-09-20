@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "1.0.0",
+  "mutationVersion": 1,
+  "packages": [],
+  "classes": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "name": "Empleado",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": { "x": 80.0, "y": 80.0 },
+      "width": 240.0,
+      "height": 180.0,
+      "attributes": [
+        {
+          "id": "a1111111-1111-4111-8111-111111111111",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "a1111111-1111-4111-8111-222222222222",
+          "name": "nombre",
+          "type": "VARCHAR",
+          "length": 120,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        }
+      ],
+      "methods": []
+    },
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "name": "Materia",
+      "visibility": "PUBLIC",
+      "isAbstract": false,
+      "position": { "x": 480.0, "y": 80.0 },
+      "width": 240.0,
+      "height": 180.0,
+      "attributes": [
+        {
+          "id": "a2222222-2222-4222-8222-111111111111",
+          "name": "id",
+          "type": "UUID",
+          "length": 36,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": true,
+          "isNullable": false,
+          "isUnique": false
+        },
+        {
+          "id": "a2222222-2222-4222-8222-222222222222",
+          "name": "nombre",
+          "type": "VARCHAR",
+          "length": 100,
+          "visibility": "PRIVATE",
+          "isPrimaryKey": false,
+          "isNullable": false,
+          "isUnique": false
+        }
+      ],
+      "methods": []
+    }
+  ],
+  "relationships": [
+    {
+      "id": "r1111111-1111-4111-8111-111111111111",
+      "sourceClassId": "11111111-1111-4111-8111-111111111111",
+      "targetClassId": "11111111-1111-4111-8111-111111111111",
+      "type": "ASSOCIATION",
+      "owningSide": "TARGET",
+      "sourceMultiplicity": "0..1",
+      "targetMultiplicity": "0..*",
+      "sourceRole": "supervisor",
+      "targetRole": "supervisados",
+      "isNavigable": true,
+      "waypoints": []
+    },
+    {
+      "id": "r2222222-2222-4222-8222-222222222222",
+      "sourceClassId": "22222222-2222-4222-8222-222222222222",
+      "targetClassId": "22222222-2222-4222-8222-222222222222",
+      "type": "MANY_TO_MANY",
+      "owningSide": "SOURCE",
+      "sourceMultiplicity": "0..*",
+      "targetMultiplicity": "0..*",
+      "sourceRole": "requiere",
+      "targetRole": "esPrerrequisitoDe",
+      "isNavigable": true,
+      "waypoints": []
+    }
+  ]
+}

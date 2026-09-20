@@ -73,6 +73,7 @@ class EntidadCreableTest {
         "reference-diagrams/barberia.json",
         "reference-diagrams/veterinaria.json",
         "reference-diagrams/inventario.json",
+        "reference-diagrams/recursivas.json",
         "reference-diagrams/owning-side-contradictorio.json",
         "edge-cases.json",
     })

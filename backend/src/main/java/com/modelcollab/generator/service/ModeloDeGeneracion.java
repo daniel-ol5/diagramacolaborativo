@@ -306,7 +306,19 @@ class ModeloDeGeneracion {
         // --- relaciones ----------------------------------------------------------------------
         List<Map<String, Object>> relaciones = new ArrayList<>();
         for (Relationship r : modelo.relationships()) {
-            asociacion(r, clase, porId, nombresJava, tipos).ifPresent(relaciones::add);
+            // UNA RELACION RECURSIVA PRODUCE DOS CAMPOS EN LA MISMA CLASE, no uno.
+            //
+            // Empleado supervisa a Empleado: la clase es origen Y destino, asi que necesita el
+            // campo "supervisor" (el dueño, con la clave foranea) y el campo "supervisados" (el
+            // inverso, con mappedBy). Antes se preguntaba "soy origen?" primero y ganaba esa
+            // rama, asi que salia SOLO el inverso — un @OneToMany(mappedBy = "supervisor")
+            // apuntando a un campo que no existia, que Hibernate rechaza al arrancar.
+            if (r.sourceClassId().equals(clase.id())) {
+                asociacion(r, clase, true, porId, nombresJava, tipos).ifPresent(relaciones::add);
+            }
+            if (r.targetClassId().equals(clase.id())) {
+                asociacion(r, clase, false, porId, nombresJava, tipos).ifPresent(relaciones::add);
+            }
         }
         e.put("relaciones", relaciones);
         e.put("tiposUsados", usados);
@@ -657,6 +669,7 @@ class ModeloDeGeneracion {
     private Optional<Map<String, Object>> asociacion(
             Relationship r,
             ClassEntity clase,
+            boolean soyOrigen,
             Map<String, ClassEntity> porId,
             Map<String, String> nombresJava,
             Map<String, String> tipos) {
@@ -664,11 +677,6 @@ class ModeloDeGeneracion {
         // La herencia se resuelve con 'extends'; la dependencia no genera campo, porque es una
         // relación de uso y no de persistencia.
         if (r.type() == RelationshipType.INHERITANCE || r.type() == RelationshipType.DEPENDENCY) {
-            return Optional.empty();
-        }
-        boolean soyOrigen = r.sourceClassId().equals(clase.id());
-        boolean soyDestino = r.targetClassId().equals(clase.id());
-        if (!soyOrigen && !soyDestino) {
             return Optional.empty();
         }
         // Una relación cuyo otro extremo no existe es el residuo de un DELETE_CLASS mal aplicado.
@@ -731,11 +739,20 @@ class ModeloDeGeneracion {
                         : sanitizer.nombreDeTablaIntermedia(
                                 porId.get(r.sourceClassId()).name(),
                                 porId.get(r.targetClassId()).name())));
-                a.put("joinColumn", columnaDeFk(porId.get(clase.id()).name()));
-                a.put("inverseJoinColumn", columnaDeFk(porId.get(idDelOtro).name()));
+                // Las DOS columnas salen de una sola funcion, que garantiza que sean
+                // distintas: en una recursiva consigo misma, derivarlas por separado daba dos
+                // veces el mismo nombre y un CREATE TABLE imposible de ejecutar.
+                List<String> columnas = sanitizer.columnasDeTablaIntermedia(
+                        r.sourceRole(), porId.get(r.sourceClassId()).name(),
+                        r.targetRole(), porId.get(r.targetClassId()).name());
+                a.put("joinColumn", literal(columnas.get(soyOrigen ? 0 : 1)));
+                a.put("inverseJoinColumn", literal(columnas.get(soyOrigen ? 1 : 0)));
             } else {
                 a.put("joinTable", null);
-                a.put("joinColumn", columnaDeFk(porId.get(idDelOtro).name()));
+                // Con el ROL, para que la columna y el campo del DTO se llamen igual:
+                // titular_id y titularId, no cliente_id y titularId.
+                a.put("joinColumn",
+                        literal(sanitizer.columnaDeFkDeRelacion(rol, claseDelOtro)));
                 a.put("obligatorio", extremoDelOtro == Multiplicity.ONE_ONE);
             }
         } else {

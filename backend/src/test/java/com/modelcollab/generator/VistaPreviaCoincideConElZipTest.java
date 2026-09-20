@@ -86,6 +86,7 @@ class VistaPreviaCoincideConElZipTest {
         "reference-diagrams/veterinaria.json",
         "reference-diagrams/barberia.json",
         "reference-diagrams/inventario.json",
+        "reference-diagrams/recursivas.json",
     })
     @DisplayName("Toda tabla y toda columna de la vista previa existe igual en el Java generado")
     void laVistaPreviaEsElEsquemaQueSeDescarga(String fixture) throws Exception {
@@ -141,6 +142,7 @@ class VistaPreviaCoincideConElZipTest {
         "reference-diagrams/veterinaria.json",
         "reference-diagrams/barberia.json",
         "reference-diagrams/inventario.json",
+        "reference-diagrams/recursivas.json",
     })
     @DisplayName("Toda referencia de la vista previa apunta a una tabla de la misma vista")
     void lasReferenciasApuntanAAlgoQueExiste(String fixture) throws Exception {
