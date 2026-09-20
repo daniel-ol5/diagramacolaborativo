@@ -75,6 +75,14 @@ public class XmiImporterService {
         for (Element elemento : hijosPorEtiqueta(doc.getDocumentElement(), "packagedElement", true)) {
             String tipo = atributoXmi(elemento, "type");
             if ("uml:Package".equals(tipo)) {
+                // El paquete raiz es un envoltorio para Enterprise Architect, no un paquete del
+                // modelo: existe para que "Import Package from XMI" se traiga el diagrama entero
+                // (ver XmiExporterService.ID_DEL_PAQUETE_RAIZ). Si entrara como paquete, cada
+                // viaje de ida y vuelta agregaria uno que el usuario nunca dibujo, y dos viajes
+                // seguidos los irian anidando. Lo detecto el arnes de ida y vuelta.
+                if (XmiExporterService.ID_DEL_PAQUETE_RAIZ.equals(id(elemento))) {
+                    continue;
+                }
                 nombresDePaquete.put(id(elemento), atributo(elemento, "name"));
                 clasesPorPaquete.computeIfAbsent(id(elemento), k -> new ArrayList<>());
             } else if ("uml:Class".equals(tipo)) {

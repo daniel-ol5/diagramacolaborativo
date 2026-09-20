@@ -75,17 +75,18 @@ public class EnterpriseArchitectViewWriter {
     /**
      * Construye la {@code xmi:Extension} de EA completa.
      *
-     * @param idDelModelo id del {@code uml:Model} raíz, que hace de paquete contenedor para las
-     *     clases sueltas y de dueño de la lámina
+     * @param idDelPaqueteRaiz id del paquete raíz que contiene TODO el diagrama. Es lo que EA se
+     *     trae con {@code Import Package from XMI}, y por eso hace de paquete de las clases
+     *     sueltas y de dueño de la lámina
      */
     public Element escribir(
-            Document doc, CanonicalModel modelo, String nombreDelDiagrama, String idDelModelo) {
+            Document doc, CanonicalModel modelo, String nombreDelDiagrama, String idDelPaqueteRaiz) {
 
         Element ext = doc.createElementNS(XmiExporterService.NS_XMI, "xmi:Extension");
         ext.setAttribute("extender", EXTENDER);
         ext.setAttribute("extenderID", EXTENDER_ID);
 
-        Map<String, String> paquetePorClase = paquetePorClase(modelo, idDelModelo);
+        Map<String, String> paquetePorClase = paquetePorClase(modelo, idDelPaqueteRaiz);
         Map<String, String> nombrePorClase = new LinkedHashMap<>();
         modelo.classes().forEach(c -> nombrePorClase.put(c.id(), c.name()));
 
@@ -102,7 +103,7 @@ public class EnterpriseArchitectViewWriter {
 
         ext.appendChild(elementos(doc, modelo, paquetePorClase, localIdPorClase));
         ext.appendChild(conectores(doc, modelo, nombrePorClase, localIdPorClase, siguiente));
-        ext.appendChild(laminas(doc, modelo, nombreDelDiagrama, idDelModelo));
+        ext.appendChild(laminas(doc, modelo, nombreDelDiagrama, idDelPaqueteRaiz));
         return ext;
     }
 
@@ -268,7 +269,7 @@ public class EnterpriseArchitectViewWriter {
      * aparecer en varias láminas, y cada aparición tiene su propia geometría.
      */
     private Element laminas(
-            Document doc, CanonicalModel modelo, String nombreDelDiagrama, String idDelModelo) {
+            Document doc, CanonicalModel modelo, String nombreDelDiagrama, String idDelPaqueteRaiz) {
 
         Element diagramas = doc.createElement("diagrams");
         Element diagrama = doc.createElement("diagram");
@@ -280,11 +281,14 @@ public class EnterpriseArchitectViewWriter {
         // exactamente el sintoma que reporto Daniel: importa las clases y no abre ningun
         // diagrama.
         //
-        // Cuando el modelo tiene paquetes se usa el primero; cuando no tiene ninguno no queda
-        // otra que el modelo raiz, y ahi este candidato no aplica.
-        String duenio = modelo.packages().isEmpty()
-                ? idDelModelo
-                : modelo.packages().get(0).id();
+        // VUELTA 3: el dueno es el PAQUETE RAIZ, no el primer sub-paquete.
+        //
+        // En la vuelta 2 era el primero de modelo.packages(), y por eso el diagrama entraba
+        // junto con "catalogo" — pero entraba SOLO eso. EA importa con "Import Package from
+        // XMI", que trae un paquete: lo que estuviera fuera del primero se perdia, incluidas las
+        // dos clases de "operaciones" y las cuatro asociaciones. Ahora todo cuelga del paquete
+        // raiz y la lamina tambien, asi que el paquete que EA se trae es el diagrama completo.
+        String duenio = idDelPaqueteRaiz;
 
         Element model = doc.createElement("model");
         model.setAttribute("package", duenio);
@@ -361,7 +365,7 @@ public class EnterpriseArchitectViewWriter {
      * que es lo mismo que hace el UML estándar que emitimos: una clase suelta es hija directa
      * del {@code uml:Model}.
      */
-    private static Map<String, String> paquetePorClase(CanonicalModel modelo, String idDelModelo) {
+    private static Map<String, String> paquetePorClase(CanonicalModel modelo, String idDelPaqueteRaiz) {
         Map<String, String> destino = new HashMap<>();
         for (com.modelcollab.metamodel.model.Package paquete : modelo.packages()) {
             for (String classId : paquete.classIds()) {
@@ -369,7 +373,7 @@ public class EnterpriseArchitectViewWriter {
             }
         }
         for (ClassEntity clase : modelo.classes()) {
-            destino.putIfAbsent(clase.id(), idDelModelo);
+            destino.putIfAbsent(clase.id(), idDelPaqueteRaiz);
         }
         return destino;
     }

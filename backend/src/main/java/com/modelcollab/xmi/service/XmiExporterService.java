@@ -65,8 +65,37 @@ public class XmiExporterService {
      */
     public static final String NS_MC = "http://modelcollab.dev/schema/xmi/1.0";
 
-    /** Id del {@code uml:Model} raiz. Lo referencia la extension de EA como paquete contenedor. */
+    /** Id del {@code uml:Model} raiz. */
     static final String ID_DEL_MODELO = "modelcollab-model";
+
+    /**
+     * Id del <b>paquete raiz</b>, que contiene absolutamente todo: sub-paquetes, clases y
+     * relaciones.
+     *
+     * <h2>Por que existe, con la observacion que lo motivo</h2>
+     *
+     * <p>Enterprise Architect importa con <b>{@code Import Package from XMI}</b>, y eso trae
+     * <b>un</b> paquete. La vuelta 2 dejaba los sub-paquetes y las asociaciones como hijos
+     * directos del {@code uml:Model}, asi que EA se traia el PRIMER paquete y descartaba el
+     * resto.
+     *
+     * <p>Al abrir {@code inventario.xmi} se vio exactamente eso, y los tres sintomas tienen esta
+     * unica causa:
+     *
+     * <ul>
+     *   <li>Entraron las 3 clases de {@code catalogo} —el primer paquete— y <b>no</b> las 2 de
+     *       {@code operaciones}.</li>
+     *   <li>Aparecio un {@code Package2} vacio en el arbol: es {@code operaciones}, del que EA
+     *       dejo un muñon porque estaba fuera de lo importado.</li>
+     *   <li><b>Ninguna relacion se dibujo</b>: las cuatro asociaciones colgaban del
+     *       {@code uml:Model}, o sea fuera del paquete que se importo.</li>
+     * </ul>
+     *
+     * <p>La sospecha que traiamos era que las asociaciones caian dentro de ese {@code Package2}.
+     * <b>Es falsa</b> — el arbol del archivo muestra que colgaban del modelo— y si la hubieramos
+     * arreglado sin mirar, las clases de {@code operaciones} habrian seguido faltando.
+     */
+    static final String ID_DEL_PAQUETE_RAIZ = "modelcollab-root-package";
 
     /** Tipos primitivos de UML a los que apuntan los atributos exportados. */
     private static final Map<String, String> PRIMITIVOS = Map.of(
@@ -125,12 +154,23 @@ public class XmiExporterService {
             model.setAttribute("name", nombreDelDiagrama == null ? "Diagrama" : nombreDelDiagrama);
             raiz.appendChild(model);
 
-            escribirModelo(doc, model, modelo);
+            // TODO lo demas cuelga de un unico paquete raiz, no del modelo: ver
+            // ID_DEL_PAQUETE_RAIZ. Es lo que hace que "Import Package from XMI" traiga el
+            // diagrama entero y no solo su primer paquete.
+            Element paqueteRaiz = doc.createElement("packagedElement");
+            paqueteRaiz.setAttributeNS(NS_XMI, "xmi:type", "uml:Package");
+            paqueteRaiz.setAttributeNS(NS_XMI, "xmi:id", ID_DEL_PAQUETE_RAIZ);
+            paqueteRaiz.setAttribute(
+                    "name", nombreDelDiagrama == null ? "Diagrama" : nombreDelDiagrama);
+            model.appendChild(paqueteRaiz);
+
+            escribirModelo(doc, paqueteRaiz, modelo);
             // Primero la de EA y despues la nuestra. El orden entre extensiones no deberia
             // importarle a ningun lector —cada una se identifica por su atributo extender, que es
             // lo que hace nuestro propio importador— pero si algun lector mira solo la primera,
             // que sea la que le habla a el.
-            raiz.appendChild(vistaEa.escribir(doc, modelo, nombreDelDiagrama, ID_DEL_MODELO));
+            raiz.appendChild(
+                    vistaEa.escribir(doc, modelo, nombreDelDiagrama, ID_DEL_PAQUETE_RAIZ));
             raiz.appendChild(extension(doc, modelo));
 
             return serializar(doc);
@@ -141,6 +181,7 @@ public class XmiExporterService {
 
     // ----------------------------------------------------------- UML estándar
 
+    /** {@code model} es el paquete raiz, no el {@code uml:Model}: ver ID_DEL_PAQUETE_RAIZ. */
     private void escribirModelo(Document doc, Element model, CanonicalModel modelo) {
         Map<String, ClassEntity> porId = new LinkedHashMap<>();
         modelo.classes().forEach(c -> porId.put(c.id(), c));
@@ -209,6 +250,18 @@ public class XmiExporterService {
         e.setAttributeNS(NS_XMI, "xmi:id", atributo.id());
         e.setAttribute("name", atributo.name());
         e.setAttribute("visibility", atributo.visibility().name().toLowerCase());
+        // CONTRA EL "{bag}" QUE ENSUCIA LA LAMINA EN EA.
+        //
+        // Daniel abrio el archivo y cada atributo salia con "{bag}" pegado al final. No rompe
+        // nada, pero en una defensa se ve. En UML, una propiedad sin orden y sin unicidad ES una
+        // bolsa, y EA lo anota; el valor por defecto de isUnique en la especificacion es true,
+        // pero al no escribirlo EA lo toma como false. Declarandolo, la propiedad pasa a ser un
+        // conjunto y EA no le pone nada.
+        //
+        // NO VERIFICADO: es la explicacion que mejor encaja con el sintoma, no una observacion.
+        // Va en la misma vuelta que el paquete raiz para que se compruebe de una sola pasada.
+        e.setAttribute("isUnique", "true");
+        e.setAttribute("isOrdered", "false");
 
         Element tipo = doc.createElement("type");
         tipo.setAttributeNS(NS_XMI, "xmi:type", "uml:PrimitiveType");
