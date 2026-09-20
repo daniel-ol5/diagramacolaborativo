@@ -30,7 +30,9 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
   }
 
   void _cargar() {
-    setState(() => _futuro = _api.listarProyectos());
+    setState(() {
+      _futuro = _api.listarProyectos();
+    });
   }
 
   Future<void> _cerrarSesion() async {

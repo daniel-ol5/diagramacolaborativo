@@ -31,7 +31,9 @@ class _DiagramListScreenState extends State<DiagramListScreen> {
   }
 
   void _cargar() {
-    setState(() => _futuro = _api.listarDiagramas(widget.proyecto.id));
+    setState(() {
+      _futuro = _api.listarDiagramas(widget.proyecto.id);
+    });
   }
 
   Future<void> _elegir(DiagramSummary diagrama) async {
