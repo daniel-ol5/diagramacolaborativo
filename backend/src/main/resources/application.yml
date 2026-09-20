@@ -55,7 +55,10 @@ jwt:
 modelcollab:
   ai:
     api-key: ${GEMINI_API_KEY:}
-    model: ${GEMINI_MODEL:gemini-flash-latest}
+    model: ${GEMINI_MODEL:gemini-3-flash-preview}
+    # Al que se recurre cuando el principal esta saturado o sin cuota: la saturacion es POR
+    # MODELO, asi que cambiar de modelo es lo unico que recupera cuando reintentar no alcanza.
+    modelo-de-respaldo: ${GEMINI_MODELO_RESPALDO:gemini-flash-lite-latest}
     endpoint: ${GEMINI_ENDPOINT:https://generativelanguage.googleapis.com/v1beta}
     timeout-ms: ${GEMINI_TIMEOUT_MS:30000}
 

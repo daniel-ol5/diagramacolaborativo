@@ -36,6 +36,9 @@ import org.springframework.web.client.RestClient;
  */
 public class GeminiAiModelClient implements AiModelClient {
 
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(GeminiAiModelClient.class);
+
     private final AiProperties propiedades;
     private final ObjectMapper objectMapper;
     private final RestClient http;
@@ -87,15 +90,36 @@ public class GeminiAiModelClient implements AiModelClient {
 
         // El reintento envuelve SOLO la llamada: acá todavía no se aplicó nada al diagrama, así
         // que repetirla no puede duplicar ninguna operación. Ver ReintentoAnteSaturacion.
-        String respuesta = reintento.ejecutar("El asistente", () -> http.post()
-                .uri("/models/{modelo}:generateContent", propiedades.model())
+        try {
+            return textoDe(reintento.ejecutar(
+                    "El asistente", () -> llamar(propiedades.model(), cuerpo)));
+        } catch (RuntimeException e) {
+            if (!ReintentoAnteSaturacion.esSaturacion(e)) {
+                throw e;
+            }
+            // CAMBIAR DE MODELO ES LO ÚNICO QUE RECUPERA CUANDO REINTENTAR NO ALCANZA.
+            //
+            // La saturación y la cuota son POR MODELO. Medido el 20/09 con la misma clave y en
+            // el mismo minuto: el principal devolvió 429 cuatro de cuatro veces mientras el de
+            // respaldo devolvía 200 cuatro de cuatro. Insistir contra un modelo agotado falla
+            // igual por más que se espere; el otro contesta al primer intento.
+            //
+            // Va UNA sola vez, sin escalera: si el de respaldo está sano contesta enseguida, y
+            // si no lo está, lo que corresponde es decir la verdad y no hacer esperar más.
+            log.warn("{} no respondió; se recurre al modelo de respaldo ({})",
+                    propiedades.model(), propiedades.modeloDeRespaldo());
+            return textoDe(llamar(propiedades.modeloDeRespaldo(), cuerpo));
+        }
+    }
+
+    private String llamar(String modelo, Map<String, Object> cuerpo) {
+        return http.post()
+                .uri("/models/{modelo}:generateContent", modelo)
                 .header("x-goog-api-key", propiedades.apiKey())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(cuerpo)
                 .retrieve()
-                .body(String.class));
-
-        return textoDe(respuesta);
+                .body(String.class);
     }
 
     @Override

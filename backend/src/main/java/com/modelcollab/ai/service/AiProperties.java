@@ -15,10 +15,27 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * un tope duro, es un valor por defecto.
  */
 @ConfigurationProperties(prefix = "modelcollab.ai")
-public record AiProperties(String apiKey, String model, String endpoint, Integer timeoutMs) {
+public record AiProperties(
+        String apiKey, String model, String modeloDeRespaldo, String endpoint, Integer timeoutMs) {
 
     public AiProperties {
-        model = model == null || model.isBlank() ? "gemini-flash-latest" : model;
+        model = model == null || model.isBlank() ? "gemini-3-flash-preview" : model;
+        // EL MODELO DE RESPALDO, y por que existe.
+        //
+        // Medido el 20/09 intercalando llamadas a cuatro modelos con la misma clave, en el mismo
+        // minuto: gemini-flash-latest devolvio 429 las CUATRO veces, y gemini-3-flash-preview y
+        // gemini-flash-lite-latest devolvieron 200 las cuatro. La saturacion y la cuota son POR
+        // MODELO, no de la cuenta ni de la red.
+        //
+        // Eso es lo que ningun reintento puede arreglar: si el modelo esta agotado, insistir
+        // contra el mismo modelo falla igual por mas que se espere. Cambiar de modelo si
+        // contesta, y contesta en el primer intento.
+        //
+        // Se elige el preview y no el lite porque el lite tardo entre 9 y 18 s contra 1,3 a 8 s
+        // del preview, y esto corre con una persona esperando a que su comando dictado haga algo.
+        modeloDeRespaldo = modeloDeRespaldo == null || modeloDeRespaldo.isBlank()
+                ? "gemini-flash-lite-latest"
+                : modeloDeRespaldo;
         endpoint = endpoint == null || endpoint.isBlank()
                 ? "https://generativelanguage.googleapis.com/v1beta"
                 : endpoint;

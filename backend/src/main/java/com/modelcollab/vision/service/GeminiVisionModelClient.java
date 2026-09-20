@@ -30,6 +30,9 @@ import org.springframework.web.client.RestClient;
  */
 public class GeminiVisionModelClient implements VisionModelClient {
 
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(GeminiVisionModelClient.class);
+
     private final AiProperties propiedades;
     private final ObjectMapper objectMapper;
     private final RestClient http;
@@ -85,17 +88,31 @@ public class GeminiVisionModelClient implements VisionModelClient {
         // Mismo reintento que CU16, y por el mismo motivo: el 503 de saturación va y viene en
         // ráfagas. Acá todavía no se aplicó nada al diagrama —esto sólo mira la foto— así que
         // repetir la llamada no puede duplicar ninguna clase.
-        String respuesta = reintento.ejecutar("La lectura de fotos", () -> http.post()
-                .uri("/models/{modelo}:generateContent", propiedades.model())
+        try {
+            return textoDe(reintento.ejecutar(
+                    "La lectura de fotos", () -> llamar(propiedades.model(), cuerpo)));
+        } catch (RuntimeException e) {
+            if (!ReintentoAnteSaturacion.esSaturacion(e)) {
+                throw e;
+            }
+            // Mismo motivo que en CU16: la cuota y la saturacion son POR MODELO, asi que
+            // cambiar de modelo recupera donde reintentar no puede.
+            log.warn("{} no respondio; se recurre al modelo de respaldo ({})",
+                    propiedades.model(), propiedades.modeloDeRespaldo());
+            return textoDe(llamar(propiedades.modeloDeRespaldo(), cuerpo));
+        }
+    }
+
+    private String llamar(String modelo, Map<String, Object> cuerpo) {
+        return http.post()
+                .uri("/models/{modelo}:generateContent", modelo)
                 // En cabecera y no en la URL: una URL termina en los logs de acceso y en el
                 // historial de cualquier proxy que haya en el medio.
                 .header("x-goog-api-key", propiedades.apiKey())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(cuerpo)
                 .retrieve()
-                .body(String.class));
-
-        return textoDe(respuesta);
+                .body(String.class);
     }
 
     @Override

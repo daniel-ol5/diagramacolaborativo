@@ -269,11 +269,24 @@ public class AiCommandService {
         } catch (RespuestaDeIaInvalidaException e) {
             throw e;
         } catch (RuntimeException e) {
-            log.warn("El servicio de IA ({}) no respondió: {}",
-                    cliente.descripcion(), e.toString());
+            // SE DISTINGUE LA CUOTA DE LA CAIDA, y es lo que nos costo media hora de
+            // diagnostico equivocado: un 429 salia como "el asistente no esta disponible", que
+            // manda a mirar la red y el servicio cuando lo que pasa es que se agoto el cupo.
+            boolean cuota = e instanceof org.springframework.web.client.HttpClientErrorException c
+                    && c.getStatusCode().value() == 429;
+            log.warn("El servicio de IA ({}) no respondió [{}]: {}",
+                    cliente.descripcion(),
+                    cuota ? "CUOTA AGOTADA (429)" : "no disponible",
+                    e.toString());
             throw new RespuestaDeIaInvalidaException(
                     AiCommandResponse.IA_CAIDA,
-                    "El asistente no está disponible en este momento. El diagrama no se tocó.",
+                    cuota
+                            // Se dice lo que pasa de verdad: insistir no lo arregla, y saberlo
+                            // cambia lo que hace la persona del otro lado.
+                            ? "Se alcanzó el límite de uso del asistente. Hay que esperar unos "
+                                    + "minutos. El diagrama no se tocó."
+                            : "El asistente no está disponible en este momento. "
+                                    + "El diagrama no se tocó.",
                     e);
         }
     }

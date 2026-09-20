@@ -169,6 +169,22 @@ public final class ReintentoAnteSaturacion {
         throw ultimo;
     }
 
+    /**
+     * Si el fallo es "el servicio no esta disponible ahora" y no "la peticion esta mal".
+     *
+     * <p>Lo usa el cliente para decidir si vale la pena recurrir al modelo de respaldo. Un 400 o
+     * un 404 no se arreglan cambiando de modelo — se arreglan arreglando la peticion.
+     */
+    public static boolean esSaturacion(RuntimeException e) {
+        if (e instanceof ResourceAccessException) {
+            return true;
+        }
+        if (e instanceof HttpServerErrorException || e instanceof HttpClientErrorException) {
+            return esperaPara(e) != null;
+        }
+        return false;
+    }
+
     /** Cuánto esperar antes del próximo intento, o {@code null} si no hay que reintentar. */
     private static Duration esperaPara(RuntimeException e) {
         int codigo = e instanceof HttpServerErrorException s
