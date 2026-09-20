@@ -9,6 +9,7 @@ import {
   revokeInvitation,
 } from "./api";
 import type { Invitation, Member, ProjectRole } from "./types";
+import { rolEnCastellano } from "./types";
 import "./ShareModal.css";
 
 interface Props {
@@ -152,7 +153,7 @@ export function ShareModal({ session, projectId, onClose }: Props) {
                   >
                     <div className="share-modal__list-item-info">
                       <span className="share-modal__list-item-name">
-                        {inv.role} — {estado.texto}
+                        {rolEnCastellano(inv.role)} — {estado.texto}
                       </span>
                       <span className="share-modal__list-item-meta">
                         {inv.expiresAt
@@ -194,7 +195,7 @@ export function ShareModal({ session, projectId, onClose }: Props) {
                     <span className="share-modal__list-item-name">{m.fullName}</span>
                     <span className="share-modal__list-item-meta">{m.email}</span>
                   </div>
-                  <span className="access-role-badge">{m.role}</span>
+                  <span className="access-role-badge">{rolEnCastellano(m.role)}</span>
                 </div>
               ))}
             </div>

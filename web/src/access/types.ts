@@ -5,6 +5,37 @@
 
 export type ProjectRole = "OWNER" | "EDITOR" | "VIEWER";
 
+/**
+ * El rol escrito para una persona, no para la base de datos.
+ *
+ * OWNER/EDITOR/VIEWER son los valores del CHECK de §13 y viajan asi por la API — pero en
+ * pantalla eran la base de datos asomandose en una interfaz que por lo demas esta en castellano.
+ * Aparecia crudo en CUATRO lugares: la lista de proyectos, la lista de invitaciones, la de
+ * miembros y la pagina de invitacion. En el mismo modal de compartir, el desplegable decia
+ * "Editor" y la lista de abajo "EDITOR".
+ *
+ * Vive aca y no en cada pantalla por el motivo de siempre: escrito cuatro veces, un dia tres
+ * dicen una cosa y la cuarta otra.
+ */
+export const ROL: Record<ProjectRole, string> = {
+  OWNER: "Dueño",
+  EDITOR: "Editor",
+  VIEWER: "Lector",
+};
+
+/**
+ * El rol tal como se muestra.
+ *
+ * Tolera que falte —en la vista previa de una invitacion es opcional— y tolera un valor que no
+ * conozcamos: prefiere mostrar el crudo antes que romper la pantalla.
+ */
+export function rolEnCastellano(role?: string): string {
+  if (!role) {
+    return "";
+  }
+  return ROL[role as ProjectRole] ?? role;
+}
+
 /** ProjectResponse.java. `role` es el rol de QUIEN PREGUNTA en este proyecto, no un atributo del proyecto. */
 export interface Project {
   id: string;

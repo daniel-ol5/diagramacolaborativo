@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { Session } from "../components/LoginScreen";
 import { acceptInvitation, previewInvitation } from "./api";
 import type { InvitationPreview } from "./types";
+import { rolEnCastellano } from "./types";
 import "./InvitePage.css";
 
 interface Props {
@@ -82,7 +83,7 @@ export function InvitePage({ session }: Props) {
           <>
             <h1>
               Te invitaron a {preview.projectName} como{" "}
-              <span className="invite-page__role">{preview.role}</span>
+              <span className="invite-page__role">{rolEnCastellano(preview.role)}</span>
             </h1>
             {session ? (
               <button type="button" className="invite-page__action" onClick={handleAccept} disabled={accepting}>

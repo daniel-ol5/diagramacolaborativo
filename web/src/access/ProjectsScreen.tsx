@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import type { Session } from "../components/LoginScreen";
 import { createProject, listProjects } from "./api";
 import type { Project } from "./types";
+import { rolEnCastellano } from "./types";
 import { NewProjectModal } from "./NewProjectModal";
 import "./access.css";
 
@@ -10,18 +11,6 @@ interface Props {
   session: Session;
 }
 
-/**
- * El rol, escrito para una persona y no para la base de datos.
- *
- * OWNER/EDITOR/VIEWER son los valores del CHECK de §13 y viajan asi por la API, pero en
- * pantalla eran el enum crudo asomandose: el resto de la interfaz esta en castellano. De paso
- * la pastilla ocupa menos, que era el otro problema.
- */
-const ROL_EN_CASTELLANO: Record<string, string> = {
-  OWNER: "Dueño",
-  EDITOR: "Editor",
-  VIEWER: "Lector",
-};
 
 /** CU08/CU09: los proyectos donde soy miembro, cada uno con mi rol -- crear, entrar. */
 export function ProjectsScreen({ session }: Props) {
@@ -107,7 +96,7 @@ export function ProjectsScreen({ session }: Props) {
                   {p.description && <div className="access-list__item-meta">{p.description}</div>}
                 </div>
                 <span className={`access-role-badge${p.role === "OWNER" ? " access-role-badge--owner" : ""}`}>
-                  {ROL_EN_CASTELLANO[p.role] ?? p.role}
+                  {rolEnCastellano(p.role)}
                 </span>
               </button>
             ))}
