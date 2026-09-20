@@ -171,3 +171,16 @@
   background: var(--color-bg);
   border: 1.5px solid var(--color-primary);
 }
+
+/* El agarre de redimensionar (solo esquina inferior-derecha, ver
+   UmlClassNode.tsx). Visible siempre, no solo al pasar el mouse -- sin eso
+   nadie descubre que la caja se puede agrandar, que es justamente lo que
+   esta funcion viene a resolver (una caja con altura fija que recorta
+   texto, ver el comentario de arriba). */
+.uml-class-node__resize-handle {
+  width: 12px;
+  height: 12px;
+  border-right: 2px solid var(--color-border-strong);
+  border-bottom: 2px solid var(--color-border-strong);
+  cursor: nwse-resize;
+}

@@ -4,7 +4,7 @@ import { WS_URL } from "../services/config";
 import { useCanonicalStore } from "../store/canonicalStore";
 import { useCollaborationStore } from "../store/collaborationStore";
 import { useOfflineStore } from "../store/offlineStore";
-import type { Attribute, CanonicalModel, ClassEntity, Method, Relationship } from "../types/canonical";
+import type { Attribute, CanonicalModel, ClassEntity, Method, Package, Relationship } from "../types/canonical";
 import type { OfflineOperation } from "../types/offline";
 import {
   esBroadcastDeMutacion,
@@ -60,6 +60,15 @@ export interface UseCollaborationResult {
    * throttle descartado) para todos los demas colaboradores.
    */
   flushMove: (classId: string) => void;
+  /**
+   * Redimensiona una caja: aplica el cambio local de inmediato y publica
+   * RESIZE_CLASS con throttling, mismo patron que moveClass -- es
+   * ultimo-que-escribe-gana (asi lo declara OperationType en el backend),
+   * no pide lock.
+   */
+  resizeClass: (classId: string, width: number, height: number) => void;
+  /** Al soltar el handle de redimensionar, sin throttle -- mismo motivo que flushMove. */
+  flushResize: (classId: string) => void;
   /** Pide el soft-lock de un elemento. No abre nada por su cuenta: hay que esperar LOCK_ACQUIRED. */
   requestLock: (targetId: string) => void;
   /**
@@ -95,6 +104,12 @@ export interface UseCollaborationResult {
   addRelationship: (relationship: Relationship) => void;
   /** DELETE_RELATIONSHIP. Requiere lock sobre relId. */
   deleteRelationship: (relId: string) => void;
+  /** ADD_PACKAGE. No requiere lock (igual que ADD_CLASS/ADD_RELATIONSHIP). El id lo genera el llamador. */
+  addPackage: (paquete: Package) => void;
+  /** UPDATE_PACKAGE. Requiere lock sobre paquete.id — reemplazo completo, no parche. */
+  updatePackage: (paquete: Package) => void;
+  /** DELETE_PACKAGE. Requiere lock sobre packageId. */
+  deletePackage: (packageId: string) => void;
 }
 
 const THROTTLE_MS = 50; // ~20 mensajes/seg durante el arrastre (Dia 8)
@@ -118,10 +133,12 @@ export function useCollaboration(
   const ownMutationIds = useRef<Set<string>>(new Set());
   const lastSequenceNum = useRef<number | null>(null);
   const lastSentAt = useRef(0);
+  const lastResizeSentAt = useRef(0);
   const lastCursorSentAt = useRef(0);
 
   const setModel = useCanonicalStore((s) => s.setModel);
   const updateClassPosition = useCanonicalStore((s) => s.updateClassPosition);
+  const resizeClassLocal = useCanonicalStore((s) => s.resizeClass);
   const renameClassLocal = useCanonicalStore((s) => s.renameClass);
   const addClassLocal = useCanonicalStore((s) => s.addClass);
   const deleteClassLocal = useCanonicalStore((s) => s.deleteClass);
@@ -133,6 +150,9 @@ export function useCollaboration(
   const deleteMethodLocal = useCanonicalStore((s) => s.deleteMethod);
   const addRelationshipLocal = useCanonicalStore((s) => s.addRelationship);
   const deleteRelationshipLocal = useCanonicalStore((s) => s.deleteRelationship);
+  const addPackageLocal = useCanonicalStore((s) => s.addPackage);
+  const updatePackageLocal = useCanonicalStore((s) => s.updatePackage);
+  const deletePackageLocal = useCanonicalStore((s) => s.deletePackage);
   const setMyUserId = useCollaborationStore((s) => s.setMyUserId);
 
   useEffect(() => {
@@ -338,6 +358,9 @@ export function useCollaboration(
           case "MOVE_CLASS":
             if (body.targetId) updateClassPosition(body.targetId, Number(body.payload.x), Number(body.payload.y));
             break;
+          case "RESIZE_CLASS":
+            if (body.targetId) resizeClassLocal(body.targetId, Number(body.payload.width), Number(body.payload.height));
+            break;
           case "RENAME_CLASS":
             if (body.targetId) renameClassLocal(body.targetId, String(body.payload.name));
             break;
@@ -370,6 +393,15 @@ export function useCollaboration(
             break;
           case "DELETE_RELATIONSHIP":
             if (body.targetId) deleteRelationshipLocal(body.targetId);
+            break;
+          case "ADD_PACKAGE":
+            addPackageLocal(body.payload as unknown as Package);
+            break;
+          case "UPDATE_PACKAGE":
+            updatePackageLocal(body.payload as unknown as Package);
+            break;
+          case "DELETE_PACKAGE":
+            if (body.targetId) deletePackageLocal(body.targetId);
             break;
           case "BULK_MERGE":
             // CU17 (importar desde foto, confirmar): un solo evento con el
@@ -504,6 +536,7 @@ export function useCollaboration(
     token,
     setModel,
     updateClassPosition,
+    resizeClassLocal,
     renameClassLocal,
     addClassLocal,
     deleteClassLocal,
@@ -515,6 +548,9 @@ export function useCollaboration(
     deleteMethodLocal,
     addRelationshipLocal,
     deleteRelationshipLocal,
+    addPackageLocal,
+    updatePackageLocal,
+    deletePackageLocal,
   ]);
 
   function publishMutate(op: string, targetId: string | null, payload: Record<string, unknown>) {
@@ -580,6 +616,21 @@ export function useCollaboration(
     const clase = useCanonicalStore.getState().model?.classes.find((c) => c.id === classId);
     if (!clase) return;
     publishMutate("MOVE_CLASS", classId, { x: clase.position.x, y: clase.position.y });
+  }
+
+  function resizeClass(classId: string, width: number, height: number) {
+    resizeClassLocal(classId, width, height);
+
+    const now = performance.now();
+    if (now - lastResizeSentAt.current < THROTTLE_MS) return;
+    lastResizeSentAt.current = now;
+    publishMutate("RESIZE_CLASS", classId, { width, height });
+  }
+
+  function flushResize(classId: string) {
+    const clase = useCanonicalStore.getState().model?.classes.find((c) => c.id === classId);
+    if (!clase) return;
+    publishMutate("RESIZE_CLASS", classId, { width: clase.width, height: clase.height });
   }
 
   function requestLock(targetId: string) {
@@ -658,6 +709,23 @@ export function useCollaboration(
     publishMutate("DELETE_RELATIONSHIP", relId, {});
   }
 
+  function addPackage(paquete: Package) {
+    addPackageLocal(paquete);
+    publishMutate("ADD_PACKAGE", null, paquete as unknown as Record<string, unknown>);
+  }
+
+  function updatePackage(paquete: Package) {
+    useCollaborationStore.getState().setEditingTargetId(null);
+    updatePackageLocal(paquete);
+    publishMutate("UPDATE_PACKAGE", paquete.id, paquete as unknown as Record<string, unknown>);
+  }
+
+  function deletePackage(packageId: string) {
+    useCollaborationStore.getState().setEditingTargetId(null);
+    deletePackageLocal(packageId);
+    publishMutate("DELETE_PACKAGE", packageId, {});
+  }
+
   return {
     status,
     error,
@@ -665,6 +733,8 @@ export function useCollaboration(
     sequenceGap,
     moveClass,
     flushMove,
+    resizeClass,
+    flushResize,
     requestLock,
     releaseLock,
     renewLock,
@@ -680,5 +750,8 @@ export function useCollaboration(
     deleteMethod,
     addRelationship,
     deleteRelationship,
+    addPackage,
+    updatePackage,
+    deletePackage,
   };
 }

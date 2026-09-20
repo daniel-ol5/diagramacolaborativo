@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
-import { Handle, Position, type NodeProps } from "reactflow";
+import { Handle, NodeResizeControl, Position, type NodeProps } from "reactflow";
 import type { Attribute, ClassEntity, Method } from "../types/canonical";
 import { visibilitySymbol, methodSignature } from "../lib/uml";
 import { useCollaborationActions } from "../hooks/collaborationActionsContext";
@@ -155,6 +155,22 @@ export function UmlClassNode({ data, selected }: NodeProps<ClassEntity>) {
             : undefined
       }
     >
+      {/* Solo esquina inferior-derecha: con las otras tres, React Flow puede
+          mover x/y ademas de width/height (redimensionar "desde arriba" o
+          "desde la izquierda" corre el origen de la caja), y ese
+          movimiento no se manda por ningun lado -- MOVE_CLASS es un gesto
+          aparte. Restringido a esta esquina, el origen nunca cambia y solo
+          hace falta publicar width/height. */}
+      <NodeResizeControl
+        position="bottom-right"
+        minWidth={180}
+        minHeight={120}
+        style={{ background: "transparent", border: "none" }}
+        onResize={(_, params) => actions?.resizeClass(data.id, params.width, params.height)}
+        onResizeEnd={() => actions?.flushResize(data.id)}
+      >
+        <div className="uml-class-node__resize-handle nodrag" />
+      </NodeResizeControl>
       <Handle type="target" position={Position.Top} className="uml-class-node__handle" />
       <Handle type="source" position={Position.Bottom} className="uml-class-node__handle" />
       <div

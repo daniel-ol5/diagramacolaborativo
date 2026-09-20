@@ -14,6 +14,9 @@ export interface CollaborationActions {
   renewLock: (targetId: string) => void;
   renameClass: (targetId: string, name: string) => void;
   deleteClass: (classId: string) => void;
+  /** Ultimo-que-escribe-gana, igual que MOVE_CLASS -- no pide lock. */
+  resizeClass: (classId: string, width: number, height: number) => void;
+  flushResize: (classId: string) => void;
   addAttribute: (classId: string, attribute: Attribute) => void;
   updateAttribute: (attribute: Attribute) => void;
   deleteAttribute: (attrId: string) => void;

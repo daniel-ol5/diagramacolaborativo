@@ -14,6 +14,7 @@ import { UmlMarkerDefs } from "./components/UmlMarkerDefs";
 import { CursorOverlay } from "./components/CursorOverlay";
 import type { Session } from "./components/LoginScreen";
 import { NewClassModal } from "./components/NewClassModal";
+import { PackagePanel } from "./components/PackagePanel";
 import { RelationshipFormModal } from "./components/RelationshipFormModal";
 import { OfflineSyncBadge } from "./components/OfflineSyncBadge";
 import { ReconciliationModal } from "./components/ReconciliationModal";
@@ -126,6 +127,7 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
   const [generatorError, setGeneratorError] = useState<string | null>(null);
   const [showAiCommand, setShowAiCommand] = useState(false);
   const [showVisionImport, setShowVisionImport] = useState(false);
+  const [showPackages, setShowPackages] = useState(false);
   const selectNode = usePresentationStore((s) => s.selectNode);
   const selectedNodeId = usePresentationStore((s) => s.selectedNodeId);
   const viewMode = usePresentationStore((s) => s.viewMode);
@@ -298,6 +300,9 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
             <button type="button" onClick={() => setShowVisionImport(true)}>
               Importar foto
             </button>
+            <button type="button" onClick={() => setShowPackages((v) => !v)}>
+              Paquetes
+            </button>
           </div>
         )}
 
@@ -370,6 +375,20 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
         {diagramId && showAiCommand && (
           <AiCommandBox diagramId={diagramId} token={session.token} onClose={() => setShowAiCommand(false)} />
         )}
+        {showPackages && model && (
+          <PackagePanel
+            model={model}
+            actions={{
+              requestLock: collaboration.requestLock,
+              releaseLock: collaboration.releaseLock,
+              renewLock: collaboration.renewLock,
+              addPackage: collaboration.addPackage,
+              updatePackage: collaboration.updatePackage,
+              deletePackage: collaboration.deletePackage,
+            }}
+            onClose={() => setShowPackages(false)}
+          />
+        )}
         <CollaborationActionsContext.Provider
           value={{
             requestLock: collaboration.requestLock,
@@ -377,6 +396,8 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
             renewLock: collaboration.renewLock,
             renameClass: collaboration.renameClass,
             deleteClass: collaboration.deleteClass,
+            resizeClass: collaboration.resizeClass,
+            flushResize: collaboration.flushResize,
             addAttribute: collaboration.addAttribute,
             updateAttribute: collaboration.updateAttribute,
             deleteAttribute: collaboration.deleteAttribute,
