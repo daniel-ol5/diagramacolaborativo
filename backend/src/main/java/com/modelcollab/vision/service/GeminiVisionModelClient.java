@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.modelcollab.ai.dto.AiCommandResponse;
 import com.modelcollab.ai.service.AiProperties;
+import com.modelcollab.ai.service.ReintentoAnteSaturacion;
 import com.modelcollab.ai.service.RespuestaDeIaInvalidaException;
 import java.time.Duration;
 import java.util.Base64;
@@ -32,10 +33,17 @@ public class GeminiVisionModelClient implements VisionModelClient {
     private final AiProperties propiedades;
     private final ObjectMapper objectMapper;
     private final RestClient http;
+    private final ReintentoAnteSaturacion reintento;
 
     public GeminiVisionModelClient(AiProperties propiedades, ObjectMapper objectMapper) {
+        this(propiedades, objectMapper, new ReintentoAnteSaturacion());
+    }
+
+    public GeminiVisionModelClient(
+            AiProperties propiedades, ObjectMapper objectMapper, ReintentoAnteSaturacion reintento) {
         this.propiedades = propiedades;
         this.objectMapper = objectMapper;
+        this.reintento = reintento;
 
         SimpleClientHttpRequestFactory fabrica = new SimpleClientHttpRequestFactory();
         fabrica.setConnectTimeout(Duration.ofMillis(propiedades.timeoutMs()));
@@ -62,7 +70,10 @@ public class GeminiVisionModelClient implements VisionModelClient {
                         "temperature", 0,
                         "responseMimeType", "application/json"));
 
-        String respuesta = http.post()
+        // Mismo reintento que CU16, y por el mismo motivo: el 503 de saturación va y viene en
+        // ráfagas. Acá todavía no se aplicó nada al diagrama —esto sólo mira la foto— así que
+        // repetir la llamada no puede duplicar ninguna clase.
+        String respuesta = reintento.ejecutar("La lectura de fotos", () -> http.post()
                 .uri("/models/{modelo}:generateContent", propiedades.model())
                 // En cabecera y no en la URL: una URL termina en los logs de acceso y en el
                 // historial de cualquier proxy que haya en el medio.
@@ -70,7 +81,7 @@ public class GeminiVisionModelClient implements VisionModelClient {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(cuerpo)
                 .retrieve()
-                .body(String.class);
+                .body(String.class));
 
         return textoDe(respuesta);
     }

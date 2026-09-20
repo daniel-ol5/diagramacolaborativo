@@ -39,10 +39,17 @@ public class GeminiAiModelClient implements AiModelClient {
     private final AiProperties propiedades;
     private final ObjectMapper objectMapper;
     private final RestClient http;
+    private final ReintentoAnteSaturacion reintento;
 
     public GeminiAiModelClient(AiProperties propiedades, ObjectMapper objectMapper) {
+        this(propiedades, objectMapper, new ReintentoAnteSaturacion());
+    }
+
+    public GeminiAiModelClient(
+            AiProperties propiedades, ObjectMapper objectMapper, ReintentoAnteSaturacion reintento) {
         this.propiedades = propiedades;
         this.objectMapper = objectMapper;
+        this.reintento = reintento;
 
         SimpleClientHttpRequestFactory fabrica = new SimpleClientHttpRequestFactory();
         // Con timeout, siempre. Sin él, una llamada que no vuelve deja colgado el hilo que
@@ -66,13 +73,15 @@ public class GeminiAiModelClient implements AiModelClient {
                         "temperature", 0,
                         "responseMimeType", "application/json"));
 
-        String respuesta = http.post()
+        // El reintento envuelve SOLO la llamada: acá todavía no se aplicó nada al diagrama, así
+        // que repetirla no puede duplicar ninguna operación. Ver ReintentoAnteSaturacion.
+        String respuesta = reintento.ejecutar("El asistente", () -> http.post()
                 .uri("/models/{modelo}:generateContent", propiedades.model())
                 .header("x-goog-api-key", propiedades.apiKey())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(cuerpo)
                 .retrieve()
-                .body(String.class);
+                .body(String.class));
 
         return textoDe(respuesta);
     }

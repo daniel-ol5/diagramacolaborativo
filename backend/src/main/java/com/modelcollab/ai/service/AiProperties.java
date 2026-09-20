@@ -18,11 +18,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record AiProperties(String apiKey, String model, String endpoint, Integer timeoutMs) {
 
     public AiProperties {
-        model = model == null || model.isBlank() ? "gemini-2.0-flash" : model;
+        model = model == null || model.isBlank() ? "gemini-flash-latest" : model;
         endpoint = endpoint == null || endpoint.isBlank()
                 ? "https://generativelanguage.googleapis.com/v1beta"
                 : endpoint;
-        timeoutMs = timeoutMs == null ? 8000 : timeoutMs;
+        timeoutMs = timeoutMs == null ? 30000 : timeoutMs;
     }
 
     public boolean hayClave() {

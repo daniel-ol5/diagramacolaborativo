@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Registros de una corrida a mano (spring-boot:run > backend-run.log). No son del proyecto.
+*.log
