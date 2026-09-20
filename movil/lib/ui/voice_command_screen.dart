@@ -142,12 +142,21 @@ class _VoiceCommandScreenState extends State<VoiceCommandScreen> {
         );
 
       case _Estado.enviando:
+        // El servidor puede tardar hasta 45s reintentando contra el
+        // modelo real -- sin este aviso, medio minuto de pantalla quieta
+        // parece colgado, no ocupado (encontrado en el pase del 20/09).
         return const Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
             Text('Enviando…'),
+            SizedBox(height: 8),
+            Text(
+              'Puede tardar hasta un minuto.',
+              style: TextStyle(fontSize: 13, color: Colors.black54),
+              textAlign: TextAlign.center,
+            ),
           ],
         );
 

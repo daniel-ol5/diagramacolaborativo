@@ -51,6 +51,15 @@ class AiCommandException implements Exception {
 /// AiCommandBox.tsx en la web. El telefono manda TEXTO (ya transcripto en
 /// el dispositivo), nunca audio: el servidor no distingue si el texto vino
 /// tipeado en la web o dictado en el telefono, y no tiene por que.
+///
+/// DISEÑO PENDIENTE, anotado a proposito (encontrado en el pase con
+/// telefono real del 20/09, a tres dias de la defensa): el telefono NO
+/// deberia esperar a que el modelo conteste -- deberia mandar el comando,
+/// recibir un "recibido" inmediato, y enterarse del resultado por otro
+/// canal (como ya hace vision-capture con /user/queue/vision para la
+/// foto). Esperar acopla al telefono a un tiempo que no controla. No se
+/// hizo ahora por el tiempo que queda; el arreglo de emergencia de abajo
+/// (60s) es correcto pero temporal.
 class AiCommandService {
   AiCommandService._();
 
@@ -69,7 +78,13 @@ class AiCommandService {
             headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
             body: jsonEncode({'command': command, 'clientCommandId': clientCommandId}),
           )
-          .timeout(const Duration(seconds: 20));
+          // El servidor reintenta hasta 45s ante 503/429/fallo de red antes
+          // de darse por vencido con el modelo real -- este tope tiene que
+          // ser mayor a ESE peor caso, no al tiempo "razonable" de una
+          // llamada que sale bien. Encontrado en el pase: con 20s, el
+          // telefono se rendia antes de que el servidor terminara de
+          // reintentar, y los reintentos quedaban gritando al vacio.
+          .timeout(const Duration(seconds: 60));
     } catch (e) {
       throw AiCommandException('No se pudo mandar el comando. ($e)');
     }

@@ -40,6 +40,15 @@ class VisionCaptureException implements Exception {
 /// se pudo. El servidor empuja el resultado del analisis a
 /// /user/queue/vision de esa MISMA persona -- este cliente ni se
 /// suscribe a eso, no es asunto suyo.
+///
+/// DISEÑO PENDIENTE, anotado a proposito (pase con telefono real del
+/// 20/09): esta llamada debería terminar apenas el servidor CONFIRMA que
+/// recibio la imagen, no esperar a que el modelo la analice -- el
+/// resultado ya viaja aparte por /user/queue/vision. Hoy el telefono
+/// manda Y espera el analisis completo, que es media decision: el diseño
+/// acordado es "el telefono manda, la web revisa", y esperar lo ata a un
+/// tiempo que no controla. No se hizo ahora por el tiempo que queda antes
+/// de la defensa.
 class VisionCaptureService {
   VisionCaptureService._();
 
@@ -57,7 +66,11 @@ class VisionCaptureService {
       )
         ..headers['Authorization'] = 'Bearer $token'
         ..files.add(await http.MultipartFile.fromPath('image', foto.path));
-      final streamed = await request.send().timeout(const Duration(seconds: 30));
+      // Mismo motivo que ai_command_service.dart: el servidor puede tardar
+      // hasta el tope de reintentos ante Gemini (45s) antes de contestar;
+      // 30s hacia que el telefono se rindiera antes de que el servidor
+      // terminara de intentar.
+      final streamed = await request.send().timeout(const Duration(seconds: 60));
       respuesta = await http.Response.fromStream(streamed);
     } catch (e) {
       throw VisionCaptureException('No se pudo subir la foto. ($e)');
