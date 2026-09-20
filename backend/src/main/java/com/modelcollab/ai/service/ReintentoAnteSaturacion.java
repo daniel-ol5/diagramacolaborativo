@@ -5,6 +5,7 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.HttpServerErrorException;
 
 /**
@@ -42,6 +43,10 @@ import org.springframework.web.client.HttpServerErrorException;
  *   <li><b>429</b> — cuota por minuto agotada. Se reintenta <b>con más espera</b>: insistir
  *       rápido contra una cuota la empeora. También apareció en la medición, y también se
  *       despejó solo.</li>
+ *   <li><b>Un error de red</b> —{@link ResourceAccessException}: no conectó, se cortó, agotó el
+ *       tiempo— también se reintenta. Medido contra la conexión de Daniel, tres llamadas
+ *       seguidas: la primera <b>agotó 20 s sin conectar</b>, la segunda salió en 8,8 s. Falló
+ *       una y la siguiente anduvo: un solo reintento habría salvado el comando.</li>
  *   <li><b>Todo lo demás no se reintenta.</b> Un 400, un 401 o un 404 son culpa nuestra —
  *       petición mal armada, clave inválida, modelo que ya no existe— y reintentarlos sólo gasta
  *       cuota y le hace esperar al usuario tres veces el mismo error. El 404 del modelo dado de
@@ -79,6 +84,27 @@ public final class ReintentoAnteSaturacion {
     public static final Duration ESPERA_CUOTA = Duration.ofMillis(4000);
 
     /**
+     * Espera tras un error de red: corta, porque el intento fallido ya gastó tiempo por su cuenta.
+     *
+     * <h2>Corte total contra tropezón, que es la pregunta que hay debajo</h2>
+     *
+     * <p>Las dos cosas llegan como la misma excepción, y reintentar un corte total sólo retrasa
+     * el mismo error. Se elige reintentar igual, por dos razones:
+     *
+     * <p><b>Un corte total no necesita que se lo digamos: ya es evidente.</b> Esta aplicación se
+     * sirve por la misma red, y la colaboración va por WebSocket sobre esa red. Si no hay
+     * conexión, el usuario ya está viendo el lienzo desconectado — el comando dictado no es por
+     * donde se entera. El caso que sí es invisible es el tropezón: todo anda, y justo esa llamada
+     * cae.
+     *
+     * <p><b>Y el costo de equivocarse está acotado por el tiempo de conexión</b>, que es de
+     * {@link #ESPERA_RED} × intentos más unos pocos segundos, no los 90 que darían tres esperas
+     * de lectura completas. Por eso {@code GeminiAiModelClient} separa el tiempo de conexión del
+     * de lectura: conectar tiene que fallar rápido; pensar puede tardar.
+     */
+    public static final Duration ESPERA_RED = Duration.ofMillis(700);
+
+    /**
      * Plazo total. Con el tiempo de espera de la llamada en 30 s, tres intentos podrían sumar 90
      * segundos de silencio; esto lo corta.
      */
@@ -112,6 +138,15 @@ public final class ReintentoAnteSaturacion {
         for (int intento = 1; intento <= INTENTOS; intento++) {
             try {
                 return llamada.get();
+            } catch (ResourceAccessException e) {
+                ultimo = e;
+                Duration espera = ESPERA_RED.multipliedBy(intento);
+                if (intento == INTENTOS || System.nanoTime() + espera.toNanos() > limite) {
+                    break;
+                }
+                log.warn("{} no se pudo alcanzar ({}); se reintenta en {} ms",
+                        queEs, e.getMostSpecificCause().toString(), espera.toMillis());
+                dormir(espera);
             } catch (HttpServerErrorException | HttpClientErrorException e) {
                 Duration base = esperaPara(e);
                 // Creciente: si el servicio está saturado, insistir al mismo ritmo es parte del
@@ -130,7 +165,7 @@ public final class ReintentoAnteSaturacion {
                 dormir(espera);
             }
         }
-        log.warn("{} sigue saturado después de {} intentos", queEs, INTENTOS);
+        log.warn("{} no respondió después de {} intentos", queEs, INTENTOS);
         throw ultimo;
     }
 

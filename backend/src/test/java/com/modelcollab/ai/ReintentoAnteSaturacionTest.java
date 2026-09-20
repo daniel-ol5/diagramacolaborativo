@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 
 /**
  * Un 503 de Gemini no puede matar el comando.
@@ -101,6 +102,46 @@ class ReintentoAnteSaturacionTest {
 
         // Insistir rápido contra una cuota por minuto la empeora en vez de resolverla.
         assertThat(esperas.get(0)).isGreaterThan(ReintentoAnteSaturacion.ESPERA_SATURADO);
+    }
+
+    @Test
+    @DisplayName("Un error de RED y después éxito: la conexión de Daniel se tropieza y sigue")
+    void unTropezonDeRedNoMataElComando() {
+        AtomicInteger llamadas = new AtomicInteger();
+
+        String resultado = reintento.ejecutar("el asistente", () -> {
+            if (llamadas.incrementAndGet() == 1) {
+                throw new ResourceAccessException(
+                        "I/O error", new java.net.SocketTimeoutException("connect timed out"));
+            }
+            return "el plan";
+        });
+
+        // Medido el 19/09 contra la conexión real: el primer intento agotó 20 s sin conectar y
+        // el segundo salió en 8,8 s. Un solo reintento salva ese comando, y el 23 la red del
+        // lugar de la defensa no la controlamos.
+        assertThat(resultado).isEqualTo("el plan");
+        assertThat(llamadas.get()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Sin red del todo, se acota: no se cuelga 45 segundos tapando lo evidente")
+    void sinRedSeAcota() {
+        AtomicInteger llamadas = new AtomicInteger();
+
+        assertThatThrownBy(() -> reintento.ejecutar("el asistente", () -> {
+            llamadas.incrementAndGet();
+            throw new ResourceAccessException("I/O error", new java.io.IOException("sin ruta"));
+        })).isInstanceOf(ResourceAccessException.class);
+
+        // Un corte total y un tropezón llegan como la MISMA excepción, así que no se pueden
+        // separar. Se elige reintentar igual porque un corte total ya es evidente —el lienzo
+        // está desconectado, la aplicación se sirve por esa misma red— mientras que el tropezón
+        // es invisible. Lo que se acota es el costo de equivocarse.
+        assertThat(llamadas.get()).isEqualTo(ReintentoAnteSaturacion.INTENTOS);
+        assertThat(esperas.stream().mapToLong(Duration::toMillis).sum())
+                .as("con red caída la espera añadida tiene que ser chica")
+                .isLessThan(5000);
     }
 
     @Test

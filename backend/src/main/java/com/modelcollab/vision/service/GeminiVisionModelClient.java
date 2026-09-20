@@ -35,6 +35,13 @@ public class GeminiVisionModelClient implements VisionModelClient {
     private final RestClient http;
     private final ReintentoAnteSaturacion reintento;
 
+    /**
+     * Cuanto se espera para ABRIR la conexion, distinto del tiempo que se le da al modelo para
+     * pensar. Ver el comentario del constructor.
+     */
+    private static final Duration CONEXION = Duration.ofSeconds(5);
+
+
     public GeminiVisionModelClient(AiProperties propiedades, ObjectMapper objectMapper) {
         this(propiedades, objectMapper, new ReintentoAnteSaturacion());
     }
@@ -46,7 +53,12 @@ public class GeminiVisionModelClient implements VisionModelClient {
         this.reintento = reintento;
 
         SimpleClientHttpRequestFactory fabrica = new SimpleClientHttpRequestFactory();
-        fabrica.setConnectTimeout(Duration.ofMillis(propiedades.timeoutMs()));
+        // CONECTAR y PENSAR son dos esperas distintas, y meterlas en el mismo numero sale caro.
+        // Con 30 s para las dos, una red caida deja al usuario 30 segundos mirando la nada antes
+        // del primer reintento — medido en la conexion de Daniel: un intento agoto 20 s sin
+        // conectar y el siguiente salio en 8,8 s. Conectar tiene que fallar rapido; pensar puede
+        // tardar, que para eso esta el tiempo de lectura.
+        fabrica.setConnectTimeout(CONEXION);
         // Leer una imagen tarda mas que contestar una frase, asi que el tiempo de lectura va al
         // triple. Con el mismo numero que CU16, una foto grande daria siempre tiempo agotado y
         // pareceria que el servicio esta caido.

@@ -41,6 +41,13 @@ public class GeminiAiModelClient implements AiModelClient {
     private final RestClient http;
     private final ReintentoAnteSaturacion reintento;
 
+    /**
+     * Cuanto se espera para ABRIR la conexion, distinto del tiempo que se le da al modelo para
+     * pensar. Ver el comentario del constructor.
+     */
+    private static final Duration CONEXION = Duration.ofSeconds(5);
+
+
     public GeminiAiModelClient(AiProperties propiedades, ObjectMapper objectMapper) {
         this(propiedades, objectMapper, new ReintentoAnteSaturacion());
     }
@@ -55,7 +62,12 @@ public class GeminiAiModelClient implements AiModelClient {
         // Con timeout, siempre. Sin él, una llamada que no vuelve deja colgado el hilo que
         // atiende la petición y, con varios usuarios dictando, se lleva puesto el servidor
         // entero por un servicio de terceros que no responde.
-        fabrica.setConnectTimeout(Duration.ofMillis(propiedades.timeoutMs()));
+        // CONECTAR y PENSAR son dos esperas distintas, y meterlas en el mismo numero sale caro.
+        // Con 30 s para las dos, una red caida deja al usuario 30 segundos mirando la nada antes
+        // del primer reintento — medido en la conexion de Daniel: un intento agoto 20 s sin
+        // conectar y el siguiente salio en 8,8 s. Conectar tiene que fallar rapido; pensar puede
+        // tardar, que para eso esta el tiempo de lectura.
+        fabrica.setConnectTimeout(CONEXION);
         fabrica.setReadTimeout(Duration.ofMillis(propiedades.timeoutMs()));
 
         this.http = RestClient.builder()
