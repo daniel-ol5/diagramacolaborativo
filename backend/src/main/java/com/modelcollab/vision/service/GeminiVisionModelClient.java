@@ -19,6 +19,15 @@ import org.springframework.web.client.RestClient;
  * El adaptador real contra Gemini 2.0 Flash multimodal (§15), detrás de la misma interfaz que el
  * simulado.
  *
+ * <h2>La regla 6 del prompt NO está verificada</h2>
+ *
+ * <p>La resolución de la clase asociación —una caja colgando de una línea punteada— está escrita
+ * pero <b>nunca se probó contra una foto real</b>: el día que se agregó, la cuota del modelo
+ * estaba agotada. Lo que sí está probado, y offline, es el otro extremo: que una clase con dos
+ * relaciones hacia ella <b>sobrevive la fusión</b> y entra al modelo canónico
+ * ({@code ClaseAsociacionTest}). O sea que el destino funciona; lo que falta es comprobar que el
+ * modelo lea la pizarra así.
+ *
  * <h2>ADVERTENCIA: este archivo nunca se ejecutó</h2>
  *
  * <p>Igual que su hermano de CU16: sin clave de API no hay ni una corrida contra el servicio. Lo
@@ -181,6 +190,12 @@ public class GeminiVisionModelClient implements VisionModelClient {
             3. No inventes claves primarias ni identificadores: si no está escrito, no está.
             4. Si una línea sale del borde de la foto y no se ve a dónde va, no la devuelvas.
             5. Si no se reconoce ninguna clase, devolvé las dos listas vacías.
+            6. CLASE ASOCIACIÓN: si una caja cuelga de una LÍNEA con un trazo punteado —una caja
+               con los datos del vínculo, no de ninguna de las dos clases que une— devolvela como
+               una CLASE NORMAL con sus atributos, MÁS DOS relaciones: una desde cada clase que
+               esa línea une, hacia esa caja. No es inventar nada: es la misma información
+               escrita de la forma que este formato puede representar. Lo que NO hay que hacer es
+               devolverla suelta, porque así se pierde a qué estaba enganchada.
             """;
     }
 }
