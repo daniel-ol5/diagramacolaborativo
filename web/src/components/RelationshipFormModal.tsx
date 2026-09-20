@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Modal } from "./Modal";
 import type { Multiplicity, OwningSide, Relationship, RelationshipType } from "../types/canonical";
 import { deriveOwningSide } from "../lib/relationship";
+import { relationshipTypeLabel } from "../lib/uml";
 
 const TYPES: RelationshipType[] = [
   "ASSOCIATION",
@@ -82,7 +83,7 @@ export function RelationshipFormModal({ sourceId, sourceName, targetId, targetNa
           <select id="rel-type" value={type} onChange={(e) => handleTypeChange(e.target.value as RelationshipType)}>
             {TYPES.map((t) => (
               <option key={t} value={t}>
-                {t}
+                {relationshipTypeLabel(t)}
               </option>
             ))}
           </select>
