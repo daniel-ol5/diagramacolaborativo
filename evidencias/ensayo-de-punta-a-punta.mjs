@@ -442,8 +442,19 @@ if (CON_ZIP && zip) {
       ok(alta.status === 201, `y ACEPTA UN ALTA por su API (${alta.status})`, creado.slice(0, 160));
     }
 
+    // MATARLO DE VERDAD, no pedírselo amablemente.
+    //
+    // `servidor.kill()` a secas NO alcanza en Windows: el 19/09 este arnés dejó el backend
+    // generado escuchando en el 8099 durante VEINTE HORAS, en una máquina con 3 GB libres.
+    // Lo descubrí mirando quién ocupaba el puerto, no porque el arnés avisara — un proceso
+    // huérfano no falla, sólo se queda.
     servidor.kill();
-    await new Promise((r) => setTimeout(r, 1500));
+    await new Promise((r) => setTimeout(r, 800));
+    if (servidor.pid) {
+      // /T se lleva los hijos, /F no pide permiso.
+      spawn("taskkill", ["/PID", String(servidor.pid), "/T", "/F"], { shell: true });
+    }
+    await new Promise((r) => setTimeout(r, 1200));
     await conPsql(`DROP DATABASE IF EXISTS ${base} WITH (FORCE)`);
   });
 }
