@@ -242,6 +242,30 @@ async function correrRecorrido(browser, whitelist, esquema) {
     await page.waitForSelector(".access-page", { timeout: 8000 });
   }
 
+  // PRIMERO EL ESTADO VACIO, que es lo que ve alguien recien registrado — y es literalmente el
+  // Acto 1 del guion de la defensa. El usuario sembrado ya tiene proyectos, asi que este
+  // recorrido nunca lo pisaba: la caja del estado vacio existia sin que nadie le midiera el
+  // contraste. Hace falta una cuenta nueva.
+  const recienLlegado = `vacio-${Date.now()}@prueba.local`;
+  const CLAVE_NUEVA = "clave-de-prueba-12345";
+  const alta = await fetch("http://localhost:8080/api/v1/auth/register", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: recienLlegado, password: CLAVE_NUEVA, fullName: "Recien Registrado",
+    }),
+  });
+  if (alta.ok) {
+    await page.goto(APP_URL, { waitUntil: "networkidle0" });
+    await page.type('input[type="email"]', recienLlegado);
+    await page.type('input[type="password"]', CLAVE_NUEVA);
+    await page.click('button[type="submit"]');
+    await page.waitForSelector(".access-page__empty-box", { timeout: 8000 });
+    await new Promise((r) => setTimeout(r, 400));
+    await evaluarPantalla(page, "Lista de proyectos VACIA (recien registrado)", whitelist);
+  } else {
+    console.log("  (no se pudo registrar una cuenta nueva; se omite el estado vacio)");
+  }
+
   await login();
   await new Promise((r) => setTimeout(r, 500));
   await evaluarPantalla(page, "Pantalla de proyectos (lista real, con nombres variados)", whitelist);

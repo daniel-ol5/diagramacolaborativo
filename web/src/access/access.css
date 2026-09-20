@@ -68,6 +68,34 @@
   font-size: var(--font-size-base);
 }
 
+.access-page__empty-box {
+  /* Un estado vacio que solo dice "no hay nada" deja al usuario parado. Esta es la
+     primera pantalla que ve alguien recien registrado —y la primera del guion de la
+     defensa—, asi que tiene que decir cual es el proximo paso. */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-4);
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.access-page__empty-title {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+/* Dentro de la caja el texto no lleva el relleno vertical que tiene cuando va suelto: ahi
+   separaba de la lista, aca solo abre un hueco entre el titulo y el boton. Y sin cursiva,
+   que hacia parecer un marcador de posicion en vez de una explicacion. */
+.access-page__empty-box .access-page__empty {
+  margin: 0;
+  padding: 0;
+  font-style: normal;
+}
+
 .access-page__empty {
   /* --color-text-tertiary da 4.83:1 sobre --color-bg (blanco), pero esto
      se pinta directo sobre --color-bg-page (4.38:1, no llega a 4.5) --
@@ -88,8 +116,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-3);
+  gap: var(--space-4);
+  padding: var(--space-4);
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: 6px;
@@ -103,12 +131,30 @@
   background: var(--color-bg-selected);
 }
 
+.access-list__item-text {
+  /* El nombre y la descripcion son una unidad; el hueco entre ellos tiene que ser
+     menor que el que las separa de la pastilla, o se leen como tres cosas sueltas. */
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .access-list__item-name {
   font-weight: 600;
+  /* Antes el nombre y la descripcion pesaban casi igual: mismo tamanio, solo
+     cambiaba el grosor. Con una lista de varios proyectos, el ojo no encontraba
+     donde empezaba cada uno. */
+  font-size: var(--font-size-lg);
+  line-height: 1.3;
 }
 
 .access-list__item-meta {
   font-size: var(--font-size-sm);
+  /* Una descripcion larga no puede empujar la pastilla fuera de la fila. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   /* text-tertiary pasa 4.83:1 sobre blanco, pero la fila entera cambia a
      --color-bg-selected al pasar el mouse -- ahi cae a 3.57:1. secondary
      pasa los dos casos (7.53:1 y 5.56:1). */
@@ -116,12 +162,17 @@
 }
 
 .access-role-badge {
+  /* Ocupaba mucho para lo que dice. El rol es un dato secundario —lo que importa de
+     una fila es el proyecto— asi que se achica y deja de competir con el nombre.
+     flex-shrink: 0 para que no la aplaste una descripcion larga. */
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
   padding: 2px var(--space-2);
-  border-radius: 10px;
+  border-radius: 999px;
   font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.02em;
   background: var(--color-bg-muted);
   color: var(--color-text-secondary);
 }

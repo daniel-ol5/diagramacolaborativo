@@ -10,6 +10,19 @@ interface Props {
   session: Session;
 }
 
+/**
+ * El rol, escrito para una persona y no para la base de datos.
+ *
+ * OWNER/EDITOR/VIEWER son los valores del CHECK de §13 y viajan asi por la API, pero en
+ * pantalla eran el enum crudo asomandose: el resto de la interfaz esta en castellano. De paso
+ * la pastilla ocupa menos, que era el otro problema.
+ */
+const ROL_EN_CASTELLANO: Record<string, string> = {
+  OWNER: "Dueño",
+  EDITOR: "Editor",
+  VIEWER: "Lector",
+};
+
 /** CU08/CU09: los proyectos donde soy miembro, cada uno con mi rol -- crear, entrar. */
 export function ProjectsScreen({ session }: Props) {
   const navigate = useNavigate();
@@ -62,7 +75,22 @@ export function ProjectsScreen({ session }: Props) {
         {projects === null && !error && <p>Cargando…</p>}
 
         {projects && projects.length === 0 && (
-          <p className="access-page__empty">Todavía no formás parte de ningún proyecto.</p>
+          <div className="access-page__empty-box">
+            <span className="access-page__empty-title">Todavía no tenés proyectos</span>
+            {/* Un estado vacio que solo dice "no hay nada" deja a la persona parada. Esta es
+                la primera pantalla de alguien recien registrado, asi que dice cual es el
+                proximo paso y le da el boton para darlo sin tener que buscarlo arriba. */}
+            <p className="access-page__empty">
+              Un proyecto agrupa tus diagramas y a la gente con la que los compartís.
+            </p>
+            <button
+              type="button"
+              className="access-page__primary-btn"
+              onClick={() => setShowNew(true)}
+            >
+              + Crear el primero
+            </button>
+          </div>
         )}
 
         {projects && projects.length > 0 && (
@@ -74,12 +102,12 @@ export function ProjectsScreen({ session }: Props) {
                 className="access-list__item"
                 onClick={() => navigate(`/projects/${p.id}`)}
               >
-                <div>
+                <div className="access-list__item-text">
                   <div className="access-list__item-name">{p.name}</div>
                   {p.description && <div className="access-list__item-meta">{p.description}</div>}
                 </div>
                 <span className={`access-role-badge${p.role === "OWNER" ? " access-role-badge--owner" : ""}`}>
-                  {p.role}
+                  {ROL_EN_CASTELLANO[p.role] ?? p.role}
                 </span>
               </button>
             ))}
