@@ -1,4 +1,8 @@
-# ModelCollab :: stack de PRODUCCIÓN (AWS EC2, §5.3).
+# ModelCollab :: stack de PRODUCCIÓN (§5.3).
+#
+# Sirve en cualquier Linux con Docker nativo — AWS, Azure, Google Cloud, una
+# máquina prestada. No depende de nada específico de un proveedor: lo único que
+# pide es una IP pública, tres puertos abiertos y entrar por SSH.
 #
 # ============================ NO VERIFICADO ============================
 # Este archivo NUNCA SE EJECUTÓ. La máquina de desarrollo no tiene Docker

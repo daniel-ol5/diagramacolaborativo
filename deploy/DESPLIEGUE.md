@@ -1,4 +1,4 @@
-# Despliegue en AWS, paso a paso
+# Despliegue en un servidor, paso a paso
 
 De una instancia limpia de Ubuntu a la aplicación andando con HTTPS y WSS.
 
@@ -23,7 +23,7 @@ De una instancia limpia de Ubuntu a la aplicación andando con HTTPS y WSS.
 
 | | Qué necesita | Cuándo usarlo |
 | :--- | :--- | :--- |
-| **A — AWS** | Tarjeta de crédito, un dominio, y que el DNS propague | El mejor si hay crédito: dirección estable y nadie tiene que dejar una máquina prendida |
+| **A — Un servidor en la nube** | Crédito en el proveedor, un dominio, y que el DNS propague | El mejor si hay crédito: dirección estable y nadie tiene que dejar una máquina prendida |
 | **B — Túnel desde la máquina de Daniel** | Docker local y la laptop prendida | **Sin tarjeta, sin dominio, sin certificado que emitir.** Da una dirección HTTPS real |
 | **C — Sólo local** | Docker local | Para ensayar. No sirve para mostrarle a nadie que no esté sentado ahí |
 
@@ -56,12 +56,12 @@ probablemente falle.
 **Hacé esto primero.** Lo que más probablemente falle de todo el despliegue es
 **la construcción de la imagen, que compila el proyecto con Maven adentro**, y
 eso se puede provocar en la máquina de desarrollo: hay más memoria que en una
-`t3.small`, el repositorio está a mano, y no depende de que exista ninguna
-instancia. Si falla allá, se depura por SSH de madrugada; si falla acá, se
+el servidor, el repositorio está a mano, y no depende de que exista ninguna
+máquina en la nube. Si falla allá, se depura por SSH de madrugada; si falla acá, se
 arregla ahora.
 
 **Lo que este ensayo NO prueba**, y conviene tenerlo clarísimo: el certificado,
-el DNS, el grupo de seguridad de AWS y el comportamiento de Nginx con TLS.
+el DNS, los puertos abiertos en el proveedor y el comportamiento de Nginx con TLS.
 Esas cuatro cosas siguen sin ejecutarse nunca.
 
 ## L.0 Que Docker pueda arrancar un motor Linux
@@ -452,7 +452,18 @@ funciona a través del túnel sin recompilar ni cambiar ninguna variable**.
 
 ---
 
-# CAMINO A — AWS
+# CAMINO A — UN SERVIDOR EN LA NUBE
+
+> **Sirve para cualquier proveedor.** Está escrito contra una máquina **Linux con
+> Docker nativo**, que es lo que dan AWS, Azure, Google Cloud, DigitalOcean o
+> una máquina prestada. **Nada de acá depende de la consola de un proveedor
+> concreto**: los tres requisitos son una IP pública, poder abrir tres puertos y
+> entrar por SSH. Donde diga "grupo de seguridad", en Azure se llama *grupo de
+> seguridad de red* y en otros *cortafuegos*; es lo mismo.
+>
+> **Y no hay que reinstalar WSL ni nada parecido**: esa complicación es del
+> ensayo local en Windows. En el servidor, Docker es nativo y el paso L.0 no
+> aplica.
 
 ## PASO 0 — Los tres que más probablemente fallen
 
@@ -552,7 +563,7 @@ casa no siempre— abrir `http://IP-PUBLICA`.
 
 **Qué tenés que ver:** un listado de archivos en el navegador del celular.
 
-**Si no lo ves:** el grupo de seguridad de la instancia no deja entrar al
+**Si no lo ves:** el cortafuegos del proveedor no deja entrar al
 puerto 80. Arreglalo ahora; si lo dejás para el paso 5, vas a quemar intentos
 del certificado buscando el problema en el lugar equivocado.
 
@@ -564,13 +575,18 @@ sudo kill %1     # bajar el servidor de prueba
 
 # 1. La instancia
 
-- **Tipo:** `t3.small` o mayor. Con `t3.micro` (1 GB) el build de Maven dentro
-  de Docker se queda sin memoria aun con swap.
-- **Imagen:** Ubuntu Server 22.04 o 24.04 LTS.
+- **Memoria: 2 GB o más.** Con 1 GB el build de Maven dentro de Docker se queda
+  sin memoria aun con swap. Eso es un `t3.small` en AWS, un `B1ms` o `B2s` en
+  Azure, o cualquier máquina de 2 GB en otro lado — **lo que importa es el
+  número, no el nombre del tamaño**.
+- **Sistema:** Ubuntu Server 22.04 o 24.04 LTS. Cualquier Linux con Docker sirve;
+  los comandos de abajo son los de Debian/Ubuntu.
 - **Disco:** 20 GB. El build deja imágenes intermedias pesadas.
-- **Grupo de seguridad:** abrir **22**, **80** y **443**. Nada más. El 5432 y el
-  8080 **no se abren**: el compose de producción no los publica justamente para
-  que no queden expuestos.
+- **Puertos abiertos desde internet: 22, 80 y 443. Nada más.** El mecanismo
+  cambia de nombre según el proveedor —*grupo de seguridad* en AWS, *grupo de
+  seguridad de red* en Azure, *cortafuegos* en otros— y el efecto es el mismo.
+  El **5432** y el **8080** **no se abren**: el compose de producción no los
+  publica justamente para que no queden expuestos.
 
 **Qué tenés que ver:** `df -h /` con al menos 15 GB libres, y el paso 0.d en
 verde.
@@ -676,7 +692,7 @@ sudo ls -l /etc/letsencrypt/live/DOMINIO.EJEMPLO/
 | Lo que dice | Qué pasó | Qué hacer |
 | :--- | :--- | :--- |
 | `DNS problem: NXDOMAIN` | El dominio no resuelve todavía | Volver a 0.a y esperar |
-| `Timeout during connect` | El 80 no es alcanzable desde afuera | Volver a 0.d: es el grupo de seguridad |
+| `Timeout during connect` | El 80 no es alcanzable desde afuera | Volver a 0.d: es el cortafuegos del proveedor |
 | `Address already in use` | Algo está escuchando en el 80 | `sudo ss -lptn 'sport = :80'` y pararlo |
 | `too many failed authorizations` | Ya quemaste los 5 intentos | Esperar una hora, o **ir a la rama sin TLS de más abajo** |
 
@@ -842,7 +858,7 @@ un colaborador nuevo.
 
 - ¿El ensayo (`--dry-run`) llega a fallar por `NXDOMAIN`? Es el DNS: si el
   registro está bien puesto, esperar es la respuesta y suele resolverse solo.
-- ¿Falla por `Timeout during connect`? Es el grupo de seguridad de AWS, se
+- ¿Falla por `Timeout during connect`? Es el cortafuegos del proveedor, se
   arregla en dos minutos desde la consola, y **conviene arreglarlo** — no vale
   la pena resignar HTTPS por esto.
 - ¿Ya quemaste los cinco intentos? Hay una hora de espera. Si esa hora la
