@@ -70,7 +70,15 @@ class _DiagramListScreenState extends State<DiagramListScreen> {
           }
           final diagramas = snapshot.data!;
           if (diagramas.isEmpty) {
-            return const Center(child: Text('Este proyecto todavía no tiene diagramas.'));
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'Este proyecto todavía no tiene diagramas.\n\nSe crean desde la web, con la misma cuenta.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
           }
           return RefreshIndicator(
             onRefresh: () async => _cargar(),

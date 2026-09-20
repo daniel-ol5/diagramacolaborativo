@@ -64,7 +64,19 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
           }
           final proyectos = snapshot.data!;
           if (proyectos.isEmpty) {
-            return const Center(child: Text('Todavía no formás parte de ningún proyecto.'));
+            // La app no crea proyectos (ni cuentas): eso pasa en la web, la
+            // misma cuenta. Sin decir DONDE, la pantalla vacia deja
+            // buscando un boton que no existe (observado en el pase con
+            // telefono real del 20/09).
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'Todavía no formás parte de ningún proyecto.\n\nLos proyectos se crean desde la web, con la misma cuenta.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
           }
           return RefreshIndicator(
             onRefresh: () async => _cargar(),
@@ -75,7 +87,12 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                 return ListTile(
                   title: Text(p.name),
                   subtitle: p.description != null ? Text(p.description!) : null,
-                  trailing: Chip(label: Text(p.role)),
+                  trailing: Chip(
+                    label: Text(p.role, style: const TextStyle(fontSize: 11)),
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
