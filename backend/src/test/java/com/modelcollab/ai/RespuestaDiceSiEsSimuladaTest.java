@@ -180,6 +180,12 @@ class RespuestaDiceSiEsSimuladaTest {
             return new ComandoRechazadoException(
                     AiCommandResponse.NO_ENTENDIDO, "No entendi ese comando.");
         }
+        if (tipo == RuntimeException.class) {
+            // El manejador generico de fallos inesperados. Lo pidio ESTE test al aparecer una
+            // cuarta puerta de salida — que es exactamente para lo que se escribio por
+            // reflexion en vez de a mano.
+            return new IllegalStateException("algo se rompio");
+        }
         if (tipo == RespuestaDeIaInvalidaException.class) {
             return new RespuestaDeIaInvalidaException(
                     AiCommandResponse.CONTRATO_ROTO, "El modelo devolvio algo que no es JSON.");

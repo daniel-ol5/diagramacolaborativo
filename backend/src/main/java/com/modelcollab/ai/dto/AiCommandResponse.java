@@ -53,6 +53,13 @@ public record AiCommandResponse(
     public static final String CONTRATO_ROTO = "AI_CONTRACT_VIOLATION";
     /** El servicio de IA no respondió. */
     public static final String IA_CAIDA = "AI_UNAVAILABLE";
+    /**
+     * Algo falló que no habíamos previsto.
+     *
+     * <p>Existe para que un fallo inesperado salga con un cuerpo que se pueda leer en vez de un
+     * 500 vacío: el usuario tiene que saber, como mínimo, que <b>el diagrama no se tocó</b>.
+     */
+    public static final String ERROR_INESPERADO = "UNEXPECTED_ERROR";
 
     public static AiCommandResponse aplicada(
             List<String> operaciones, String mensaje, long mutationVersion) {

@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -121,6 +122,64 @@ public class AiCommandController {
         log.warn("El servicio de IA rompió el contrato: {}", e.getMessage());
         return responder(
                 HttpStatus.BAD_GATEWAY, AiCommandResponse.rechazada(e.getMotivo(), e.getMessage()));
+    }
+
+    /**
+     * Cualquier otro fallo inesperado: <b>500, pero con un cuerpo que se puede leer</b>.
+     *
+     * <h2>Por qué existe</h2>
+     *
+     * <p>Sin esto, un fallo no previsto sale como <b>500 con el cuerpo vacío</b>. El usuario dictó
+     * algo, no pasó nada, y no hay ni un texto que leer — y lo peor: <b>no sabe si se aplicó
+     * algo</b>. Ya nos pasó en vivo, y aunque la causa de aquella vez era otra, el 500 pelado la
+     * hizo mucho más difícil de diagnosticar.
+     *
+     * <h2>Y por qué NO se traga todo, que es la parte delicada</h2>
+     *
+     * <p>Este proyecto ya tuvo un incidente donde el manejo de errores devoraba códigos de
+     * estado: <b>toda respuesta de error salía convertida en 403 con cuerpo vacío</b>. Un
+     * manejador de {@code RuntimeException} es exactamente la forma de repetirlo, porque
+     * {@link ResponseStatusException} —el 403 de permisos de acá arriba— también es una
+     * {@code RuntimeException}.
+     *
+     * <p>Por eso lo primero que hace es <b>devolver lo que ya trae su propio estado</b>. Spring
+     * marca esas excepciones con {@link ErrorResponse}: el 403 de permisos, el 400 de un cuerpo
+     * ilegible, el 405 de un método equivocado. Todas siguen saliendo como lo que son.
+     */
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<AiCommandResponse> falloInesperado(RuntimeException e) {
+        if (traeSuPropioEstado(e)) {
+            // No es nuestra para contestar: ya sabe qué estado tiene.
+            throw e;
+        }
+        log.error("Fallo inesperado procesando un comando de IA", e);
+        return responder(HttpStatus.INTERNAL_SERVER_ERROR, AiCommandResponse.rechazada(
+                AiCommandResponse.ERROR_INESPERADO,
+                "Algo falló al procesar el comando. El diagrama no se tocó."));
+    }
+
+    /**
+     * Si la excepción ya sabe con qué estado tiene que salir.
+     *
+     * <p>Son tres casos y los tres hicieron falta:
+     *
+     * <ul>
+     *   <li>{@link ErrorResponse} — lo que Spring marca explícitamente, como el
+     *       {@code ResponseStatusException} del 403 de permisos.</li>
+     *   <li>Una excepción anotada con {@code @ResponseStatus}, que es la otra forma de
+     *       declararlo.</li>
+     *   <li><b>Cualquier excepción del propio Spring.</b> Ésta la agregué porque el test la
+     *       pidió: {@code HttpMessageNotReadableException} —un cuerpo JSON ilegible, que
+     *       corresponde a un <b>400</b>— <b>no</b> implementa {@code ErrorResponse}, así que con
+     *       las dos primeras reglas se convertía en un 500. Si el marco la lanzó, el marco sabe
+     *       qué estado merece mejor que nosotros.</li>
+     * </ul>
+     */
+    private static boolean traeSuPropioEstado(RuntimeException e) {
+        return e instanceof ErrorResponse
+                || e.getClass().isAnnotationPresent(
+                        org.springframework.web.bind.annotation.ResponseStatus.class)
+                || e.getClass().getName().startsWith("org.springframework.");
     }
 
     private void exigirPermisoDeEscritura(UUID diagramId, UUID userId) {
