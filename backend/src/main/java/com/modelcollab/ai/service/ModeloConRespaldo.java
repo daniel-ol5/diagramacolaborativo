@@ -50,6 +50,9 @@ public class ModeloConRespaldo {
     /** volatile: lo escribe el hilo que reciba el primer 404 y lo leen todos los demás. */
     private volatile boolean principalRetirado;
 
+    /** Hasta cuándo se deja descansar al principal después de un 429. 0 = no está descansando. */
+    private volatile long principalDescansaHasta;
+
     public ModeloConRespaldo(AiProperties propiedades, ReintentoAnteSaturacion reintento) {
         this.propiedades = propiedades;
         this.reintento = reintento;
@@ -60,7 +63,7 @@ public class ModeloConRespaldo {
      * @param llamada recibe el nombre del modelo y devuelve la respuesta cruda
      */
     public String pedir(String queEs, Function<String, String> llamada) {
-        if (principalRetirado) {
+        if (principalRetirado || System.nanoTime() < principalDescansaHasta) {
             return llamada.apply(propiedades.modeloDeRespaldo());
         }
 
@@ -75,6 +78,16 @@ public class ModeloConRespaldo {
         } catch (RuntimeException e) {
             if (!ReintentoAnteSaturacion.esSaturacion(e)) {
                 throw e;
+            }
+            if (ReintentoAnteSaturacion.esCuotaAgotada(e)) {
+                // La cuota no vuelve en segundos: se lo deja descansar en vez de pagarle una
+                // llamada perdida a cada comando. Medido el 20/09: sin esto, con el principal
+                // sin cupo, cada comando tardaba entre 16 y 45 s en lugar de 4.
+                principalDescansaHasta =
+                        System.nanoTime() + ReintentoAnteSaturacion.DESCANSO_POR_CUOTA.toNanos();
+                log.warn("{} se quedó sin cuota; se usa {} durante los próximos {} s",
+                        propiedades.model(), propiedades.modeloDeRespaldo(),
+                        ReintentoAnteSaturacion.DESCANSO_POR_CUOTA.toSeconds());
             }
             // Una sola llamada al respaldo, sin escalera: si está sano contesta enseguida, y si
             // no lo está, corresponde decir la verdad en vez de hacer esperar más.

@@ -96,13 +96,26 @@ public class GeminiAiModelClient implements AiModelClient {
     }
 
     private String llamar(String modelo, Map<String, Object> cuerpo) {
-        return http.post()
+        byte[] crudo = http.post()
                 .uri("/models/{modelo}:generateContent", modelo)
                 .header("x-goog-api-key", propiedades.apiKey())
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(cuerpo)
+                .accept(MediaType.ALL)
                 .retrieve()
-                .body(String.class);
+                // SE LEE COMO BYTES Y NO COMO String, y no es un detalle.
+                //
+                // Visto en el registro del 20/09: "Error while extracting response for type
+                // [java.lang.String] and content type [application/octet-stream]". Gemini a
+                // veces contesta con ese tipo de contenido en vez de application/json, y el
+                // convertidor de String se niega a tocarlo — la respuesta llegaba entera y se
+                // tiraba. El usuario veia "el asistente no esta disponible" cuando el asistente
+                // habia contestado perfecto.
+                //
+                // El convertidor de byte[] acepta cualquier tipo de contenido. Lo que hay
+                // adentro lo valida AiPlanParser, que es donde corresponde.
+                .body(byte[].class);
+        return crudo == null ? null : new String(crudo, java.nio.charset.StandardCharsets.UTF_8);
     }
 
     @Override

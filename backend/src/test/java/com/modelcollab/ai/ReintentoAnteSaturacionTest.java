@@ -94,14 +94,24 @@ class ReintentoAnteSaturacionTest {
     }
 
     @Test
-    @DisplayName("Un 429 espera MÁS que un 503: lo que se agotó es una cuota")
-    void laCuotaEsperaMas() {
+    @DisplayName("Un 429 NO se reintenta: la cuota no se repone insistiendo")
+    void laCuotaNoSeReintenta() {
+        AtomicInteger llamadas = new AtomicInteger();
+
         assertThatThrownBy(() -> reintento.ejecutar("el asistente", () -> {
+            llamadas.incrementAndGet();
             throw cuotaAgotada();
         })).isInstanceOf(HttpClientErrorException.class);
 
-        // Insistir rápido contra una cuota por minuto la empeora en vez de resolverla.
-        assertThat(esperas.get(0)).isGreaterThan(ReintentoAnteSaturacion.ESPERA_SATURADO);
+        // CORRECCION a la primera version, que le ponia una espera MAS LARGA que al 503
+        // razonando que insistir rapido contra una cuota la empeora. Es cierto, pero la
+        // conclusion correcta era otra: la escalera entera es tiempo perdido, porque la cuota se
+        // repone por ventana de tiempo y no por paciencia. Medido el 20/09 con el principal sin
+        // cupo: cada comando pagaba 12 segundos de reintentos y tardaba 16 s en vez de 4.
+        //
+        // Quien resuelve un 429 es el modelo de respaldo. Ver ModeloConRespaldo.
+        assertThat(llamadas.get()).as("tiene que llamar UNA sola vez").isEqualTo(1);
+        assertThat(esperas).as("y no esperar nada").isEmpty();
     }
 
     @Test

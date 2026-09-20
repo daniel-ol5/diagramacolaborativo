@@ -80,8 +80,14 @@ public final class ReintentoAnteSaturacion {
     /** Espera tras un 503. La segunda es el doble. */
     public static final Duration ESPERA_SATURADO = Duration.ofMillis(1200);
 
-    /** Espera tras un 429: más larga, porque lo que se agotó es una cuota por minuto. */
-    public static final Duration ESPERA_CUOTA = Duration.ofMillis(4000);
+    /**
+     * Cuánto se deja de lado al modelo principal después de un 429.
+     *
+     * <p>La cuota se repone por ventana de tiempo. Volver a probarlo en cada comando sería pagar
+     * una llamada perdida cada vez — con el principal sin cupo, eso convertía comandos de cuatro
+     * segundos en comandos de dieciséis. Se lo deja descansar y se vuelve a intentar después.
+     */
+    public static final Duration DESCANSO_POR_CUOTA = Duration.ofSeconds(90);
 
     /**
      * Espera tras un error de red: corta, porque el intento fallido ya gastó tiempo por su cuenta.
@@ -175,7 +181,15 @@ public final class ReintentoAnteSaturacion {
      * <p>Lo usa el cliente para decidir si vale la pena recurrir al modelo de respaldo. Un 400 o
      * un 404 no se arreglan cambiando de modelo — se arreglan arreglando la peticion.
      */
+    /** Si el fallo es cuota agotada: no se reintenta, se cambia de modelo. */
+    public static boolean esCuotaAgotada(RuntimeException e) {
+        return e instanceof HttpClientErrorException c && c.getStatusCode().value() == 429;
+    }
+
     public static boolean esSaturacion(RuntimeException e) {
+        if (esCuotaAgotada(e)) {
+            return true;
+        }
         if (e instanceof ResourceAccessException) {
             return true;
         }
@@ -191,9 +205,17 @@ public final class ReintentoAnteSaturacion {
                 ? s.getStatusCode().value()
                 : ((HttpClientErrorException) e).getStatusCode().value();
 
+        // EL 429 NO LLEVA ESCALERA, y esto es una correccion a la version anterior.
+        //
+        // Se habia puesto con una espera mas larga, razonando que insistir rapido contra una
+        // cuota la empeora. Es cierto, pero la conclusion correcta era otra: la cuota NO se
+        // repone en segundos, asi que la escalera entera es tiempo perdido. Medido el 20/09 con
+        // el principal sin cuota: cada comando pagaba 12 SEGUNDOS de reintentos antes de caer al
+        // respaldo, y por eso tardaban entre 16 y 45 s en vez de 4.
+        //
+        // Quien resuelve un 429 es el modelo de respaldo, no la paciencia. Ver ModeloConRespaldo.
         return switch (codigo) {
             case 503 -> ESPERA_SATURADO;
-            case 429 -> ESPERA_CUOTA;
             default -> null;
         };
     }

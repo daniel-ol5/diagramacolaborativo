@@ -109,10 +109,37 @@ class ModeloConRespaldoTest {
         });
 
         assertThat(r).isEqualTo("el plan");
-        assertThat(llamados).endsWith("respaldo");
-        // Pero el 429 SÍ lleva escalera antes de rendirse, a diferencia del 404: una cuota por
-        // minuto puede reponerse sola en segundos; un modelo retirado no.
-        assertThat(esperas).isNotEmpty();
+        // SIN ESCALERA, igual que el 404. Se habia puesto una espera mas larga razonando que
+        // insistir rapido contra una cuota la empeora; es cierto, pero la conclusion correcta
+        // era que la escalera entera es tiempo perdido. Medido: con el principal sin cupo, cada
+        // comando pagaba 12 segundos de reintentos antes de caer al respaldo.
+        assertThat(llamados).containsExactly("principal", "respaldo");
+        assertThat(esperas).as("un 429 no se reintenta: se cambia de modelo").isEmpty();
+    }
+
+    @Test
+    @DisplayName("Y el principal DESCANSA: no se le paga una llamada perdida a cada comando")
+    void elPrincipalSinCuotaDescansa() {
+        conRespaldo.pedir("el asistente", modelo -> {
+            if (modelo.equals("principal")) {
+                throw cuotaAgotada();
+            }
+            return "el plan";
+        });
+
+        List<String> segunda = new ArrayList<>();
+        conRespaldo.pedir("el asistente", modelo -> {
+            segunda.add(modelo);
+            return "otro plan";
+        });
+
+        // Sin esto, con el principal sin cupo, TODOS los comandos siguientes vuelven a
+        // intentarlo y vuelven a perder esa llamada. A diferencia del 404, el descanso vence:
+        // la cuota se repone por ventana de tiempo y el principal vuelve solo.
+        assertThat(segunda).containsExactly("respaldo");
+        assertThat(conRespaldo.principalRetirado())
+                .as("quedarse sin cuota NO es lo mismo que desaparecer")
+                .isFalse();
     }
 
     @Test
