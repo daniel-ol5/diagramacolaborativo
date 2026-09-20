@@ -3,7 +3,7 @@
   Android 9+ bloquea trafico HTTP sin cifrar por defecto. Esta app declara
   una direccion de SERVIDOR EDITABLE (config_service.dart) porque uno de
   los dos escenarios soportados es una IP de LAN sin TLS (192.168.x.x), no
-  solo el tunel HTTPS o el dominio real desplegado -- ver el propio campo
+  solo el tunel HTTPS o el dominio real desplegado; ver el propio campo
   de la pantalla de login. Sin este archivo, esa IP de LAN falla en
   silencio con un error de red que no dice "el sistema lo bloqueo", y es
   la hora perdida buscando en el lugar equivocado.
@@ -11,7 +11,7 @@
   cleartextTrafficPermitted="true" sin restringir dominio: la direccion la
   escribe la persona que usa la app, no se conoce de antemano (a
   diferencia de una app con un solo backend fijo). Cuando la direccion es
-  https://, esto no aplica -- Android exige TLS igual para ese trafico.
+  https://, esto no aplica: Android exige TLS igual para ese trafico.
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="true" />
