@@ -405,6 +405,7 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
             updateMethod: collaboration.updateMethod,
             deleteMethod: collaboration.deleteMethod,
             deleteRelationship: collaboration.deleteRelationship,
+            updateWaypoints: collaboration.updateWaypoints,
           }}
         >
           <ReactFlow

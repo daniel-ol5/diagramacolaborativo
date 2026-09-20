@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { Attribute, Method } from "../types/canonical";
+import type { Attribute, Method, Waypoint } from "../types/canonical";
 
 /**
  * Subconjunto de UseCollaborationResult que UmlClassNode necesita para el
@@ -24,6 +24,8 @@ export interface CollaborationActions {
   updateMethod: (method: Method) => void;
   deleteMethod: (methodId: string) => void;
   deleteRelationship: (relId: string) => void;
+  /** UPDATE_WAYPOINTS. Ultimo-que-escribe-gana, igual que resizeClass -- no pide lock. */
+  updateWaypoints: (relId: string, waypoints: Waypoint[]) => void;
 }
 
 export const CollaborationActionsContext = createContext<CollaborationActions | null>(null);

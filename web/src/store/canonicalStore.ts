@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Attribute, CanonicalModel, ClassEntity, Method, Package, Relationship } from "../types/canonical";
+import type { Attribute, CanonicalModel, ClassEntity, Method, Package, Relationship, Waypoint } from "../types/canonical";
 
 /**
  * Slice del estado CANONICO: lo que viaja al servidor y se persiste en el
@@ -31,6 +31,8 @@ interface CanonicalState {
   deleteMethod: (methodId: string) => void;
   addRelationship: (relationship: Relationship) => void;
   deleteRelationship: (relId: string) => void;
+  /** UPDATE_WAYPOINTS: LWW libre, sin candado, igual que MOVE_CLASS/RESIZE_CLASS. */
+  updateWaypoints: (relId: string, waypoints: Waypoint[]) => void;
   addPackage: (paquete: Package) => void;
   updatePackage: (paquete: Package) => void;
   deletePackage: (packageId: string) => void;
@@ -203,6 +205,19 @@ export const useCanonicalStore = create<CanonicalState>((set) => ({
         model: {
           ...state.model,
           relationships: state.model.relationships.filter((r) => r.id !== relId),
+        },
+      };
+    }),
+
+  updateWaypoints: (relId, waypoints) =>
+    set((state) => {
+      if (!state.model) return state;
+      return {
+        model: {
+          ...state.model,
+          relationships: state.model.relationships.map((r) =>
+            r.id === relId ? { ...r, waypoints } : r,
+          ),
         },
       };
     }),

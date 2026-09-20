@@ -4,7 +4,7 @@ import { WS_URL } from "../services/config";
 import { useCanonicalStore } from "../store/canonicalStore";
 import { useCollaborationStore } from "../store/collaborationStore";
 import { useOfflineStore } from "../store/offlineStore";
-import type { Attribute, CanonicalModel, ClassEntity, Method, Package, Relationship } from "../types/canonical";
+import type { Attribute, CanonicalModel, ClassEntity, Method, Package, Relationship, Waypoint } from "../types/canonical";
 import type { OfflineOperation } from "../types/offline";
 import {
   esBroadcastDeMutacion,
@@ -104,6 +104,8 @@ export interface UseCollaborationResult {
   addRelationship: (relationship: Relationship) => void;
   /** DELETE_RELATIONSHIP. Requiere lock sobre relId. */
   deleteRelationship: (relId: string) => void;
+  /** UPDATE_WAYPOINTS. No requiere lock -- ultimo-que-escribe-gana, igual que MOVE_CLASS/RESIZE_CLASS. */
+  updateWaypoints: (relId: string, waypoints: Waypoint[]) => void;
   /** ADD_PACKAGE. No requiere lock (igual que ADD_CLASS/ADD_RELATIONSHIP). El id lo genera el llamador. */
   addPackage: (paquete: Package) => void;
   /** UPDATE_PACKAGE. Requiere lock sobre paquete.id — reemplazo completo, no parche. */
@@ -150,6 +152,7 @@ export function useCollaboration(
   const deleteMethodLocal = useCanonicalStore((s) => s.deleteMethod);
   const addRelationshipLocal = useCanonicalStore((s) => s.addRelationship);
   const deleteRelationshipLocal = useCanonicalStore((s) => s.deleteRelationship);
+  const updateWaypointsLocal = useCanonicalStore((s) => s.updateWaypoints);
   const addPackageLocal = useCanonicalStore((s) => s.addPackage);
   const updatePackageLocal = useCanonicalStore((s) => s.updatePackage);
   const deletePackageLocal = useCanonicalStore((s) => s.deletePackage);
@@ -394,6 +397,9 @@ export function useCollaboration(
           case "DELETE_RELATIONSHIP":
             if (body.targetId) deleteRelationshipLocal(body.targetId);
             break;
+          case "UPDATE_WAYPOINTS":
+            if (body.targetId) updateWaypointsLocal(body.targetId, (body.payload.waypoints as unknown as Waypoint[]) ?? []);
+            break;
           case "ADD_PACKAGE":
             addPackageLocal(body.payload as unknown as Package);
             break;
@@ -548,6 +554,7 @@ export function useCollaboration(
     deleteMethodLocal,
     addRelationshipLocal,
     deleteRelationshipLocal,
+    updateWaypointsLocal,
     addPackageLocal,
     updatePackageLocal,
     deletePackageLocal,
@@ -709,6 +716,15 @@ export function useCollaboration(
     publishMutate("DELETE_RELATIONSHIP", relId, {});
   }
 
+  // Sin lock (LWW libre, igual que MOVE_CLASS): un solo mensaje al soltar el
+  // arrastre, no un stream throttled -- a diferencia de mover una clase
+  // entera, nadie mas necesita ver la posicion intermedia del quiebre
+  // mientras se arrastra.
+  function updateWaypoints(relId: string, waypoints: Waypoint[]) {
+    updateWaypointsLocal(relId, waypoints);
+    publishMutate("UPDATE_WAYPOINTS", relId, { waypoints });
+  }
+
   function addPackage(paquete: Package) {
     addPackageLocal(paquete);
     publishMutate("ADD_PACKAGE", null, paquete as unknown as Record<string, unknown>);
@@ -750,6 +766,7 @@ export function useCollaboration(
     deleteMethod,
     addRelationship,
     deleteRelationship,
+    updateWaypoints,
     addPackage,
     updatePackage,
     deletePackage,
