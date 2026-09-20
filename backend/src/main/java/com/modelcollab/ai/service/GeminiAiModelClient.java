@@ -42,7 +42,7 @@ public class GeminiAiModelClient implements AiModelClient {
     private final AiProperties propiedades;
     private final ObjectMapper objectMapper;
     private final RestClient http;
-    private final ReintentoAnteSaturacion reintento;
+    private final ModeloConRespaldo conRespaldo;
 
     /**
      * Cuanto se espera para ABRIR la conexion, distinto del tiempo que se le da al modelo para
@@ -59,7 +59,7 @@ public class GeminiAiModelClient implements AiModelClient {
             AiProperties propiedades, ObjectMapper objectMapper, ReintentoAnteSaturacion reintento) {
         this.propiedades = propiedades;
         this.objectMapper = objectMapper;
-        this.reintento = reintento;
+        this.conRespaldo = new ModeloConRespaldo(propiedades, reintento);
 
         SimpleClientHttpRequestFactory fabrica = new SimpleClientHttpRequestFactory();
         // Con timeout, siempre. Sin él, una llamada que no vuelve deja colgado el hilo que
@@ -90,26 +90,9 @@ public class GeminiAiModelClient implements AiModelClient {
 
         // El reintento envuelve SOLO la llamada: acá todavía no se aplicó nada al diagrama, así
         // que repetirla no puede duplicar ninguna operación. Ver ReintentoAnteSaturacion.
-        try {
-            return textoDe(reintento.ejecutar(
-                    "El asistente", () -> llamar(propiedades.model(), cuerpo)));
-        } catch (RuntimeException e) {
-            if (!ReintentoAnteSaturacion.esSaturacion(e)) {
-                throw e;
-            }
-            // CAMBIAR DE MODELO ES LO ÚNICO QUE RECUPERA CUANDO REINTENTAR NO ALCANZA.
-            //
-            // La saturación y la cuota son POR MODELO. Medido el 20/09 con la misma clave y en
-            // el mismo minuto: el principal devolvió 429 cuatro de cuatro veces mientras el de
-            // respaldo devolvía 200 cuatro de cuatro. Insistir contra un modelo agotado falla
-            // igual por más que se espere; el otro contesta al primer intento.
-            //
-            // Va UNA sola vez, sin escalera: si el de respaldo está sano contesta enseguida, y
-            // si no lo está, lo que corresponde es decir la verdad y no hacer esperar más.
-            log.warn("{} no respondió; se recurre al modelo de respaldo ({})",
-                    propiedades.model(), propiedades.modeloDeRespaldo());
-            return textoDe(llamar(propiedades.modeloDeRespaldo(), cuerpo));
-        }
+        // Principal, respaldo y modelo retirado: la politica vive en una sola clase,
+        // compartida con el otro cliente. Ver ModeloConRespaldo.
+        return textoDe(conRespaldo.pedir("El asistente", modelo -> llamar(modelo, cuerpo)));
     }
 
     private String llamar(String modelo, Map<String, Object> cuerpo) {

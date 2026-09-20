@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.modelcollab.ai.dto.AiCommandResponse;
 import com.modelcollab.ai.service.AiProperties;
+import com.modelcollab.ai.service.ModeloConRespaldo;
 import com.modelcollab.ai.service.ReintentoAnteSaturacion;
 import com.modelcollab.ai.service.RespuestaDeIaInvalidaException;
 import java.time.Duration;
@@ -36,7 +37,7 @@ public class GeminiVisionModelClient implements VisionModelClient {
     private final AiProperties propiedades;
     private final ObjectMapper objectMapper;
     private final RestClient http;
-    private final ReintentoAnteSaturacion reintento;
+    private final ModeloConRespaldo conRespaldo;
 
     /**
      * Cuanto se espera para ABRIR la conexion, distinto del tiempo que se le da al modelo para
@@ -53,7 +54,7 @@ public class GeminiVisionModelClient implements VisionModelClient {
             AiProperties propiedades, ObjectMapper objectMapper, ReintentoAnteSaturacion reintento) {
         this.propiedades = propiedades;
         this.objectMapper = objectMapper;
-        this.reintento = reintento;
+        this.conRespaldo = new ModeloConRespaldo(propiedades, reintento);
 
         SimpleClientHttpRequestFactory fabrica = new SimpleClientHttpRequestFactory();
         // CONECTAR y PENSAR son dos esperas distintas, y meterlas en el mismo numero sale caro.
@@ -88,19 +89,9 @@ public class GeminiVisionModelClient implements VisionModelClient {
         // Mismo reintento que CU16, y por el mismo motivo: el 503 de saturación va y viene en
         // ráfagas. Acá todavía no se aplicó nada al diagrama —esto sólo mira la foto— así que
         // repetir la llamada no puede duplicar ninguna clase.
-        try {
-            return textoDe(reintento.ejecutar(
-                    "La lectura de fotos", () -> llamar(propiedades.model(), cuerpo)));
-        } catch (RuntimeException e) {
-            if (!ReintentoAnteSaturacion.esSaturacion(e)) {
-                throw e;
-            }
-            // Mismo motivo que en CU16: la cuota y la saturacion son POR MODELO, asi que
-            // cambiar de modelo recupera donde reintentar no puede.
-            log.warn("{} no respondio; se recurre al modelo de respaldo ({})",
-                    propiedades.model(), propiedades.modeloDeRespaldo());
-            return textoDe(llamar(propiedades.modeloDeRespaldo(), cuerpo));
-        }
+        // Principal, respaldo y modelo retirado: la politica vive en una sola clase,
+        // compartida con el otro cliente. Ver ModeloConRespaldo.
+        return textoDe(conRespaldo.pedir("La lectura de fotos", modelo -> llamar(modelo, cuerpo)));
     }
 
     private String llamar(String modelo, Map<String, Object> cuerpo) {
