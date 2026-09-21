@@ -76,6 +76,14 @@ export function InvitePage({ session }: Props) {
           <>
             <h1>Enlace no disponible</h1>
             <p>{RAZON_TEXTO[preview.reason ?? ""] ?? "Este enlace no es válido."}</p>
+            <p className="invite-page__nota">
+              Pedile al dueño del proyecto que te mande uno nuevo.
+            </p>
+            {/* Sin esto la tarjeta es un callejón: quien llega con un enlace vencido se queda
+                mirando un cartel sin ningún lado a donde ir. */}
+            <button type="button" className="invite-page__action" onClick={() => navigate("/")}>
+              Ir a ModelCollab
+            </button>
           </>
         )}
 
@@ -86,13 +94,32 @@ export function InvitePage({ session }: Props) {
               <span className="invite-page__role">{rolEnCastellano(preview.role)}</span>
             </h1>
             {session ? (
-              <button type="button" className="invite-page__action" onClick={handleAccept} disabled={accepting}>
-                {accepting ? "Aceptando…" : "Aceptar invitación"}
-              </button>
+              <>
+                {/* Con qué cuenta se entra al proyecto. Importa porque el enlace se abre en el
+                    navegador que uno TIENE ABIERTO, que puede tener la sesión de otra persona:
+                    aceptar con la cuenta equivocada mete al proyecto a quien no era. */}
+                <p className="invite-page__nota">
+                  Vas a aceptarla como <strong>{session.fullName || session.email}</strong>.
+                </p>
+                <button type="button" className="invite-page__action" onClick={handleAccept} disabled={accepting}>
+                  {accepting ? "Aceptando…" : "Aceptar invitación"}
+                </button>
+              </>
             ) : (
-              <button type="button" className="invite-page__action" onClick={handleGoToLogin}>
-                Iniciar sesión para aceptar
-              </button>
+              <>
+                {/* DECIA SOLO "Iniciar sesión para aceptar", y quien recibe una invitación es
+                    justamente la persona que todavía NO tiene cuenta. La pantalla de crear
+                    cuenta existe desde 061ad6e y esta —la única a la que llega alguien de
+                    afuera— seguía sin nombrarla. Misma costura, otra vez: la pieza nueva no
+                    llegó al lugar donde hacía falta. */}
+                <p className="invite-page__nota">
+                  Necesitás una cuenta de ModelCollab para aceptarla. Si todavía no tenés, la creás
+                  en el mismo paso.
+                </p>
+                <button type="button" className="invite-page__action" onClick={handleGoToLogin}>
+                  Entrar o crear cuenta
+                </button>
+              </>
             )}
           </>
         )}

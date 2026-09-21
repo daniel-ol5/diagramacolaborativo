@@ -50,3 +50,18 @@
   background: var(--color-primary-muted);
   cursor: default;
 }
+
+/* La linea de contexto bajo el titulo: con que cuenta se acepta, o que hace falta una.
+   Secundaria a proposito —lo primero que se lee es a que proyecto te invitaron— pero
+   --color-text-secondary (7.53:1) y no --color-text-tertiary: los dos pasan 4.5:1, la
+   diferencia es que esto NO es adorno, dice con que cuenta vas a entrar al proyecto. */
+.invite-page__nota {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.invite-page__nota strong {
+  color: var(--color-text);
+}
