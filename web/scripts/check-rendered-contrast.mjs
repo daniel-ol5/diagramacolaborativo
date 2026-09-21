@@ -242,6 +242,16 @@ async function correrRecorrido(browser, whitelist, esquema) {
     await page.waitForSelector(".access-page", { timeout: 8000 });
   }
 
+  // LA PANTALLA DE CREAR CUENTA, que es literalmente lo primero del Acto 1 y hasta hoy no
+  // existia. El recorrido entraba por el login y nunca pulsaba "no tengo cuenta", asi que ese
+  // formulario —tres campos, un texto de ayuda y un boton secundario— no lo medía nadie.
+  await page.goto(APP_URL, { waitUntil: "networkidle0" });
+  await page.click(".login-screen__alternar");
+  await page.waitForFunction(
+    () => document.querySelector("h1")?.textContent?.includes("Creá"), { timeout: 5000 });
+  await new Promise((r) => setTimeout(r, 400));
+  await evaluarPantalla(page, "Crear cuenta (CU01, el primer paso de todos)", whitelist);
+
   // PRIMERO EL ESTADO VACIO, que es lo que ve alguien recien registrado — y es literalmente el
   // Acto 1 del guion de la defensa. El usuario sembrado ya tiene proyectos, asi que este
   // recorrido nunca lo pisaba: la caja del estado vacio existia sin que nadie le midiera el

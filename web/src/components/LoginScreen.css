@@ -68,3 +68,26 @@
   color: var(--color-danger);
   font-size: var(--font-size-sm);
 }
+.login-screen__ayuda {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* El camino secundario: existe y se encuentra, pero no compite con el boton principal.
+   Es un boton y no un enlace porque no navega a ningun lado — cambia esta misma pantalla.
+   
+   VA CON EL SELECTOR DEL FORMULARIO DELANTE, y no a secas: ".login-screen__form button" tiene
+   mas especificidad (una clase y un elemento) que ".login-screen__alternar" (una clase), asi
+   que le ganaba y este boton salia pintado igual que el principal. Lo vi en la captura: dos
+   botones azules identicos, uno arriba del otro — justo la competencia de jerarquia que este
+   pulido existe para sacar. */
+.login-screen__form .login-screen__alternar {
+  margin-top: var(--space-1);
+  padding: var(--space-1);
+  font-size: var(--font-size-base);
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  text-decoration: underline;
+}
