@@ -58,5 +58,37 @@ const alta = await fetch(`${API}/api/v1/auth/register`, {
 if (!alta.ok) throw new Error("no se pudo registrar: " + alta.status);
 await foto(nuevo, CLAVE, "lista-vacia");
 
+// 3. Un proyecto SIN diagramas: es donde cae Daniel en el Acto 1, apenas lo crea.
+{
+  const correo = `proyvacio-${Date.now()}@prueba.local`;
+  const CLAVE = "clave-de-prueba-12345";
+  const alta = await (await fetch(`${API}/api/v1/auth/register`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: correo, password: CLAVE, fullName: "Proyecto Vacio" }),
+  })).json();
+  const h = { Authorization: `Bearer ${alta.token}`, "Content-Type": "application/json" };
+  const proyecto = await (await fetch(`${API}/api/v1/projects`, {
+    method: "POST", headers: h, body: JSON.stringify({ name: "Colegio" }),
+  })).json();
+
+  const page = await navegador.newPage();
+  await page.setViewport({ width: 1100, height: 760 });
+  await page.goto(APP, { waitUntil: "networkidle0" });
+  await page.type('input[type="email"]', correo);
+  await page.type('input[type="password"]', CLAVE);
+  await page.click('button[type="submit"]');
+  await page.waitForSelector(".access-page__body", { timeout: 15000 });
+  // Se entra CLICKEANDO la fila, no con page.goto: la aplicacion guarda la sesion en memoria,
+  // asi que recargar la URL directa la pierde y rebota al login. Me paso: la captura salio
+  // siendo la pantalla de acceso.
+  await page.click(".access-list__item");
+  await page.waitForSelector(".access-page__empty-box", { timeout: 15000 });
+  await new Promise((r) => setTimeout(r, 700));
+  const archivo = join(DESTINO, `proyecto-sin-diagramas-${SUFIJO}.png`);
+  await page.screenshot({ path: archivo });
+  console.log("  " + archivo);
+  await page.close();
+}
+
 await navegador.close();
 console.log(`\nCapturas "${SUFIJO}" listas.\n`);

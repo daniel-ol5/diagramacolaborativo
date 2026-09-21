@@ -68,6 +68,13 @@
   font-size: var(--font-size-base);
 }
 
+.access-page__actions {
+  /* Estaba como style inline en ProjectScreen. Una regla de maquetado en el JSX es una regla
+     que los verificadores de contraste y de estilo no miran. */
+  display: flex;
+  gap: var(--space-2);
+}
+
 .access-page__empty-box {
   /* Un estado vacio que solo dice "no hay nada" deja al usuario parado. Esta es la
      primera pantalla que ve alguien recien registrado —y la primera del guion de la

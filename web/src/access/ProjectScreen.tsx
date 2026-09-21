@@ -93,7 +93,7 @@ export function ProjectScreen({ session }: Props) {
       <div className="access-page__body">
         <div className="access-page__row">
           <h1>{project?.name ?? "Cargando…"}</h1>
-          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+          <div className="access-page__actions">
             {project?.role === "OWNER" && (
               <button type="button" onClick={() => setShowShare(true)}>
                 Compartir
@@ -112,7 +112,24 @@ export function ProjectScreen({ session }: Props) {
         {diagrams === null && !error && <p>Cargando…</p>}
 
         {diagrams && diagrams.length === 0 && (
-          <p className="access-page__empty">Este proyecto todavía no tiene diagramas.</p>
+          // Mismo caso que la lista de proyectos vacia, y este esta en el Acto 1 del guion:
+          // Daniel crea el proyecto y cae aca sin ningun diagrama. Decir "no hay" y nada mas
+          // lo deja buscando el boton arriba a la derecha.
+          <div className="access-page__empty-box">
+            <span className="access-page__empty-title">Este proyecto no tiene diagramas</span>
+            <p className="access-page__empty">
+              Un diagrama es el lienzo donde se modelan las clases y sus relaciones.
+            </p>
+            {project && project.role !== "VIEWER" && (
+              <button
+                type="button"
+                className="access-page__primary-btn"
+                onClick={() => setShowNew(true)}
+              >
+                + Crear el primero
+              </button>
+            )}
+          </div>
         )}
 
         {diagrams && diagrams.length > 0 && (
