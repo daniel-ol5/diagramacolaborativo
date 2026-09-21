@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import type { Session } from "../components/LoginScreen";
 import { ApiError, createDiagram, listDiagrams, listProjects } from "./api";
 import type { DiagramSummary, Project } from "./types";
+import { fechaYHora } from "./types";
 import { NewDiagramModal } from "./NewDiagramModal";
 import { ShareModal } from "./ShareModal";
 import "./access.css";
@@ -143,7 +144,7 @@ export function ProjectScreen({ session }: Props) {
               >
                 <div className="access-list__item-name">{d.name}</div>
                 <span className="access-list__item-meta">
-                  actualizado {new Date(d.updatedAt).toLocaleString()}
+                  actualizado {fechaYHora(d.updatedAt)}
                 </span>
               </button>
             ))}

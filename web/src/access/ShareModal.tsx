@@ -9,7 +9,7 @@ import {
   revokeInvitation,
 } from "./api";
 import type { Invitation, Member, ProjectRole } from "./types";
-import { rolEnCastellano } from "./types";
+import { fechaCorta, rolEnCastellano } from "./types";
 import "./ShareModal.css";
 
 interface Props {
@@ -129,7 +129,7 @@ export function ShareModal({ session, projectId, onClose }: Props) {
               type="number"
               min={1}
               max={365}
-              placeholder="días (opc.)"
+              placeholder="días (opcional)"
               value={newLinkExpires}
               onChange={(e) => setNewLinkExpires(e.target.value)}
             />
@@ -157,7 +157,7 @@ export function ShareModal({ session, projectId, onClose }: Props) {
                       </span>
                       <span className="share-modal__list-item-meta">
                         {inv.expiresAt
-                          ? `vence ${new Date(inv.expiresAt).toLocaleDateString()}`
+                          ? `vence ${fechaCorta(inv.expiresAt)}`
                           : "sin vencimiento"}
                       </span>
                     </div>

@@ -87,3 +87,34 @@ export interface InvitationPreview {
   projectName?: string;
   role?: ProjectRole;
 }
+
+/**
+ * Fechas en castellano, no en el idioma que tenga puesto el navegador.
+ *
+ * `toLocaleDateString()` SIN locale usa el del navegador, y en la máquina donde se probó esto
+ * devolvía `10/21/2026`: un lector de acá lo lee como el 10 del mes 21, o directamente no lo
+ * lee. La aplicación entera está en castellano rioplatense y la fecha se había quedado afuera
+ * porque nadie la mira hasta que aparece proyectada.
+ *
+ * Están acá y no en cada pantalla por el mismo motivo que `rolEnCastellano`: es una regla que
+ * DOS lugares tienen que respetar (el vencimiento de una invitación y la última edición de un
+ * diagrama), y una regla repetida en dos lados es una regla que se va a desincronizar.
+ */
+export function fechaCorta(iso: string): string {
+  return new Date(iso).toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+/** Igual que {@link fechaCorta} pero con la hora, para "actualizado ...". */
+export function fechaYHora(iso: string): string {
+  return new Date(iso).toLocaleString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}

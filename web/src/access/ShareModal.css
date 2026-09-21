@@ -34,7 +34,9 @@
 }
 
 .share-modal__inline-form input[type="number"] {
-  width: 70px;
+  /* 70px cortaba su propio placeholder: se leía "días (opc" y quedaba como un campo roto
+     justo en la pantalla que se proyecta al compartir el proyecto. */
+  width: 130px;
 }
 
 .share-modal__link-row {
