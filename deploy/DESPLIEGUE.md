@@ -651,7 +651,12 @@ sed -i 's/DOMINIO\.EJEMPLO/tu-dominio-real.com/g' deploy/nginx/modelcollab.conf
 grep -c "tu-dominio-real.com" deploy/nginx/modelcollab.conf
 ```
 
-**Qué tenés que ver:** `4`.
+**Qué tenés que ver:** `5`.
+
+> Decía `4` y estaba mal. El dominio aparece en **cuatro directivas**
+> (`server_name` dos veces y las dos rutas del certificado) **más una línea de
+> comentario** que el `sed` también reemplaza — y `grep -c` cuenta líneas. Son
+> cinco. Contado sobre el archivo el 22/09.
 
 **Si dice 0:** el `sed` no encontró nada, probablemente porque ya lo corriste.
 **Si dice otro número:** alguien editó el archivo; revisalo a mano antes de

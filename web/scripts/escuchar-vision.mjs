@@ -6,7 +6,6 @@
 const BASE = process.env.BASE ?? 'http://localhost:8080';
 const WS = BASE.replace('http', 'ws') + '/ws';
 const NUL = String.fromCharCode(0);
-const PROJECT_ID = '829fe6c2-ca56-43f6-b854-3e7c17e8fa9c';
 const DIAGRAM_ID = 'e7bbedd8-030f-4ae3-b423-3182c92ea7e5';
 
 function frame(comando, cabeceras, cuerpo = '') {
