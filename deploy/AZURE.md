@@ -138,7 +138,7 @@ Portal → **Máquinas virtuales** → **Crear** → **Máquina virtual de Azure
 | **Autenticación** | **Clave pública SSH** | |
 | **Nombre de usuario** | `azureuser` | **Anotalo.** No es `ubuntu` como en AWS: es el que escribís vos |
 | **Origen de la clave** | **Generar nuevo par de claves** | |
-| **Nombre del par** | `modelcollab-key` | |
+| **Nombre del par** | `modelcollab_key` | |
 | **Puertos de entrada** | **Permitir puertos seleccionados** → **SSH (22), HTTP (80), HTTPS (443)** | Los tres, nada más |
 
 > ⚠️ **No abras el 5432 ni el 8080.** El compose de producción **no los publica** justamente para
@@ -167,7 +167,7 @@ querés descubrir el 23.
 **Revisar y crear** → **Crear** → **Descargar clave privada y crear recurso**.
 
 **Se descarga una sola vez.** Si la perdés hay que crear otra máquina. Guardala en
-`C:\Users\Daniel\.ssh\modelcollab-key.pem`.
+`C:\Users\Daniel\.ssh\modelcollab_key.pem`.
 
 | Si la creación falla diciendo | Qué hacer |
 | :--- | :--- |
@@ -200,14 +200,14 @@ Windows los archivos nacen así. **Este es el punto donde se traba casi todo el 
 
 ```powershell
 # En PowerShell, UNA sola vez:
-icacls "C:\Users\Daniel\.ssh\modelcollab-key.pem" /inheritance:r
-icacls "C:\Users\Daniel\.ssh\modelcollab-key.pem" /grant:r "$($env:USERNAME):(R)"
+icacls "C:\Users\Daniel\.ssh\modelcollab_key.pem" /inheritance:r
+icacls "C:\Users\Daniel\.ssh\modelcollab_key.pem" /grant:r "$($env:USERNAME):(R)"
 ```
 
 **Después, desde Git Bash:**
 
 ```bash
-ssh -i ~/.ssh/modelcollab-key.pem azureuser@LA-IP-PUBLICA
+ssh -i ~/.ssh/modelcollab_key.pem azureuser@LA-IP-PUBLICA
 ```
 
 **El usuario es el que escribiste en 1.3** —`azureuser` si dejaste el que viene—, **no `ubuntu` ni
@@ -314,7 +314,7 @@ y este es el tropiezo número uno del bloque.
 exit
 ```
 ```bash
-ssh -i ~/.ssh/modelcollab-key.pem azureuser@LA-IP-PUBLICA
+ssh -i ~/.ssh/modelcollab_key.pem azureuser@LA-IP-PUBLICA
 docker compose version
 docker run --rm hello-world
 ```
@@ -447,7 +447,7 @@ la interfaz muestra). La aplicación levanta igual.
 repositorio:
 
 ```bash
-scp -i ~/.ssh/modelcollab-key.pem -r web/dist \
+scp -i ~/.ssh/modelcollab_key.pem -r web/dist \
   azureuser@LA-IP-PUBLICA:~/sistemacolaborativo/deploy/web-dist
 ```
 
@@ -487,8 +487,8 @@ instaladas y nada compitiendo por la memoria con Maven.
 ## 7.1 El dominio en la configuración de Nginx
 
 ```bash
-sed -i "s/DOMINIO\.EJEMPLO/$DOMINIO/g" deploy/nginx/modelcollab.conf
-grep -c "$DOMINIO" deploy/nginx/modelcollab.conf
+sed -i "s/DOMINIO\.EJEMPLO/modelcollab.duckdns.org/g" deploy/nginx/modelcollab.conf
+grep -c " modelcollab.duckdns.org" deploy/nginx/modelcollab.conf
 ```
 
 **Qué tenés que ver: `5`.**

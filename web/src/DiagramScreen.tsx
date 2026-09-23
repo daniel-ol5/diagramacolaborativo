@@ -57,6 +57,7 @@ export function DiagramScreen({ session }: Props) {
     <DiagramWorkspace
       session={session}
       diagramId={diagramId}
+      projectId={projectId ?? null}
       toolbarLeft={
         <Link to={`/projects/${projectId}`} className="access-page__back">
           ← Proyecto

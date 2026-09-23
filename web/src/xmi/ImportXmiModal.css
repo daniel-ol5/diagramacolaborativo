@@ -1,0 +1,78 @@
+.import-xmi {
+  width: 460px;
+  max-width: 100%;
+}
+
+.import-xmi__message {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+}
+
+.import-xmi__file-input {
+  width: 100%;
+  font-size: var(--font-size-base);
+}
+
+.import-xmi__report {
+  margin-top: var(--space-3);
+  /* Un informe largo no puede empujar los botones fuera de la pantalla: el
+     que se lee scrollea, el que decide queda siempre visible. */
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.import-xmi__banner {
+  padding: var(--space-2) var(--space-3);
+  border-radius: 4px;
+  font-weight: 600;
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.import-xmi__section-title {
+  margin: var(--space-3) 0 var(--space-2);
+  font-size: var(--font-size-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.import-xmi__section-title--errors {
+  color: var(--color-danger);
+}
+
+.import-xmi__section-title--warnings {
+  color: var(--color-warning);
+}
+
+.import-xmi__issues {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* A diferencia del informe de CU13, estos NO se pueden clickear: los ids son
+   los del archivo, no los del lienzo abierto, y llevarían la vista a un
+   elemento que no existe. */
+.import-xmi__issues li {
+  display: block;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border-muted);
+  border-radius: 4px;
+}
+
+.import-xmi__issue-element {
+  display: block;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+}
+
+.import-xmi__issue-message {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}

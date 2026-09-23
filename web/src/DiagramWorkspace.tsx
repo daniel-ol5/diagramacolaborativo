@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode, type MouseEvent as ReactMouseEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import ReactFlow, {
   Background,
   Controls,
@@ -38,6 +39,8 @@ import { ErMarkerDefs } from "./modeling/ErMarkerDefs";
 import { toErNodes } from "./modeling/toErNodes";
 import { toErEdges } from "./modeling/toErEdges";
 import { fetchSchemaPreview, type SchemaPreview } from "./modeling/schemaPreviewApi";
+import { exportXmi } from "./xmi/xmiApi";
+import { ImportXmiModal } from "./xmi/ImportXmiModal";
 import "./App.css";
 
 const nodeTypes = { umlClass: UmlClassNode, erTable: ErTableNode };
@@ -106,6 +109,12 @@ interface Props {
   session: Session;
   /** Id real del diagrama en el servidor, o null para un demo local sin colaboracion en vivo. */
   diagramId: string | null;
+  /**
+   * Proyecto al que pertenece el diagrama, o null en el demo. Importar un
+   * XMI cuelga del PROYECTO y no del diagrama (crea uno nuevo al lado),
+   * asi que sin esto el boton de importar no tiene a donde apuntar.
+   */
+  projectId: string | null;
   /** Lo que va a la izquierda de la barra de herramientas: el selector de fixtures del demo, o un enlace de "volver" en el flujo real. */
   toolbarLeft: ReactNode;
 }
@@ -117,16 +126,18 @@ interface Props {
  * de un proyecto -- la diferencia entre los dos es solo `diagramId` (null
  * en el demo salvo para "barberia") y que hay a la izquierda de la barra.
  */
-export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
+export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft }: Props) {
   const [showNewClass, setShowNewClass] = useState(false);
   const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
   const [validationReport, setValidationReport] = useState<{ report: ValidationReport; blocked: boolean } | null>(null);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [validating, setValidating] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [generatorError, setGeneratorError] = useState<string | null>(null);
+  const [toolbarError, setToolbarError] = useState<string | null>(null);
   const [showAiCommand, setShowAiCommand] = useState(false);
   const [showVisionImport, setShowVisionImport] = useState(false);
+  const [showXmiImport, setShowXmiImport] = useState(false);
+  const [exportingXmi, setExportingXmi] = useState(false);
   const [showPackages, setShowPackages] = useState(false);
   const selectNode = usePresentationStore((s) => s.selectNode);
   const selectedNodeId = usePresentationStore((s) => s.selectedNodeId);
@@ -136,6 +147,7 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
   const reactFlowRef = useRef<ReactFlowInstance | null>(null);
   const [schemaPreview, setSchemaPreview] = useState<SchemaPreview | null>(null);
   const [schemaError, setSchemaError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const collaboration = useCollaboration(diagramId, session.token, session.userId);
 
@@ -237,12 +249,12 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
   async function handleValidate() {
     if (!diagramId) return;
     setValidating(true);
-    setGeneratorError(null);
+    setToolbarError(null);
     try {
       const report = await validateDiagram(diagramId, session.token);
       setValidationReport({ report, blocked: false });
     } catch (e) {
-      setGeneratorError(e instanceof Error ? e.message : String(e));
+      setToolbarError(e instanceof Error ? e.message : String(e));
     } finally {
       setValidating(false);
     }
@@ -251,7 +263,7 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
   async function handleGenerate(basePackage: string) {
     if (!diagramId) return;
     setGenerating(true);
-    setGeneratorError(null);
+    setToolbarError(null);
     try {
       const resultado = await generateBackend(diagramId, session.token, basePackage);
       if (resultado.ok) {
@@ -264,9 +276,28 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
         setValidationReport({ report: resultado.report, blocked: true });
       }
     } catch (e) {
-      setGeneratorError(e instanceof Error ? e.message : String(e));
+      setToolbarError(e instanceof Error ? e.message : String(e));
     } finally {
       setGenerating(false);
+    }
+  }
+
+  /**
+   * CU18. El XMI se pide con fetch y se baja desde el cliente porque el
+   * endpoint exige el Bearer -- ver el comentario de exportXmi(). Un VIEWER
+   * tambien puede: exportar es leer.
+   */
+  async function handleExportXmi() {
+    if (!diagramId) return;
+    setExportingXmi(true);
+    setToolbarError(null);
+    try {
+      const { blob, filename } = await exportXmi(diagramId, session.token);
+      triggerDownload(blob, filename);
+    } catch (e) {
+      setToolbarError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setExportingXmi(false);
     }
   }
 
@@ -300,6 +331,11 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
             <button type="button" onClick={() => setShowVisionImport(true)}>
               Importar foto
             </button>
+            {projectId && (
+              <button type="button" onClick={() => setShowXmiImport(true)}>
+                Importar XMI
+              </button>
+            )}
             <button type="button" onClick={() => setShowPackages((v) => !v)}>
               Paquetes
             </button>
@@ -335,13 +371,16 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
             <button type="button" onClick={() => setShowGenerateModal(true)}>
               Generar backend
             </button>
+            <button type="button" onClick={handleExportXmi} disabled={exportingXmi}>
+              {exportingXmi ? "Exportando…" : "Exportar XMI"}
+            </button>
           </div>
         )}
 
         <div className="app__toolbar-status">
           {viewMode === "er" && !schemaPreview && !schemaError && <span className="app__collab-warning">Cargando esquema…</span>}
           {schemaError && <span className="app__collab-warning">⚠ {schemaError}</span>}
-          {generatorError && <span className="app__collab-warning">⚠ {generatorError}</span>}
+          {toolbarError && <span className="app__collab-warning">⚠ {toolbarError}</span>}
           {collaboration.sequenceGap && (
             <span className="app__collab-warning">
               ⚠ se perdió al menos un evento (esperaba #{collaboration.sequenceGap.esperaba}, llegó #
@@ -461,6 +500,20 @@ export function DiagramWorkspace({ session, diagramId, toolbarLeft }: Props) {
       )}
       {diagramId && showVisionImport && (
         <VisionImportModal diagramId={diagramId} token={session.token} onClose={() => setShowVisionImport(false)} />
+      )}
+      {projectId && showXmiImport && (
+        <ImportXmiModal
+          projectId={projectId}
+          token={session.token}
+          onClose={() => setShowXmiImport(false)}
+          onImported={(diagrama) => {
+            setShowXmiImport(false);
+            // Importar crea un diagrama NUEVO: quedarse en el actual deja a
+            // la persona mirando un lienzo que no cambio, convencida de que
+            // la importacion no hizo nada.
+            navigate(`/projects/${projectId}/diagrams/${diagrama.id}`);
+          }}
+        />
       )}
     </div>
   );

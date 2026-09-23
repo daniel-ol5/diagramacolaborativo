@@ -46,6 +46,7 @@ function App({ session }: Props) {
     <DiagramWorkspace
       session={session}
       diagramId={liveDiagramId}
+      projectId={null}
       toolbarLeft={
         <>
           <label htmlFor="diagram-select">Diagrama:</label>
