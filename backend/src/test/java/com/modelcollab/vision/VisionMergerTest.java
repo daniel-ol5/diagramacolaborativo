@@ -8,7 +8,9 @@ import com.modelcollab.metamodel.model.Attribute;
 import com.modelcollab.metamodel.model.AttributeType;
 import com.modelcollab.metamodel.model.CanonicalModel;
 import com.modelcollab.metamodel.model.ClassEntity;
+import com.modelcollab.metamodel.model.OwningSide;
 import com.modelcollab.metamodel.model.Position;
+import com.modelcollab.metamodel.model.Relationship;
 import com.modelcollab.metamodel.model.RelationshipType;
 import com.modelcollab.vision.dto.VisionAttribute;
 import com.modelcollab.vision.dto.VisionClass;
@@ -224,5 +226,39 @@ class VisionMergerTest {
                     assertThat(r.sourceMultiplicity()).isNull();
                     assertThat(r.targetMultiplicity()).isNull();
                 });
+    }
+
+    @Test
+    @DisplayName("Una composición asigna owningSide TARGET para que el rombo quede en el todo (source)")
+    void composicionAsignaOwningSideTarget() {
+        VisionDraft draft = new VisionDraft(
+                List.of(new VisionClass("Clase", List.of()),
+                        new VisionClass("DetalleEquipoSacado", List.of())),
+                List.of(new VisionRelationship("Clase", "DetalleEquipoSacado", "COMPOSITION", "1..1", "0..*")));
+
+        VisionMerger.Resultado resultado = fusionador.fusionar(CanonicalModel.empty(), draft, true);
+
+        assertThat(resultado.relacionesNuevas()).isEqualTo(1);
+        Relationship rel = resultado.modelo().relationships().get(0);
+        assertThat(rel.type()).isEqualTo(RelationshipType.COMPOSITION);
+        assertThat(rel.owningSide())
+                .as("el lado dueño es TARGET (la parte) para que el frontend dibuje el rombo en source (el todo)")
+                .isEqualTo(OwningSide.TARGET);
+    }
+
+    @Test
+    @DisplayName("Una agregación con multiplicidades simétricas asigna owningSide TARGET")
+    void agregacionSimetricaAsignaOwningSideTarget() {
+        VisionDraft draft = new VisionDraft(
+                List.of(new VisionClass("Edificio", List.of()),
+                        new VisionClass("Aula", List.of())),
+                List.of(new VisionRelationship("Edificio", "Aula", "AGGREGATION", "1..1", "1..1")));
+
+        VisionMerger.Resultado resultado = fusionador.fusionar(CanonicalModel.empty(), draft, true);
+
+        assertThat(resultado.relacionesNuevas()).isEqualTo(1);
+        Relationship rel = resultado.modelo().relationships().get(0);
+        assertThat(rel.type()).isEqualTo(RelationshipType.AGGREGATION);
+        assertThat(rel.owningSide()).isEqualTo(OwningSide.TARGET);
     }
 }

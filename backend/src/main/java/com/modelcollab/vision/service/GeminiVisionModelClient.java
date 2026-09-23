@@ -190,12 +190,44 @@ public class GeminiVisionModelClient implements VisionModelClient {
             3. No inventes claves primarias ni identificadores: si no está escrito, no está.
             4. Si una línea sale del borde de la foto y no se ve a dónde va, no la devuelvas.
             5. Si no se reconoce ninguna clase, devolvé las dos listas vacías.
-            6. CLASE ASOCIACIÓN: si una caja cuelga de una LÍNEA con un trazo punteado —una caja
-               con los datos del vínculo, no de ninguna de las dos clases que une— devolvela como
-               una CLASE NORMAL con sus atributos, MÁS DOS relaciones: una desde cada clase que
-               esa línea une, hacia esa caja. No es inventar nada: es la misma información
-               escrita de la forma que este formato puede representar. Lo que NO hay que hacer es
-               devolverla suelta, porque así se pierde a qué estaba enganchada.
+            6. CLASE ASOCIACIÓN (MUY IMPORTANTE):
+               En UML, una clase asociación es un recuadro que se conecta mediante una LÍNEA PUNTEADA
+               (o discontinua) al punto medio de una relación entre dos clases.
+               NUNCA la devuelvas flotando, desconectada o huérfana en "classes" sin aristas.
+               Debes descomponerla siempre de la siguiente manera:
+               - En "classes": incluí la clase asociación con su nombre y sus atributos.
+               - En "relationships": NO dejes la relación directa entre las dos clases principales.
+                 En su lugar, generá DOS relaciones de tipo "ASSOCIATION", una desde cada clase hacia
+                 la clase asociación.
+
+               EJEMPLOS DE CLASE ASOCIACIÓN:
+               1) Con nombre compuesto: si "Entrenador" y "Especialidad" están unidas por una línea,
+                  y de esa línea cuelga con trazo punteado "EspecialidadEntrenador" (o "HorarioClase" entre "Clase" y "Horario"):
+                  - Agregá las tres clases a "classes".
+                  - Agregá a "relationships":
+                    {"from": "Entrenador", "to": "EspecialidadEntrenador", "type": "ASSOCIATION", "sourceMultiplicity": "1..1", "targetMultiplicity": "0..*"},
+                    {"from": "Especialidad", "to": "EspecialidadEntrenador", "type": "ASSOCIATION", "sourceMultiplicity": "1..1", "targetMultiplicity": "0..*"}
+               2) Con nombre de acción o verbo: si entre "Equipo" y "Deposito" cuelga con trazo punteado
+                  el recuadro "Guarda", o entre "Cliente" y "Evaluacion" cuelga "Evalua":
+                  - NO agregues la relación directa {"from": "Equipo", "to": "Deposito"}.
+                  - Agregá a "relationships":
+                    {"from": "Equipo", "to": "Guarda", "type": "ASSOCIATION", "sourceMultiplicity": "1..1", "targetMultiplicity": "0..*"},
+                    {"from": "Deposito", "to": "Guarda", "type": "ASSOCIATION", "sourceMultiplicity": "1..1", "targetMultiplicity": "0..*"}
+                  - Y para Evalua:
+                    {"from": "Cliente", "to": "Evalua", "type": "ASSOCIATION", "sourceMultiplicity": "1..1", "targetMultiplicity": "0..*"},
+                    {"from": "Evaluacion", "to": "Evalua", "type": "ASSOCIATION", "sourceMultiplicity": "1..1", "targetMultiplicity": "0..*"}
+
+            7. DIRECCIÓN EN COMPOSICIÓN Y AGREGACIÓN:
+               - En COMPOSITION (rombo relleno/negro) y AGGREGATION (rombo hueco/blanco):
+                 "from" es SIEMPRE la clase del TODO / CONTENEDOR (el extremo donde está dibujado el rombo).
+                 "to" es SIEMPRE la clase de la PARTE / CONTENIDO (el extremo sin rombo).
+                 sourceMultiplicity es la del lado del todo (ej. 1..1) y targetMultiplicity es la de la parte (ej. 0..* o 1..*).
+                 Ejemplo: si "Clase" tiene el rombo negro y se conecta a "DetalleEquipo":
+                 {"from": "Clase", "to": "DetalleEquipo", "type": "COMPOSITION", "sourceMultiplicity": "1..1", "targetMultiplicity": "0..*"}
+
+            8. DIRECCIÓN EN HERENCIA (INHERITANCE):
+               - "from" es SIEMPRE la subclase (hijo).
+               - "to" es SIEMPRE la superclase (padre, hacia donde apunta el triángulo hueco).
             """;
     }
 }

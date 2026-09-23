@@ -315,6 +315,62 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft }:
     });
   }
 
+  function handleCreateAssociationClass(className: string) {
+    if (!pendingConnection || !model) return;
+    const source = model.classes.find((c) => c.id === pendingConnection.sourceId);
+    const target = model.classes.find((c) => c.id === pendingConnection.targetId);
+
+    const midX = source && target
+      ? Math.round((source.position.x + target.position.x) / 2)
+      : 200;
+    const midY = source && target
+      ? Math.round((source.position.y + target.position.y) / 2) + 70
+      : 200;
+
+    const newClassId = crypto.randomUUID();
+
+    // 1. Agregar la clase intermedia al lienzo
+    collaboration.addClass({
+      id: newClassId,
+      name: className.trim(),
+      visibility: "PUBLIC",
+      isAbstract: false,
+      position: { x: midX, y: midY },
+      width: 220,
+      height: 150,
+      attributes: [],
+      methods: [],
+    });
+
+    // 2. Conectar source -> intermedia
+    collaboration.addRelationship({
+      id: crypto.randomUUID(),
+      sourceClassId: pendingConnection.sourceId,
+      targetClassId: newClassId,
+      type: "ASSOCIATION",
+      owningSide: "TARGET",
+      sourceMultiplicity: "1..1",
+      targetMultiplicity: "0..*",
+      isNavigable: true,
+      waypoints: [],
+    });
+
+    // 3. Conectar target -> intermedia
+    collaboration.addRelationship({
+      id: crypto.randomUUID(),
+      sourceClassId: pendingConnection.targetId,
+      targetClassId: newClassId,
+      type: "ASSOCIATION",
+      owningSide: "TARGET",
+      sourceMultiplicity: "1..1",
+      targetMultiplicity: "0..*",
+      isNavigable: true,
+      waypoints: [],
+    });
+
+    setPendingConnection(null);
+  }
+
   return (
     <div className="app">
       <header className="app__toolbar">
@@ -480,6 +536,7 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft }:
             collaboration.addRelationship(relationship);
             setPendingConnection(null);
           }}
+          onCreateAssociationClass={handleCreateAssociationClass}
           onClose={() => setPendingConnection(null)}
         />
       )}
