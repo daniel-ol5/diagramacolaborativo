@@ -80,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _direccionCtrl,
                     decoration: const InputDecoration(
                       labelText: 'Dirección del servidor',
-                      helperText: 'Ej: http://192.168.1.100:8080 o https://tu-dominio',
+                      helperText: 'Ej: https://modelcollab.duckdns.org o http://192.168.1.100:8080',
                     ),
                     keyboardType: TextInputType.url,
                     validator: (v) => (v == null || v.trim().isEmpty) ? 'Requerido' : null,

@@ -381,8 +381,13 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft }:
             <button type="button" className="app__new-class-btn" onClick={() => setShowNewClass(true)}>
               + Clase
             </button>
-            <button type="button" onClick={() => setShowAiCommand((v) => !v)}>
-              Comando
+            <button
+              type="button"
+              className={showAiCommand ? "app__btn--active" : ""}
+              onClick={() => setShowAiCommand((v) => !v)}
+              title="Comandos por texto o voz (micrófono)"
+            >
+              🎤 Comando
             </button>
             <button type="button" onClick={() => setShowVisionImport(true)}>
               Importar foto

@@ -23,11 +23,9 @@ class ConfigService {
   static const String _claveUltimoDiagramaId = 'ultimo_diagrama_id';
   static const String _claveUltimoDiagramaNombre = 'ultimo_diagrama_nombre';
 
-  /// Sin nada guardado todavia, un placeholder de LAN -- no localhost: dentro
-  /// del telefono, "localhost" es el telefono mismo, nunca la maquina donde
-  /// corre el backend (ver el mismo comentario en config.dart del app
-  /// generado por CU19, que llega a la misma conclusion).
-  static const String direccionPorDefecto = 'http://192.168.1.100:8080';
+  /// Servidor por defecto en producción (Azure con TLS). Si se corre en LAN
+  /// o túnel de desarrollo, el usuario puede editar la dirección desde el login.
+  static const String direccionPorDefecto = 'https://modelcollab.duckdns.org';
 
   static Future<String> direccionServidor() async {
     final prefs = await SharedPreferences.getInstance();
@@ -36,7 +34,8 @@ class ConfigService {
 
   static Future<void> guardarDireccionServidor(String direccion) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_claveDireccion, direccion);
+    final limpia = direccion.trim().replaceAll(RegExp(r'/+$'), '');
+    await prefs.setString(_claveDireccion, limpia);
   }
 
   static Future<Sesion?> sesionGuardada() async {
