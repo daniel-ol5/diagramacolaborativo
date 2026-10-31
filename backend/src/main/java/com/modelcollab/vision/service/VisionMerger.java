@@ -213,11 +213,14 @@ public class VisionMerger {
                     hasta == null ? null : hasta.getValue()));
         }
 
-        // Si una clase leída quedó huérfana (0 relaciones) pero su nombre combina dos clases
-        // con relación directa leída (clase asociación en la foto que el modelo no descompuso),
-        // se reconecta automáticamente con ambas clases.
-        resolverClasesAsociacionHuerfanas(
-                actual, nuevas, relacionesNuevas, relacionesSaneadas, notas);
+        // Al proponer, si una clase leída quedó huérfana (0 relaciones) pero su nombre combina
+        // dos clases con relación directa leída (clase asociación en la foto que el modelo no
+        // descompuso), se reconecta automáticamente con ambas clases para que la persona lo vea
+        // en el modal. Al confirmar (estricto = true) se respeta tal cual lo que confirmó.
+        if (!estricto) {
+            resolverClasesAsociacionHuerfanas(
+                    actual, nuevas, relacionesNuevas, relacionesSaneadas, notas);
+        }
 
         if (nuevas.isEmpty()) {
             throw new BorradorInvalidoException(
@@ -411,7 +414,7 @@ public class VisionMerger {
                 long totalHuerfanas = nuevas.stream().filter(c -> relacionesNuevas.stream()
                         .noneMatch(rel -> rel.sourceClassId().equals(c.id()) || rel.targetClassId().equals(c.id()))).count();
 
-                if ((relacionesNuevas.size() == 1 && totalHuerfanas == 1) || (esNombreTipico && relacionesNuevas.size() == 1)) {
+                if (esNombreTipico && relacionesNuevas.size() == 1 && totalHuerfanas == 1) {
                     directa = relacionesNuevas.get(0);
                     indiceDirecta = 0;
                 }
