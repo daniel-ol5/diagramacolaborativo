@@ -102,7 +102,10 @@ jobs:
         #
         # Por eso se activa acá y no en local: cuesta ~25 s por diagrama, y en una suite que tarda
         # dos minutos eso es la diferencia entre correr los tests siempre y dejar de correrlos.
-        run: ./mvnw -B clean test -Dalta-real=true
+        run: |
+          sed -i 's/\r$//' ./mvnw src/main/resources/generator/wrapper/mvnw
+          chmod +x ./mvnw
+          ./mvnw -B clean test -Dalta-real=true
 
       - name: Informes de las pruebas
         # Con `always()` los informes se suben también cuando la suite falla, que es justo cuando
