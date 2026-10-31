@@ -47,64 +47,74 @@
  * aca.
  */
 :root {
-  /* Rampa neutra fria (pizarra): reemplaza los grises puros/azulados de
-     la primera pasada. Nombrada por uso, no por posicion en la rampa,
-     para no obligar a memorizar una escala al leer el resto del archivo. */
-  --gray-page: #f2f4f6; /* pantallas standalone: acceso, proyectos */
-  --gray-chrome: #eef0f3; /* barra de herramientas, superficies secundarias */
-  --gray-header: #e2e6ec; /* encabezado de clase UML, superficie "hundida" */
-  --gray-divider: #d3d8de; /* separador decorativo (no delimita nada por si solo) */
-  --gray-border: #7e8694; /* borde real: inputs, paneles, botones -- 3.5:1+ */
-  --gray-text-secondary: #4b5566; /* 7.53:1 */
-  --gray-text-tertiary: #6b7280; /* 4.83:1 -- piso de legibilidad, no bajar de aca */
+  /* Paleta principal: #4B97C5 (Cerulean), #7BB2D8 (Sky Blue), #273B40 (Deep Slate Teal) */
+  --brand-dark: #273b40;
+  --brand-dark-elevated: #314950;
+  --brand-primary: #4b97c5;
+  --brand-primary-hover: #3b82b0;
+  --brand-primary-active: #2e6d96;
+  --brand-light: #7bb2d8;
+  --brand-tint: #e8f3fa;
+  --brand-tint-strong: #d4e9f7;
+
+  /* Rampa neutra armonizada con #273B40 y #7BB2D8 */
+  --gray-page: #f0f5f8;
+  --gray-chrome: #e5eff5;
+  --gray-header: #273b40;
+  --gray-divider: #d0e0ea;
+  --gray-border: #8faec2;
+  --gray-text-secondary: #3d565e;
+  --gray-text-tertiary: #58727b;
 
   /* Superficies */
   --color-bg: #ffffff;
   --color-bg-page: var(--gray-page);
   --color-bg-subtle: var(--gray-chrome);
-  --color-bg-muted: var(--gray-header);
-  --color-bg-selected: #d7deea; /* hover/seleccion: la unica superficie con tinte de acento, es una de las dos señales permitidas */
-  --color-bg-footer: #343a40;
+  --color-bg-muted: #dceaf3;
+  --color-bg-selected: var(--brand-tint);
+  --color-bg-footer: var(--brand-dark);
 
-  /* Bordes / iconos: minimo 3:1 sobre --color-bg o --canvas-bg */
-  --color-border: var(--gray-border); /* 3.5-3.7:1 */
-  --color-border-muted: var(--gray-divider); /* decorativo, no WCAG-critico */
-  --color-border-strong: #1a1a2e; /* borde de clase UML -- notacion, no decoracion. NO TOCAR sin avisar a [cl1] (ancla la paleta de colaboradores). 17.06:1 */
+  /* Bordes / iconos */
+  --color-border: var(--gray-border);
+  --color-border-muted: var(--gray-divider);
+  --color-border-strong: #273b40;
 
-  /* Texto: minimo 4.5:1 sobre --color-bg */
-  --color-text: #1a1a2e; /* NO TOCAR sin avisar a [cl1], mismo motivo que --color-border-strong */
+  /* Texto */
+  --color-text: #273b40;
   --color-text-secondary: var(--gray-text-secondary);
   --color-text-tertiary: var(--gray-text-tertiary);
   --color-text-on-dark: #ffffff;
 
-  /* Acento unico: accion principal y seleccion, nada mas. Desaturado a
-     proposito frente al azul anterior (#3b5bdb) para que el lienzo sea lo
-     unico vivo de la pantalla. */
-  --color-primary: #365d94; /* 6.67:1 con texto blanco */
+  /* Acento principal */
+  --color-primary: #4b97c5;
+  --color-primary-hover: #3b82b0;
   --color-primary-contrast: #ffffff;
-  --color-primary-muted: #5d7099; /* botones deshabilitados: 4.95:1 con texto blanco */
-  --color-link: var(--color-primary); /* un solo acento: el link no es un azul aparte */
+  --color-primary-muted: #7bb2d8;
+  --color-link: #3b82b0;
 
-  /* Estado semantico -- señales funcionales, no "el acento": se quedan mas
-     vivas que el resto de la paleta a proposito (rojo=error, verde=exito
-     tienen que leerse rapido). */
+  /* Estados semánticos */
   --color-danger: #c92a2a;
   --color-danger-bg: #ffe3e3;
   --color-success: #227a34;
   --color-success-bg: #d3f9d8;
   --color-warning: #a83e08;
-  --color-warning-bg: #fff4e6; /* 5.76:1 con --color-warning encima */
+  --color-warning-bg: #fff4e6;
 
-  /* Lienzo UML: es un plano distinto del resto de la interfaz (regla 3),
-     con contraste fuerte reservado para su contenido (regla del
-     proyector). --canvas-grid-dot es decorativo (textura ambiente de
-     "espacio de trabajo", como el punteado de Figma/Excalidraw) y no lleva
-     el piso de 3:1: no delimita nada ni transmite informacion por si solo. */
-  --canvas-bg: #fbfcfd;
-  --canvas-grid-dot: #ccd2d9;
-  --canvas-edge-stroke: #5c5c66; /* 6.61:1 sobre blanco */
-  --canvas-edge-stroke-active: var(--color-primary); /* tono distinto (gris -> acento), no solo mas oscuro: si el reposo ya subio de contraste, oscurecer mas el seleccionado angosta la diferencia hasta que deja de leerse. deltaE=28.7 entre los dos. */
-  --canvas-edge-stroke-width: 1.5px; /* piso: 1px desaparece proyectado */
+  /* Lienzo UML / ER */
+  --canvas-bg: #f7fafc;
+  --canvas-grid-dot: #b8d2e3;
+  --canvas-edge-stroke: #273b40;
+  --canvas-edge-stroke-active: #4b97c5;
+  --canvas-edge-stroke-width: 1.75px;
+
+  /* Sombras y radios modernos */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 2px 6px rgba(39, 59, 64, 0.08);
+  --shadow-md: 0 6px 20px rgba(39, 59, 64, 0.12);
+  --shadow-lg: 0 14px 36px rgba(39, 59, 64, 0.2);
+  --focus-ring: 0 0 0 3px rgba(75, 151, 197, 0.28);
 
   /* Espaciado (escala de 4px) */
   --space-1: 4px;
@@ -114,12 +124,7 @@
   --space-5: 24px;
   --space-6: 32px;
 
-  /* Tipografia. --font-size-canvas es el piso para texto DENTRO del lienzo
-     al zoom por defecto (regla del proyector). --font-mono es para
-     identificadores (regla 4): nombre/tipo de atributo, firma de metodo,
-     multiplicidad -- alinea y hace escaneable, no es decoracion. Stack de
-     sistema a proposito, sin depender de una fuente externa (coherente
-     con una app que tiene que poder funcionar sin red, ver CU12). */
+  /* Tipografía */
   --font-size-canvas: 13px;
   --font-size-sm: 12px;
   --font-size-base: 14px;

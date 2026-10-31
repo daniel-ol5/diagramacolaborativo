@@ -3,18 +3,66 @@
   flex-direction: column;
   width: 100vw;
   height: 100vh;
+  background: var(--canvas-bg);
 }
 
 .app__toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
-  padding: 6px var(--space-3);
-  background: var(--color-bg-subtle);
-  border-bottom: 1px solid var(--color-border);
-  font-family: "Segoe UI", Roboto, sans-serif;
+  gap: 10px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #273b40 0%, #2f474d 100%);
+  border-bottom: 2px solid var(--brand-primary);
+  box-shadow: 0 3px 12px rgba(39, 59, 64, 0.18);
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
   font-size: var(--font-size-base);
+  color: var(--color-text-on-dark);
+  z-index: 25;
+}
+
+.app__toolbar label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--brand-light);
+}
+
+.app__toolbar select {
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(123, 178, 216, 0.45);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-on-dark);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.app__toolbar select option {
+  background: var(--brand-dark);
+  color: var(--color-text-on-dark);
+}
+
+.app__toolbar .access-page__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(123, 178, 216, 0.14);
+  border: 1px solid rgba(123, 178, 216, 0.32);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  text-decoration: none;
+  transition: all 0.16s ease;
+}
+
+.app__toolbar .access-page__back:hover {
+  background: rgba(75, 151, 197, 0.35);
+  border-color: var(--brand-light);
+  text-decoration: none;
+  transform: translateY(-1px);
 }
 
 /* Tres grupos por función (construir / notación / sacar del modelo), no una
@@ -24,9 +72,48 @@
 .app__toolbar-group {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  padding-right: var(--space-2);
-  border-right: 1px solid var(--color-border);
+  gap: 6px;
+  padding-right: 12px;
+  border-right: 1px solid rgba(123, 178, 216, 0.25);
+}
+
+/* Botones de los grupos de la barra de herramientas */
+.app__toolbar-group button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 12px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(123, 178, 216, 0.32);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-on-dark);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.app__toolbar-group button:hover:not(:disabled) {
+  background: rgba(123, 178, 216, 0.22);
+  border-color: var(--brand-light);
+  transform: translateY(-1px);
+}
+
+.app__toolbar-group button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.app__toolbar-group button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.app__toolbar-group button.app__btn--active {
+  background: var(--brand-primary);
+  border-color: var(--brand-light);
+  color: var(--color-primary-contrast);
+  box-shadow: 0 0 0 2px rgba(123, 178, 216, 0.3);
 }
 
 /* Control segmentado UML / Entidad-Relación: las DOS etiquetas estan
@@ -35,38 +122,41 @@
    cada vez que se tocaba -- reporte directo de Daniel). El ancho total no
    se mueve nunca, solo cambia cual mitad esta resaltada. */
 .app__view-toggle {
-  padding: 2px;
-  gap: 0;
+  padding: 3px;
+  gap: 2px;
   border-right: none;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid rgba(123, 178, 216, 0.35);
+  border-radius: 8px;
 }
 
-.app__view-toggle-btn {
+.app__toolbar-group .app__view-toggle-btn {
   border: none;
   background: transparent;
-  padding: 3px 10px;
+  padding: 5px 12px;
   font-size: var(--font-size-sm);
-  border-radius: 4px;
-  color: var(--color-text-secondary);
+  font-weight: 600;
+  border-radius: 6px;
+  color: var(--brand-light);
   cursor: pointer;
 }
 
-.app__view-toggle-btn--active {
-  background: var(--color-primary);
+.app__toolbar-group .app__view-toggle-btn:hover:not(.app__view-toggle-btn--active) {
+  background: rgba(123, 178, 216, 0.14);
+  color: var(--color-text-on-dark);
+  transform: none;
+}
+
+.app__toolbar-group .app__view-toggle-btn--active {
+  background: var(--brand-primary);
   color: var(--color-primary-contrast);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
 }
 
 /* "Validar" <-> "Validando…" es el mismo tipo de salto: ancho reservado de
    antemano por el string mas largo de los dos, para que tocar el boton no
    corra todo lo que esta a la derecha. */
 .app__toolbar-btn--fixed {
-  /* "Validar" (7 caracteres) vs "Validando…" (10 caracteres): con un boton
-     de ancho automatico, tocarlo corre todo lo que esta a la derecha. `ch`
-     no alcanza aca (la tipografia no es monoespaciada) -- el numero sale de
-     medir el mas largo de los dos ya renderizado, no de una cuenta de
-     caracteres. */
   min-width: 96px;
 }
 
@@ -86,16 +176,44 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 600;
 }
 
 .app__canvas {
   position: relative;
   flex: 1;
   min-height: 0;
-  /* El lienzo es un plano distinto del resto de la interfaz, no blanco
-     plano: es la señal de "esto es un espacio de trabajo" (regla 3 de la
-     pasada visual). El punteado lo pone <Background/> de React Flow. */
-  background: var(--canvas-bg);
+  background:
+    radial-gradient(circle at 15% 15%, rgba(123, 178, 216, 0.12), transparent 45%),
+    radial-gradient(circle at 85% 85%, rgba(75, 151, 197, 0.09), transparent 45%),
+    var(--canvas-bg);
+}
+
+/* Controles de zoom de React Flow estilizados con la paleta */
+.app__canvas .react-flow__controls {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--color-border);
+}
+
+.app__canvas .react-flow__controls-button {
+  background: var(--color-bg);
+  color: var(--brand-dark);
+  border-bottom: 1px solid var(--color-border-muted);
+  transition: background 0.15s ease;
+}
+
+.app__canvas .react-flow__controls-button:hover {
+  background: var(--brand-tint);
+}
+
+.app__canvas .react-flow__controls-button svg {
+  fill: var(--brand-dark);
 }
 
 /* El link "React Flow" de la esquina viene con #999 (2.77:1) de fabrica
@@ -107,18 +225,22 @@
 
 .app__collab-status {
   font-size: var(--font-size-sm);
-  padding: 2px var(--space-2);
-  border-radius: 10px;
-  background: var(--color-bg-subtle);
-  color: var(--color-text-secondary);
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--color-text-on-dark);
+  border: 1px solid rgba(123, 178, 216, 0.3);
 }
 .app__collab-status[data-status="conectado"] {
   background: var(--color-success-bg);
   color: var(--color-success);
+  border-color: rgba(34, 122, 52, 0.3);
 }
 .app__collab-status[data-status="error"] {
   background: var(--color-danger-bg);
   color: var(--color-danger);
+  border-color: rgba(201, 42, 42, 0.3);
 }
 
 .app__collab-warning {
@@ -126,37 +248,39 @@
   color: var(--color-warning);
 }
 
-.app__new-class-btn {
-  padding: 4px 10px;
+.app__toolbar-group .app__new-class-btn {
+  padding: 6px 14px;
   font-size: var(--font-size-sm);
-  border-radius: 4px;
-  border: 1px solid var(--color-primary);
-  background: var(--color-primary);
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--brand-light);
+  background: var(--brand-primary);
   color: var(--color-primary-contrast);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   cursor: pointer;
+}
+
+.app__toolbar-group .app__new-class-btn:hover {
+  background: var(--brand-primary-hover);
+  border-color: #ffffff;
 }
 
 .app__roster {
   display: flex;
-  gap: var(--space-1);
+  gap: 6px;
 }
 
 .app__roster-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px var(--space-2);
-  border-radius: 10px;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
   font-size: 11px;
   font-weight: 600;
-  /* El color de colaborador NO rellena el fondo: es un punto (ver
-     .app__roster-chip-dot) y el texto se queda en los colores normales de
-     la interfaz. Esa paleta esta medida como trazo contra la tinta del
-     lienzo, no como relleno con texto encima -- con relleno, la
-     legibilidad dependia de cual de los ocho colores le tocara a cada
-     colaborador (uno daba 4.41:1, por debajo del piso de 4.5). */
-  background: var(--color-bg-subtle);
+  background: var(--color-bg);
   color: var(--color-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
 }
 
 .app__roster-chip-dot {
@@ -169,7 +293,11 @@
 .app__session {
   margin-left: auto;
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  font-weight: 500;
+  color: var(--brand-light);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .app__toasts {
@@ -183,14 +311,134 @@
 }
 
 .app__toast {
-  padding: var(--space-2) 14px;
-  border-radius: 6px;
-  background: var(--color-bg-footer);
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  background: var(--brand-dark);
   color: var(--color-text-on-dark);
   font-size: 13px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-weight: 500;
+  border: 1px solid var(--brand-light);
+  box-shadow: var(--shadow-md);
 }
 
 .app__toast--warning {
   background: var(--color-warning);
+  border-color: rgba(255, 255, 255, 0.25);
 }
+
+/* ToolBox flotante de Relaciones UML */
+.app__rel-toolbox {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 18;
+  display: flex;
+  flex-direction: column;
+  width: 152px;
+  background: var(--color-bg);
+  border: 1px solid var(--brand-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
+}
+
+.app__rel-toolbox-title {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: linear-gradient(135deg, #273b40 0%, #314950 100%);
+  color: var(--color-text-on-dark);
+  border-bottom: 1.5px solid var(--brand-primary);
+  text-align: center;
+}
+
+.app__rel-toolbox-list {
+  display: flex;
+  flex-direction: column;
+  padding: 5px;
+  gap: 3px;
+}
+
+.app__rel-tool-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--brand-dark);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.14s ease;
+}
+
+.app__rel-tool-btn:hover {
+  background: var(--brand-tint);
+  border-color: var(--brand-light);
+}
+
+.app__rel-tool-btn--active {
+  background: var(--brand-primary) !important;
+  border-color: var(--brand-primary) !important;
+  color: var(--color-primary-contrast) !important;
+  box-shadow: 0 2px 6px rgba(75, 151, 197, 0.35);
+}
+
+.app__rel-tool-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  flex-shrink: 0;
+}
+
+.app__rel-tool-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Aviso guia cuando se esta conectando con el ToolBox */
+.app__rel-hint {
+  position: absolute;
+  top: var(--space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 22;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--brand-dark);
+  color: var(--color-text-on-dark);
+  border: 1.5px solid var(--brand-primary);
+  box-shadow: var(--shadow-md);
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.app__rel-hint-cancel {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--brand-light);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--color-text-on-dark);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.app__rel-hint-cancel:hover {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+}
+

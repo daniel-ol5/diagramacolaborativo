@@ -34,7 +34,7 @@ export function UmlMarkerDefs() {
           refY={7}
           orient="auto-start-reverse"
         >
-          <polygon points="0,7 12,0 24,7 12,14" fill="#fff" stroke="#1a1a2e" strokeWidth={1.5} />
+          <polygon points="0,7 12,0 24,7 12,14" fill="#fff" stroke="#273b40" strokeWidth={1.75} />
         </marker>
 
         <marker
@@ -47,7 +47,7 @@ export function UmlMarkerDefs() {
           refY={7}
           orient="auto-start-reverse"
         >
-          <polygon points="0,7 12,0 24,7 12,14" fill="#1a1a2e" stroke="#1a1a2e" strokeWidth={1.5} />
+          <polygon points="0,7 12,0 24,7 12,14" fill="#273b40" stroke="#273b40" strokeWidth={1.75} />
         </marker>
 
         <marker
@@ -60,7 +60,7 @@ export function UmlMarkerDefs() {
           refY={8}
           orient="auto"
         >
-          <polygon points="0,0 18,8 0,16" fill="#fff" stroke="#1a1a2e" strokeWidth={1.5} />
+          <polygon points="0,0 18,8 0,16" fill="#fff" stroke="#273b40" strokeWidth={1.75} />
         </marker>
 
         <marker
@@ -73,7 +73,7 @@ export function UmlMarkerDefs() {
           refY={6}
           orient="auto"
         >
-          <polyline points="0,0 13,6 0,12" fill="none" stroke="#1a1a2e" strokeWidth={1.5} />
+          <polyline points="0,0 13,6 0,12" fill="none" stroke="#273b40" strokeWidth={1.75} />
         </marker>
       </defs>
     </svg>

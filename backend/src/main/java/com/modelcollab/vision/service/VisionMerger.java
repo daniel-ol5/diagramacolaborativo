@@ -6,9 +6,11 @@ import com.modelcollab.metamodel.model.AttributeType;
 import com.modelcollab.metamodel.model.CanonicalModel;
 import com.modelcollab.metamodel.model.ClassEntity;
 import com.modelcollab.metamodel.model.Multiplicity;
+import com.modelcollab.metamodel.model.OwningSide;
 import com.modelcollab.metamodel.model.Position;
 import com.modelcollab.metamodel.model.Relationship;
 import com.modelcollab.metamodel.model.RelationshipType;
+import com.modelcollab.metamodel.service.OwningSideRule;
 import com.modelcollab.vision.dto.VisionAttribute;
 import com.modelcollab.vision.dto.VisionClass;
 import com.modelcollab.vision.dto.VisionDraft;
@@ -187,13 +189,37 @@ public class VisionMerger {
                     ? multiplicidad(leida.targetMultiplicity(), Multiplicity.ZERO_MANY, estricto)
                     : null;
 
+            OwningSide ladoDueno = OwningSide.SOURCE;
+            if (llevaMultiplicidades) {
+                Relationship preliminar = new Relationship(
+                        "temp", origen, destino, tipo,
+                        OwningSide.SOURCE, null, desde, hasta, null, null, null, List.of());
+                if (OwningSideRule.esDerivable(preliminar)) {
+                    ladoDueno = OwningSideRule.efectivo(preliminar);
+                } else if (tipo == RelationshipType.COMPOSITION || tipo == RelationshipType.AGGREGATION) {
+                    // En composición/agregación, si las multiplicidades no deciden (ej. 1..1 a 1..1),
+                    // el origen 'from' es el todo y el destino 'to' es la parte que lleva la FK,
+                    // por lo que el lado dueño es TARGET para que el frontend dibuje el rombo en source.
+                    ladoDueno = OwningSide.TARGET;
+                }
+            }
+
             relacionesNuevas.add(new Relationship(
                     UUID.randomUUID().toString(), origen, destino, tipo,
-                    null, null, desde, hasta, null, null, null, List.of()));
+                    ladoDueno, null, desde, hasta, null, null, null, List.of()));
             relacionesSaneadas.add(new VisionRelationship(
                     leida.from().strip(), leida.to().strip(), tipo.name(),
                     desde == null ? null : desde.getValue(),
                     hasta == null ? null : hasta.getValue()));
+        }
+
+        // Al proponer, si una clase leída quedó huérfana (0 relaciones) pero su nombre combina
+        // dos clases con relación directa leída (clase asociación en la foto que el modelo no
+        // descompuso), se reconecta automáticamente con ambas clases para que la persona lo vea
+        // en el modal. Al confirmar (estricto = true) se respeta tal cual lo que confirmó.
+        if (!estricto) {
+            resolverClasesAsociacionHuerfanas(
+                    actual, nuevas, relacionesNuevas, relacionesSaneadas, notas);
         }
 
         if (nuevas.isEmpty()) {
@@ -295,6 +321,184 @@ public class VisionMerger {
             }
         }
         return base + " " + UUID.randomUUID().toString().substring(0, 4);
+    }
+
+    private static void resolverClasesAsociacionHuerfanas(
+            CanonicalModel actual,
+            List<ClassEntity> nuevas,
+            List<Relationship> relacionesNuevas,
+            List<VisionRelationship> relacionesSaneadas,
+            List<String> notas) {
+
+        Map<String, String> nombrePorId = new LinkedHashMap<>();
+        actual.classes().forEach(c -> nombrePorId.put(c.id(), c.name()));
+        nuevas.forEach(c -> nombrePorId.put(c.id(), c.name()));
+
+        for (ClassEntity clase : nuevas) {
+            // Una copia renombrada por colisión con el diagrama existente (ej. "Estudiante (2)")
+            // nunca es una clase asociación
+            if (clase.name().matches(".+ \\(\\d+\\)$")) {
+                continue;
+            }
+
+            String idClase = clase.id();
+            boolean tieneRelaciones = relacionesNuevas.stream()
+                    .anyMatch(r -> r.sourceClassId().equals(idClase) || r.targetClassId().equals(idClase));
+            if (tieneRelaciones) {
+                continue;
+            }
+
+            String nombreClaseLimpio = soloAlfanumerico(clase.name());
+            if (nombreClaseLimpio.isEmpty()) {
+                continue;
+            }
+
+            Relationship directa = null;
+            int indiceDirecta = -1;
+
+            // 1. Coincidencia exacta de concatenación (ej. EspecialidadEntrenador, HorarioClase)
+            for (int i = 0; i < relacionesNuevas.size(); i++) {
+                Relationship r = relacionesNuevas.get(i);
+                String a = nombrePorId.get(r.sourceClassId());
+                String b = nombrePorId.get(r.targetClassId());
+                if (a == null || b == null) continue;
+                String alfaA = soloAlfanumerico(a);
+                String alfaB = soloAlfanumerico(b);
+                if (alfaA.isEmpty() || alfaB.isEmpty()) continue;
+                if (nombreClaseLimpio.equals(alfaA + alfaB) || nombreClaseLimpio.equals(alfaB + alfaA)) {
+                    directa = r;
+                    indiceDirecta = i;
+                    break;
+                }
+            }
+
+            // 2. Coincidencia bidireccional por prefijo / raíz (ej. Evalua <-> Evaluacion, DetalleEquipo <-> Equipo)
+            if (directa == null) {
+                for (int i = 0; i < relacionesNuevas.size(); i++) {
+                    Relationship r = relacionesNuevas.get(i);
+                    String a = nombrePorId.get(r.sourceClassId());
+                    String b = nombrePorId.get(r.targetClassId());
+                    if (a == null || b == null) continue;
+                    String alfaA = soloAlfanumerico(a);
+                    String alfaB = soloAlfanumerico(b);
+                    if (alfaA.isEmpty() || alfaB.isEmpty()) continue;
+                    if (coincideNombreORaiz(nombreClaseLimpio, alfaA) || coincideNombreORaiz(nombreClaseLimpio, alfaB)) {
+                        directa = r;
+                        indiceDirecta = i;
+                        break;
+                    }
+                }
+            }
+
+            // 3. Afinidad semántica de verbos y sustantivos de asociación (ej. Guarda entre Equipo y Depósito)
+            if (directa == null) {
+                for (int i = 0; i < relacionesNuevas.size(); i++) {
+                    Relationship r = relacionesNuevas.get(i);
+                    String a = nombrePorId.get(r.sourceClassId());
+                    String b = nombrePorId.get(r.targetClassId());
+                    if (a == null || b == null) continue;
+                    String alfaA = soloAlfanumerico(a);
+                    String alfaB = soloAlfanumerico(b);
+                    if (alfaA.isEmpty() || alfaB.isEmpty()) continue;
+                    if (coincideSemantica(nombreClaseLimpio, alfaA, alfaB)) {
+                        directa = r;
+                        indiceDirecta = i;
+                        break;
+                    }
+                }
+            }
+
+            // 4. Si es un sustantivo típico de asociación y queda una única relación directa disponible
+            if (directa == null && !relacionesNuevas.isEmpty()) {
+                boolean esNombreTipico = esNombreDeAsociacion(nombreClaseLimpio);
+                long totalHuerfanas = nuevas.stream().filter(c -> relacionesNuevas.stream()
+                        .noneMatch(rel -> rel.sourceClassId().equals(c.id()) || rel.targetClassId().equals(c.id()))).count();
+
+                if (esNombreTipico && relacionesNuevas.size() == 1 && totalHuerfanas == 1) {
+                    directa = relacionesNuevas.get(0);
+                    indiceDirecta = 0;
+                }
+            }
+
+            if (directa != null) {
+                relacionesNuevas.remove(indiceDirecta);
+                if (indiceDirecta < relacionesSaneadas.size()) {
+                    relacionesSaneadas.remove(indiceDirecta);
+                }
+
+                String origenA = directa.sourceClassId();
+                String origenB = directa.targetClassId();
+
+                Relationship relA = new Relationship(
+                        UUID.randomUUID().toString(), origenA, idClase, RelationshipType.ASSOCIATION,
+                        OwningSide.TARGET, null, Multiplicity.ONE_ONE, Multiplicity.ZERO_MANY,
+                        null, null, null, List.of());
+                Relationship relB = new Relationship(
+                        UUID.randomUUID().toString(), origenB, idClase, RelationshipType.ASSOCIATION,
+                        OwningSide.TARGET, null, Multiplicity.ONE_ONE, Multiplicity.ZERO_MANY,
+                        null, null, null, List.of());
+
+                relacionesNuevas.add(relA);
+                relacionesNuevas.add(relB);
+
+                String nombreA = nombrePorId.get(origenA);
+                String nombreB = nombrePorId.get(origenB);
+                relacionesSaneadas.add(new VisionRelationship(
+                        nombreA != null ? nombreA : origenA, clase.name(), "ASSOCIATION", "1..1", "0..*"));
+                relacionesSaneadas.add(new VisionRelationship(
+                        nombreB != null ? nombreB : origenB, clase.name(), "ASSOCIATION", "1..1", "0..*"));
+
+                notas.add("Se conectó la clase asociación '" + clase.name()
+                        + "' con '" + (nombreA != null ? nombreA : origenA)
+                        + "' y '" + (nombreB != null ? nombreB : origenB) + "'.");
+            }
+        }
+    }
+
+    private static boolean coincideNombreORaiz(String clase, String extremo) {
+        if (clase.equals(extremo)) return false;
+        if (clase.length() >= 4 && extremo.length() >= 4) {
+            if (clase.contains(extremo) || extremo.contains(clase)) return true;
+            String prefijoClase = clase.substring(0, Math.min(4, clase.length()));
+            String prefijoExtremo = extremo.substring(0, Math.min(4, extremo.length()));
+            if (prefijoClase.equals(prefijoExtremo)) return true;
+        }
+        return false;
+    }
+
+    private static boolean coincideSemantica(String clase, String alfaA, String alfaB) {
+        if (clase.contains("guarda") || clase.contains("custodia")) {
+            return alfaA.contains("deposito") || alfaB.contains("deposito")
+                    || alfaA.contains("almacen") || alfaB.contains("almacen")
+                    || alfaA.contains("bodega") || alfaB.contains("bodega")
+                    || alfaA.contains("equipo") || alfaB.contains("equipo");
+        }
+        if (clase.contains("reserva")) {
+            return alfaA.contains("habitacion") || alfaB.contains("habitacion")
+                    || alfaA.contains("cancha") || alfaB.contains("cancha")
+                    || alfaA.contains("mesa") || alfaB.contains("mesa")
+                    || alfaA.contains("cliente") || alfaB.contains("cliente");
+        }
+        if (clase.contains("matricula") || clase.contains("inscrip")) {
+            return alfaA.contains("curso") || alfaB.contains("curso")
+                    || alfaA.contains("clase") || alfaB.contains("clase")
+                    || alfaA.contains("estudiante") || alfaB.contains("estudiante")
+                    || alfaA.contains("alumno") || alfaB.contains("alumno");
+        }
+        return false;
+    }
+
+    private static String soloAlfanumerico(String s) {
+        return s == null ? "" : s.replaceAll("[^a-zA-Z0-9]", "").toLowerCase(Locale.ROOT);
+    }
+
+    private static boolean esNombreDeAsociacion(String s) {
+        if (s == null) return false;
+        List<String> tipicos = List.of(
+                "guarda", "guardia", "inscripcion", "matricula", "detalle",
+                "asignacion", "asistencia", "turno", "reserva", "linea",
+                "item", "registro", "contrato", "cita", "sesion", "as", "evalua");
+        return tipicos.stream().anyMatch(s::contains);
     }
 
     private static String normalizar(String nombre) {

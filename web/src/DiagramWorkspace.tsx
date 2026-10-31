@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode, type MouseEvent a
 import { useNavigate } from "react-router-dom";
 import ReactFlow, {
   Background,
+  ConnectionMode,
   Controls,
   type Connection,
   type NodeChange,
@@ -9,6 +10,7 @@ import ReactFlow, {
   type ReactFlowInstance,
 } from "reactflow";
 import "reactflow/dist/style.css";
+import type { RelationshipType } from "./types/canonical";
 import { UmlClassNode } from "./components/UmlClassNode";
 import { UmlRelationshipEdge } from "./components/UmlRelationshipEdge";
 import { UmlMarkerDefs } from "./components/UmlMarkerDefs";
@@ -98,11 +100,95 @@ function RosterPanel() {
   );
 }
 
+type RelToolType = RelationshipType | "ASSOCIATION_CLASS";
+
+const REL_TOOLS: { type: RelToolType; label: string; short: string; icon: ReactNode }[] = [
+  {
+    type: "ASSOCIATION",
+    label: "Asociación",
+    short: "Asociación",
+    icon: (
+      <svg width="26" height="12" viewBox="0 0 26 12" aria-hidden="true">
+        <line x1="2" y1="6" x2="24" y2="6" stroke="currentColor" strokeWidth="2" />
+      </svg>
+    ),
+  },
+  {
+    type: "AGGREGATION",
+    label: "Agregación (◇)",
+    short: "Agregación",
+    icon: (
+      <svg width="26" height="12" viewBox="0 0 26 12" aria-hidden="true">
+        <polygon points="1,6 6,2 11,6 6,10" fill="none" stroke="currentColor" strokeWidth="1.8" />
+        <line x1="11" y1="6" x2="25" y2="6" stroke="currentColor" strokeWidth="2" />
+      </svg>
+    ),
+  },
+  {
+    type: "COMPOSITION",
+    label: "Composición (◆)",
+    short: "Composición",
+    icon: (
+      <svg width="26" height="12" viewBox="0 0 26 12" aria-hidden="true">
+        <polygon points="1,6 6,2 11,6 6,10" fill="currentColor" stroke="currentColor" strokeWidth="1.8" />
+        <line x1="11" y1="6" x2="25" y2="6" stroke="currentColor" strokeWidth="2" />
+      </svg>
+    ),
+  },
+  {
+    type: "MANY_TO_MANY",
+    label: "Muchos a muchos (*..*)",
+    short: "Muchos a *",
+    icon: (
+      <svg width="26" height="12" viewBox="0 0 26 12" aria-hidden="true">
+        <line x1="4" y1="6" x2="22" y2="6" stroke="currentColor" strokeWidth="2" />
+        <circle cx="4" cy="6" r="2.2" fill="currentColor" />
+        <circle cx="22" cy="6" r="2.2" fill="currentColor" />
+      </svg>
+    ),
+  },
+  {
+    type: "INHERITANCE",
+    label: "Herencia (▷)",
+    short: "Herencia",
+    icon: (
+      <svg width="26" height="12" viewBox="0 0 26 12" aria-hidden="true">
+        <line x1="2" y1="6" x2="17" y2="6" stroke="currentColor" strokeWidth="2" />
+        <polygon points="17,2 25,6 17,10" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      </svg>
+    ),
+  },
+  {
+    type: "DEPENDENCY",
+    label: "Dependencia (- - >)",
+    short: "Dependencia",
+    icon: (
+      <svg width="26" height="12" viewBox="0 0 26 12" aria-hidden="true">
+        <line x1="2" y1="6" x2="22" y2="6" stroke="currentColor" strokeWidth="2" strokeDasharray="3,2.5" />
+        <polyline points="18,2.5 24,6 18,9.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      </svg>
+    ),
+  },
+  {
+    type: "ASSOCIATION_CLASS",
+    label: "Clase Asociación",
+    short: "Clase Asoc.",
+    icon: (
+      <svg width="26" height="12" viewBox="0 0 26 12" aria-hidden="true">
+        <line x1="2" y1="3" x2="24" y2="3" stroke="currentColor" strokeWidth="1.8" />
+        <line x1="13" y1="3" x2="13" y2="7" stroke="currentColor" strokeWidth="1.5" strokeDasharray="2,1.5" />
+        <rect x="8" y="7" width="10" height="4.5" rx="1" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      </svg>
+    ),
+  },
+];
+
 interface PendingConnection {
   sourceId: string;
   sourceName: string;
   targetId: string;
   targetName: string;
+  initialType?: RelToolType;
 }
 
 interface Props {
@@ -139,6 +225,8 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft }:
   const [showXmiImport, setShowXmiImport] = useState(false);
   const [exportingXmi, setExportingXmi] = useState(false);
   const [showPackages, setShowPackages] = useState(false);
+  const [activeRelTool, setActiveRelTool] = useState<RelToolType | null>(null);
+  const [relSourceId, setRelSourceId] = useState<string | null>(null);
   const selectNode = usePresentationStore((s) => s.selectNode);
   const selectedNodeId = usePresentationStore((s) => s.selectedNodeId);
   const viewMode = usePresentationStore((s) => s.viewMode);
@@ -194,8 +282,43 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft }:
     return schemaPreview ? toErEdges(model, schemaPreview) : [];
   }, [model, viewMode, schemaPreview]);
 
+  useEffect(() => {
+    if (!activeRelTool) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setActiveRelTool(null);
+        setRelSourceId(null);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeRelTool]);
+
   const handleNodeClick: NodeMouseHandler = (_event, node) => {
     selectNode(node.id);
+    if (!activeRelTool || viewMode !== "uml" || !model) return;
+    if (!relSourceId) {
+      setRelSourceId(node.id);
+      return;
+    }
+    if (relSourceId === node.id) {
+      // Clic en la misma clase origen la deselecciona como origen
+      setRelSourceId(null);
+      return;
+    }
+    const source = model.classes.find((c) => c.id === relSourceId);
+    const target = model.classes.find((c) => c.id === node.id);
+    if (source && target) {
+      setPendingConnection({
+        sourceId: source.id,
+        sourceName: source.name,
+        targetId: target.id,
+        targetName: target.name,
+        initialType: activeRelTool,
+      });
+    }
+    setActiveRelTool(null);
+    setRelSourceId(null);
   };
 
   function handlePaneMouseMove(event: ReactMouseEvent) {
@@ -266,7 +389,7 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft }:
     setToolbarError(null);
     try {
       const resultado = await generateBackend(diagramId, session.token, basePackage);
-      if (resultado.ok) {
+      if ("blob" in resultado) {
         triggerDownload(resultado.blob, resultado.filename);
         setShowGenerateModal(false);
       } else {
@@ -315,6 +438,62 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft }:
     });
   }
 
+  function handleCreateAssociationClass(className: string) {
+    if (!pendingConnection || !model) return;
+    const source = model.classes.find((c) => c.id === pendingConnection.sourceId);
+    const target = model.classes.find((c) => c.id === pendingConnection.targetId);
+
+    const midX = source && target
+      ? Math.round((source.position.x + target.position.x) / 2)
+      : 200;
+    const midY = source && target
+      ? Math.round((source.position.y + target.position.y) / 2) + 70
+      : 200;
+
+    const newClassId = crypto.randomUUID();
+
+    // 1. Agregar la clase intermedia al lienzo
+    collaboration.addClass({
+      id: newClassId,
+      name: className.trim(),
+      visibility: "PUBLIC",
+      isAbstract: false,
+      position: { x: midX, y: midY },
+      width: 220,
+      height: 150,
+      attributes: [],
+      methods: [],
+    });
+
+    // 2. Conectar source -> intermedia
+    collaboration.addRelationship({
+      id: crypto.randomUUID(),
+      sourceClassId: pendingConnection.sourceId,
+      targetClassId: newClassId,
+      type: "ASSOCIATION",
+      owningSide: "TARGET",
+      sourceMultiplicity: "1..1",
+      targetMultiplicity: "0..*",
+      isNavigable: true,
+      waypoints: [],
+    });
+
+    // 3. Conectar target -> intermedia
+    collaboration.addRelationship({
+      id: crypto.randomUUID(),
+      sourceClassId: pendingConnection.targetId,
+      targetClassId: newClassId,
+      type: "ASSOCIATION",
+      owningSide: "TARGET",
+      sourceMultiplicity: "1..1",
+      targetMultiplicity: "0..*",
+      isNavigable: true,
+      waypoints: [],
+    });
+
+    setPendingConnection(null);
+  }
+
   return (
     <div className="app">
       <header className="app__toolbar">
@@ -325,7 +504,12 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft }:
             <button type="button" className="app__new-class-btn" onClick={() => setShowNewClass(true)}>
               + Clase
             </button>
-            <button type="button" onClick={() => setShowAiCommand((v) => !v)}>
+            <button
+              type="button"
+              className={showAiCommand ? "app__btn--active" : ""}
+              onClick={() => setShowAiCommand((v) => !v)}
+              title="Comandos por texto o voz (micrófono)"
+            >
               Comando
             </button>
             <button type="button" onClick={() => setShowVisionImport(true)}>
@@ -411,6 +595,55 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft }:
         <CollaborationToasts />
         {diagramId && <OfflineSyncBadge />}
         <ReconciliationModal />
+        {viewMode === "uml" && model && (
+          <aside className="app__rel-toolbox" aria-label="Herramientas de relación">
+            <div className="app__rel-toolbox-title">Relacionar</div>
+            <div className="app__rel-toolbox-list">
+              {REL_TOOLS.map((tool) => {
+                const isActive = activeRelTool === tool.type;
+                return (
+                  <button
+                    key={tool.type}
+                    type="button"
+                    className={`app__rel-tool-btn${isActive ? " app__rel-tool-btn--active" : ""}`}
+                    title={`${tool.label} — Clic en clase origen y luego en destino`}
+                    onClick={() => {
+                      if (isActive) {
+                        setActiveRelTool(null);
+                        setRelSourceId(null);
+                      } else {
+                        setActiveRelTool(tool.type);
+                        setRelSourceId(null);
+                      }
+                    }}
+                  >
+                    <span className="app__rel-tool-icon">{tool.icon}</span>
+                    <span className="app__rel-tool-label">{tool.short}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </aside>
+        )}
+        {activeRelTool && viewMode === "uml" && (
+          <div className="app__rel-hint">
+            <span>
+              {relSourceId
+                ? `Origen: ${model?.classes.find((c) => c.id === relSourceId)?.name ?? "Clase"} → Hacé clic en la clase destino`
+                : `${REL_TOOLS.find((t) => t.type === activeRelTool)?.label}: Hacé clic en la clase origen`}
+            </span>
+            <button
+              type="button"
+              className="app__rel-hint-cancel"
+              onClick={() => {
+                setActiveRelTool(null);
+                setRelSourceId(null);
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
+        )}
         {diagramId && showAiCommand && (
           <AiCommandBox diagramId={diagramId} token={session.token} onClose={() => setShowAiCommand(false)} />
         )}
@@ -453,6 +686,7 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft }:
             edges={edges}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
+            connectionMode={ConnectionMode.Loose}
             onNodeClick={handleNodeClick}
             onNodesChange={handleNodesChange}
             onConnect={handleConnect}
@@ -476,10 +710,12 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft }:
           sourceName={pendingConnection.sourceName}
           targetId={pendingConnection.targetId}
           targetName={pendingConnection.targetName}
+          initialType={pendingConnection.initialType}
           onSubmit={(relationship) => {
             collaboration.addRelationship(relationship);
             setPendingConnection(null);
           }}
+          onCreateAssociationClass={handleCreateAssociationClass}
           onClose={() => setPendingConnection(null)}
         />
       )}

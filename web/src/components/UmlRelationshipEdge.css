@@ -1,18 +1,7 @@
-/*
- * El trazo por defecto de React Flow (.react-flow__edge-path) es #b1b1b7,
- * 2.13:1 sobre blanco -- por debajo del piso de 3:1 para elementos
- * graficos, y las relaciones son la mitad de la notacion UML, no chrome
- * (regla del proyector). El selector con la clase del tipo de edge
- * (react-flow__edge-umlRelationship) le gana en especificidad al de
- * reactflow/dist/style.css sin depender del orden de imports.
- *
- * El estado seleccionado/enfocado usa un TONO distinto (azul de marca), no
- * solo mas oscuro: si el reposo ya subio de contraste, oscurecerlo mas
- * angostaria la diferencia con el seleccionado hasta que dejara de leerse.
- */
 .react-flow__edge-umlRelationship .react-flow__edge-path {
   stroke: var(--canvas-edge-stroke);
   stroke-width: var(--canvas-edge-stroke-width);
+  transition: stroke 0.15s ease, stroke-width 0.15s ease;
 }
 
 .react-flow__edge-umlRelationship.selected .react-flow__edge-path,
@@ -20,60 +9,66 @@
 .react-flow__edge-umlRelationship:focus-visible .react-flow__edge-path,
 .react-flow__edge-umlRelationship:hover .react-flow__edge-path {
   stroke: var(--canvas-edge-stroke-active);
-  stroke-width: calc(var(--canvas-edge-stroke-width) + 0.5px);
+  stroke-width: calc(var(--canvas-edge-stroke-width) + 0.75px);
 }
 
 .uml-edge-label {
-  /* Multiplicidad: es un identificador, no prosa (regla 4). */
   font-family: var(--font-mono);
   font-size: var(--font-size-canvas);
+  font-weight: 600;
   fill: var(--color-border-strong);
   paint-order: stroke;
   stroke: var(--canvas-bg);
-  stroke-width: 3px;
+  stroke-width: 3.5px;
 }
 
 .uml-edge-delete-fo {
   overflow: visible;
+  pointer-events: none;
 }
 
+/* Oculto por defecto para que el diagrama quede limpio; solo aparece al pasar el mouse o seleccionar la relacion */
 .uml-edge-delete-btn {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1px solid var(--color-danger);
-  background: var(--color-bg);
-  color: var(--color-danger);
-  font-size: 10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--brand-light);
+  background: var(--brand-dark);
+  color: var(--color-text-on-dark);
+  font-size: 12px;
   line-height: 1;
   padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  opacity: 0.7;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 3px 8px rgba(39, 59, 64, 0.25);
+  transition: opacity 0.15s ease, transform 0.15s ease, background-color 0.15s ease;
+}
+
+.react-flow__edge-umlRelationship:hover .uml-edge-delete-btn,
+.react-flow__edge-umlRelationship.selected .uml-edge-delete-btn {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .uml-edge-delete-btn:hover {
-  opacity: 1;
-  background: var(--color-danger-bg);
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  transform: scale(1.1);
 }
 
-/* CU04: los agarres de quiebre solo se ven al pasar el mouse por la
-   relacion o tenerla seleccionada -- permanentes, competirian con el
-   contenido real en una lamina proyectada (igual criterio que el resto
-   del pulido de esta pasada). La linea SIGUE doblando por el quiebre
-   aunque el circulo este invisible: lo unico que se oculta es el agarre
-   para arrastrar, no el dato. */
 .uml-edge-hit-area {
-  cursor: copy;
-  /* Sin esto, un trazo "transparent" no se hit-testea (SVG por defecto es
-     visiblePainted, y "transparent" cuenta como no pintado) -- el doble
-     clic para agregar un quiebre nunca llegaria a disparar. */
+  cursor: pointer;
   pointer-events: stroke;
 }
 
 .uml-edge-waypoint-handle {
   fill: var(--color-bg);
-  stroke: var(--color-primary);
-  stroke-width: 1.5px;
+  stroke: var(--brand-primary);
+  stroke-width: 2px;
   cursor: grab;
   opacity: 0;
   transition: opacity 0.15s;

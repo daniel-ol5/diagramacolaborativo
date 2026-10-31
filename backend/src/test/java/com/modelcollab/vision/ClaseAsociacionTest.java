@@ -137,4 +137,117 @@ class ClaseAsociacionTest {
                 .as("la persona tiene que enterarse de que se renombró antes de confirmar")
                 .isNotEmpty();
     }
+
+    @Test
+    @DisplayName("Si el modelo de visión leyó la clase asociación huérfana pero con relación directa entre extremos, se reconecta")
+    void claseAsociacionHuerfanaSeReconecta() {
+        // Simula la foto donde Gemini vio Entrenador y Especialidad conectados directamente,
+        // y vio la caja EspecialidadEntrenador suelta (0 relaciones).
+        VisionDraft draftConHuerfana = new VisionDraft(
+                List.of(
+                        new VisionClass("Entrenador", List.of(new VisionAttribute("nombre", "VARCHAR"))),
+                        new VisionClass("Especialidad", List.of(new VisionAttribute("titulo", "VARCHAR"))),
+                        new VisionClass("EspecialidadEntrenador", List.of(
+                                new VisionAttribute("fecha", "DATE"),
+                                new VisionAttribute("vigente", "BOOLEAN")))),
+                List.of(
+                        new VisionRelationship("Entrenador", "Especialidad", "ASSOCIATION", "1..1", "0..*")));
+
+        VisionMerger.Resultado r = fusionador.fusionar(CanonicalModel.empty(), draftConHuerfana, false);
+
+        assertThat(r.clasesNuevas()).isEqualTo(3);
+        // La relación directa se reemplaza por dos relaciones hacia EspecialidadEntrenador
+        assertThat(r.relacionesNuevas()).isEqualTo(2);
+
+        ClassEntity intermedia = r.modelo().classes().stream()
+                .filter(c -> c.name().equals("EspecialidadEntrenador"))
+                .findFirst()
+                .orElseThrow();
+
+        List<Relationship> haciaIntermedia = r.modelo().relationships().stream()
+                .filter(rel -> rel.targetClassId().equals(intermedia.id()))
+                .toList();
+
+        assertThat(haciaIntermedia).hasSize(2);
+        assertThat(r.notas()).anyMatch(n -> n.contains("EspecialidadEntrenador"));
+    }
+
+    @Test
+    @DisplayName("Una clase asociación con nombre propio como 'Guarda' se reconecta entre las clases de la relación")
+    void claseAsociacionGuardaSeReconecta() {
+        // En la pizarra se dibuja Socio y Equipo con Guarda colgando de la línea punteada
+        VisionDraft draft = new VisionDraft(
+                List.of(
+                        new VisionClass("Socio", List.of(new VisionAttribute("ci", "VARCHAR"))),
+                        new VisionClass("Equipo", List.of(new VisionAttribute("codigo", "VARCHAR"))),
+                        new VisionClass("Guarda", List.of(new VisionAttribute("fecha", "DATE")))),
+                List.of(
+                        new VisionRelationship("Socio", "Equipo", "ASSOCIATION", "1..1", "0..*")));
+
+        VisionMerger.Resultado r = fusionador.fusionar(CanonicalModel.empty(), draft, false);
+
+        assertThat(r.clasesNuevas()).isEqualTo(3);
+        assertThat(r.relacionesNuevas()).isEqualTo(2);
+
+        ClassEntity guarda = r.modelo().classes().stream()
+                .filter(c -> c.name().equals("Guarda"))
+                .findFirst()
+                .orElseThrow();
+
+        List<Relationship> haciaGuarda = r.modelo().relationships().stream()
+                .filter(rel -> rel.targetClassId().equals(guarda.id()))
+                .toList();
+
+        assertThat(haciaGuarda).hasSize(2);
+        assertThat(r.notas()).anyMatch(n -> n.contains("Guarda"));
+    }
+
+    @Test
+    @DisplayName("En un diagrama con múltiples clases asociación (compuestas, verbales y por raíz), todas se reconectan")
+    void diagramaCompletoConMultiplesClasesAsociacionSeReconecta() {
+        VisionDraft draft = new VisionDraft(
+                List.of(
+                        new VisionClass("Persona", List.of(new VisionAttribute("ci", "VARCHAR"))),
+                        new VisionClass("Cliente", List.of(new VisionAttribute("edad", "INTEGER"))),
+                        new VisionClass("Evaluacion", List.of(new VisionAttribute("id", "VARCHAR"))),
+                        new VisionClass("Evalua", List.of(new VisionAttribute("resultado", "VARCHAR"))),
+                        new VisionClass("Entrenador", List.of(new VisionAttribute("nombre", "VARCHAR"))),
+                        new VisionClass("Especialidad", List.of(new VisionAttribute("titulo", "VARCHAR"))),
+                        new VisionClass("EspecialidadEntrenador", List.of()),
+                        new VisionClass("Clase", List.of(new VisionAttribute("id", "VARCHAR"))),
+                        new VisionClass("Horario", List.of(new VisionAttribute("dia", "VARCHAR"))),
+                        new VisionClass("HorarioClase", List.of()),
+                        new VisionClass("Equipo", List.of(new VisionAttribute("id", "VARCHAR"))),
+                        new VisionClass("Deposito", List.of(new VisionAttribute("id", "VARCHAR"))),
+                        new VisionClass("Guarda", List.of())),
+                List.of(
+                        new VisionRelationship("Cliente", "Persona", "INHERITANCE", null, null),
+                        new VisionRelationship("Cliente", "Evaluacion", "ASSOCIATION", "1..1", "0..*"),
+                        new VisionRelationship("Entrenador", "Especialidad", "ASSOCIATION", "1..1", "0..*"),
+                        new VisionRelationship("Clase", "Horario", "ASSOCIATION", "1..1", "0..*"),
+                        new VisionRelationship("Equipo", "Deposito", "ASSOCIATION", "1..1", "0..*")));
+
+        VisionMerger.Resultado r = fusionador.fusionar(CanonicalModel.empty(), draft, false);
+
+        assertThat(r.clasesNuevas()).isEqualTo(13);
+        // De 5 relaciones originales: 1 herencia queda intacta, 4 asociaciones directas se convierten en 8 hacia las 4 clases asociación
+        // Total = 1 + 8 = 9 relaciones
+        assertThat(r.relacionesNuevas()).isEqualTo(9);
+
+        // Verificar que ninguna de las 4 clases asociación quedó huérfana
+        List<String> asociacionNames = List.of("Evalua", "EspecialidadEntrenador", "HorarioClase", "Guarda");
+        for (String nombre : asociacionNames) {
+            ClassEntity entidad = r.modelo().classes().stream()
+                    .filter(c -> c.name().equals(nombre))
+                    .findFirst()
+                    .orElseThrow();
+            List<Relationship> conexiones = r.modelo().relationships().stream()
+                    .filter(rel -> rel.targetClassId().equals(entidad.id()) || rel.sourceClassId().equals(entidad.id()))
+                    .toList();
+            assertThat(conexiones)
+                    .as("la clase asociación " + nombre + " debe tener 2 conexiones")
+                    .hasSize(2);
+        }
+    }
 }
+

@@ -1,40 +1,48 @@
 .er-table {
-  min-width: 200px;
+  min-width: 210px;
   background: var(--color-bg);
-  border: 1.5px solid var(--color-border-strong);
-  border-radius: 4px;
+  border: 1.5px solid var(--brand-dark);
+  border-radius: 8px;
+  box-shadow: 0 5px 16px rgba(39, 59, 64, 0.12);
   font-family: var(--font-mono);
   font-size: 12px;
-  box-shadow: none;
+  overflow: hidden;
 }
 
 .er-table__name {
-  padding: 6px 8px;
+  padding: 7px 10px;
   font-weight: 700;
   text-align: center;
-  background: var(--color-bg-muted);
-  border-bottom: 1.5px solid var(--color-border-strong);
-  font-family: "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(135deg, #273b40 0%, #324b52 100%);
+  color: var(--color-text-on-dark);
+  border-bottom: 2px solid var(--brand-primary);
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
 }
 
 .er-table--junction .er-table__name {
   font-style: italic;
-  color: var(--color-text-secondary);
+  background: linear-gradient(135deg, #324b52 0%, #4b97c5 100%);
+  color: var(--color-text-on-dark);
 }
 
 .er-table__abstract-mark {
   font-size: 10px;
-  font-weight: 400;
-  color: var(--color-text-tertiary);
+  font-weight: 500;
+  color: var(--brand-light);
 }
 
 .er-table__row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 8px;
+  gap: 8px;
+  padding: 5px 10px;
   border-bottom: 1px solid var(--color-border-muted);
   white-space: nowrap;
+  transition: background-color 0.12s ease;
+}
+
+.er-table__row:hover {
+  background: var(--brand-tint);
 }
 
 .er-table__row:last-child {
@@ -43,28 +51,36 @@
 
 .er-table__row--pk {
   font-weight: 700;
+  background: rgba(232, 243, 250, 0.45);
   text-decoration: underline;
+  text-decoration-color: var(--brand-primary);
 }
 
 .er-table__key-badge {
   flex-shrink: 0;
   font-size: 10px;
   font-weight: 700;
-  color: var(--color-primary);
-  width: 32px;
+  color: var(--color-primary-contrast);
+  background: var(--brand-primary);
+  padding: 1px 5px;
+  border-radius: 4px;
+  text-align: center;
+  min-width: 28px;
 }
 
 .er-table__col-name {
   flex: 1;
+  color: var(--color-text);
 }
 
 .er-table__col-type {
   color: var(--color-text-tertiary);
+  font-size: 11px;
 }
 
 .er-table__empty {
-  padding: 6px 8px;
+  padding: 8px 10px;
   color: var(--color-text-tertiary);
   font-style: italic;
-  font-family: "Segoe UI", Roboto, sans-serif;
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
 }

@@ -1,11 +1,13 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { sendAiCommand, type AiCommandResult } from "./aiCommandApi";
+import { useSpeechRecognition } from "./useSpeechRecognition";
 import "./AiCommandBox.css";
 
 interface Props {
   diagramId: string;
   token: string;
   onClose: () => void;
+  initialListening?: boolean;
 }
 
 interface Entrada {
@@ -18,20 +20,60 @@ interface Entrada {
 const EJEMPLO_GUARDARRAIL = "Créame un sistema para un banco";
 
 /**
- * CU16: modelado por comando de texto (la voz entra por el mismo cuadro --
- * el reconocimiento de voz del navegador produce texto, así que de acá
- * para adentro no hay ninguna diferencia, ver AiCommandRequest.java).
+ * CU16: modelado por comando de texto y voz.
+ *
+ * El reconocimiento de voz del navegador Web Speech API captura el audio del
+ * micrófono de la laptop, transcribe en tiempo real a texto en español, y lo
+ * envía a través del mismo endpoint CU16 de IA.
  *
  * El diagrama en sí NO se actualiza desde acá: las mutaciones que un
  * comando aplica llegan por la misma difusión STOMP de siempre
  * (`/topic/diagrams/{id}`, ya manejada por useCollaboration) — este
  * componente sólo manda el comando y muestra la conversación.
  */
-export function AiCommandBox({ diagramId, token, onClose }: Props) {
+export function AiCommandBox({ diagramId, token, onClose, initialListening }: Props) {
   const [command, setCommand] = useState("");
   const [history, setHistory] = useState<Entrada[]>([]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autoSendVoice, setAutoSendVoice] = useState(false);
+
+  const {
+    isSupported,
+    isListening,
+    transcript,
+    error: voiceError,
+    startListening,
+    stopListening,
+  } = useSpeechRecognition();
+
+  // Si se solicita arrancar escuchando de inmediato
+  useEffect(() => {
+    if (initialListening && isSupported && !isListening) {
+      handleToggleVoice();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialListening, isSupported]);
+
+  // Actualizar el texto del input en tiempo real a medida que el usuario habla
+  useEffect(() => {
+    if (isListening && transcript) {
+      setCommand(transcript);
+    }
+  }, [isListening, transcript]);
+
+  function handleToggleVoice() {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening((finalText) => {
+        setCommand(finalText);
+        if (autoSendVoice && finalText.trim()) {
+          void enviar(finalText.trim());
+        }
+      });
+    }
+  }
 
   async function enviar(texto: string) {
     const trimmed = texto.trim();
@@ -57,7 +99,7 @@ export function AiCommandBox({ diagramId, token, onClose }: Props) {
   return (
     <div className="ai-command">
       <div className="ai-command__header">
-        <span>Comando</span>
+        <span>Comando (Texto o Micrófono)</span>
         <button type="button" className="ai-command__close" onClick={onClose} aria-label="Cerrar">
           ✕
         </button>
@@ -66,8 +108,8 @@ export function AiCommandBox({ diagramId, token, onClose }: Props) {
         {history.length === 0 && (
           <>
             <p className="ai-command__empty">
-              Escribí lo que querés cambiar en el diagrama, por ejemplo "agregá la clase Factura
-              con atributo total decimal".
+              Escribí o hablá por el micrófono lo que querés cambiar en el diagrama, por ejemplo:
+              "agregá la clase Factura con atributo total decimal".
             </p>
             <button type="button" className="ai-command__example" onClick={() => void enviar(EJEMPLO_GUARDARRAIL)}>
               Probar el guardarraíl: "{EJEMPLO_GUARDARRAIL}"
@@ -101,21 +143,54 @@ export function AiCommandBox({ diagramId, token, onClose }: Props) {
           </div>
         ))}
         {error && <p className="ai-command__response ai-command__response--failed">⚠ {error}</p>}
+        {voiceError && <p className="ai-command__response ai-command__response--failed">⚠ {voiceError}</p>}
       </div>
+
+      {isListening && (
+        <div className="ai-command__listening-bar" role="status" aria-live="polite">
+          <span className="ai-command__listening-pulse" />
+          <span>Escuchando micrófono de la laptop… hablá tu comando</span>
+        </div>
+      )}
+
       <form className="ai-command__form" onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={command}
-          onChange={(e) => setCommand(e.target.value)}
-          placeholder="Escribí un comando…"
-          maxLength={500}
-          disabled={sending}
-          autoFocus
-        />
+        <div className="ai-command__input-group">
+          <input
+            type="text"
+            value={command}
+            onChange={(e) => setCommand(e.target.value)}
+            placeholder={isListening ? "Escuchando... hablá ahora" : "Escribí o dictá un comando…"}
+            maxLength={500}
+            disabled={sending}
+            autoFocus
+          />
+          {isSupported && (
+            <button
+              type="button"
+              className={`ai-command__mic-btn${isListening ? " ai-command__mic-btn--active" : ""}`}
+              onClick={handleToggleVoice}
+              title={isListening ? "Detener micrófono" : "Activar micrófono de la laptop"}
+              aria-label={isListening ? "Detener micrófono" : "Activar micrófono de la laptop"}
+              disabled={sending}
+            >
+              {isListening ? "⏹" : "🎤"}
+            </button>
+          )}
+        </div>
         <button type="submit" disabled={sending || !command.trim()}>
           {sending ? "Enviando…" : "Enviar"}
         </button>
       </form>
+      {isSupported && (
+        <label className="ai-command__auto-send-toggle">
+          <input
+            type="checkbox"
+            checked={autoSendVoice}
+            onChange={(e) => setAutoSendVoice(e.target.checked)}
+          />
+          <span>Enviar automáticamente al terminar de hablar</span>
+        </label>
+      )}
     </div>
   );
 }

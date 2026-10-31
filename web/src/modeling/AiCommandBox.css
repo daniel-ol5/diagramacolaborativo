@@ -2,35 +2,45 @@
   position: absolute;
   bottom: var(--space-3);
   left: var(--space-3);
-  width: 380px;
+  width: 390px;
   max-width: calc(100vw - 2 * var(--space-3));
-  max-height: 60vh;
+  max-height: 62vh;
   display: flex;
   flex-direction: column;
   background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--brand-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
   z-index: 20;
-  font-family: "Segoe UI", Roboto, sans-serif;
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
   font-size: var(--font-size-base);
+  overflow: hidden;
 }
 
 .ai-command__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border-muted);
-  font-weight: 600;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #273b40 0%, #314950 100%);
+  color: var(--color-text-on-dark);
+  border-bottom: 2px solid var(--brand-primary);
+  font-weight: 700;
 }
 
 .ai-command__close {
   border: none;
-  background: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 2px 6px;
   cursor: pointer;
-  color: var(--color-text-secondary);
+  color: var(--brand-light);
   font-size: var(--font-size-base);
+}
+
+.ai-command__close:hover {
+  background: var(--brand-primary);
+  color: var(--color-primary-contrast);
 }
 
 .ai-command__history {
@@ -40,6 +50,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  background: var(--color-bg-page);
 }
 
 .ai-command__empty {
@@ -49,47 +60,51 @@
 
 .ai-command__example {
   align-self: flex-start;
-  border: 1px dashed var(--color-border);
-  background: none;
-  color: var(--color-text-secondary);
-  border-radius: 4px;
-  padding: 4px var(--space-2);
+  border: 1px dashed var(--brand-primary);
+  background: var(--color-bg);
+  color: var(--brand-dark);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
   font-size: var(--font-size-sm);
+  font-weight: 500;
   cursor: pointer;
 }
 
 .ai-command__example:hover {
-  background: var(--color-bg-subtle);
+  background: var(--brand-tint);
+  border-style: solid;
 }
 
 .ai-command__entry {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 6px;
 }
 
 .ai-command__command {
   align-self: flex-end;
   max-width: 90%;
-  background: var(--color-bg-selected);
-  color: var(--color-text);
-  padding: 6px var(--space-2);
-  border-radius: 10px 10px 2px 10px;
+  background: var(--brand-dark);
+  color: var(--color-text-on-dark);
+  padding: 7px 12px;
+  border-radius: 12px 12px 2px 12px;
   font-size: var(--font-size-sm);
+  box-shadow: var(--shadow-sm);
 }
 
 .ai-command__response {
   max-width: 95%;
-  padding: var(--space-2);
-  border-radius: 2px 10px 10px 10px;
+  padding: 8px 12px;
+  border-radius: 2px 12px 12px 12px;
   font-size: var(--font-size-sm);
   white-space: pre-wrap;
+  box-shadow: var(--shadow-sm);
 }
 
-/* Aplicado: tono neutro-positivo, con la lista de lo que se hizo. */
 .ai-command__response--applied {
   background: var(--color-success-bg);
   color: var(--color-success);
+  border: 1px solid rgba(34, 122, 52, 0.25);
 }
 
 .ai-command__response--applied ul {
@@ -98,53 +113,147 @@
   color: var(--color-text);
 }
 
-/*
- * Un rechazo del guardarrail/catalogo (HTTP 200, applied:false) NO es un
- * error: es la unica respuesta correcta a ese pedido (RF-02.6, "Creame un
- * sistema para un banco"). Por eso va en un tono neutro/informativo --el
- * mismo lenguaje visual que "aplicado", no el rojo de --color-danger--, y
- * el texto se muestra COMPLETO y TAL CUAL lo manda el servidor: ni una
- * palabra reescrita, porque coincide caracter a caracter con un test y con
- * el documento que el docente tiene delante.
- */
 .ai-command__response--rejected {
-  background: var(--color-bg-subtle);
+  background: var(--color-bg);
   color: var(--color-text);
   border: 1px solid var(--color-border-muted);
 }
 
-/* Esto si es una falla real (HTTP 502: el servicio de IA rompio el contrato o no respondio) -- tono de advertencia, distinto de los otros dos. */
 .ai-command__response--failed {
   background: var(--color-warning-bg);
   color: var(--color-warning);
   border: 1px solid var(--color-warning);
 }
 
+.ai-command__listening-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px var(--space-3);
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  border-top: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.ai-command__listening-pulse {
+  width: 10px;
+  height: 10px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulse-recording 1.2s infinite ease-in-out;
+}
+
+@keyframes pulse-recording {
+  0% {
+    transform: scale(0.85);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  70% {
+    transform: scale(1.15);
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+  100% {
+    transform: scale(0.85);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
 .ai-command__form {
   display: flex;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  padding: 10px 12px;
+  background: var(--color-bg);
   border-top: 1px solid var(--color-border-muted);
 }
 
-.ai-command__form input {
+.ai-command__input-group {
   flex: 1;
-  font-size: var(--font-size-base);
-  padding: 6px var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  position: relative;
 }
 
-.ai-command__form button {
-  padding: 6px var(--space-3);
+.ai-command__input-group input {
+  width: 100%;
+  font-size: var(--font-size-base);
+  padding: 7px 36px 7px 10px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-page);
+}
+
+.ai-command__mic-btn {
+  position: absolute;
+  right: 4px;
+  background: none;
   border: none;
+  padding: 4px 6px;
+  cursor: pointer;
+  font-size: 1.05rem;
   border-radius: 4px;
-  background: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease-in-out;
+  color: var(--color-text-secondary);
+}
+
+.ai-command__mic-btn:hover:not(:disabled) {
+  background: var(--brand-tint);
+  transform: scale(1.1);
+}
+
+.ai-command__mic-btn--active {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+  animation: pulse-btn 1.2s infinite ease-in-out;
+}
+
+@keyframes pulse-btn {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    transform: scale(1.12);
+    box-shadow: 0 0 0 5px rgba(239, 68, 68, 0);
+  }
+}
+
+.ai-command__form button[type="submit"] {
+  padding: 7px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #4b97c5 0%, #3b82b0 100%);
   color: var(--color-primary-contrast);
+  font-weight: 600;
   cursor: pointer;
 }
 
-.ai-command__form button:disabled {
+.ai-command__form button[type="submit"]:hover:not(:disabled) {
+  background: linear-gradient(135deg, #3b82b0 0%, #2e6d96 100%);
+}
+
+.ai-command__form button[type="submit"]:disabled {
   background: var(--color-primary-muted);
   cursor: default;
+}
+
+.ai-command__auto-send-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px 10px;
+  background: var(--color-bg);
+  font-size: 0.76rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.ai-command__auto-send-toggle input {
+  cursor: pointer;
 }

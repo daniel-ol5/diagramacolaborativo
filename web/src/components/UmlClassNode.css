@@ -4,27 +4,28 @@
   width: 100%;
   height: 100%;
   background: var(--color-bg);
-  border: 1.5px solid var(--color-border-strong);
-  border-radius: 4px;
-  font-family: "Segoe UI", Roboto, sans-serif;
-  /* El piso de 13px (--font-size-canvas) queda pendiente aca a proposito:
-     con este tamaño el texto de atributos/metodos desborda la altura fija
-     de la caja (dato del diagrama, no CSS) y RECORTA filas enteras sin
-     avisar -- verificado visualmente, ver informe. Subir el tamaño sin
-     poder tocar la altura de la caja es exactamente el "reacomodar" que
-     esta pasada tiene prohibido. Se resuelve cuando la caja deje de tener
-     una altura fija heredada del Dia 6 (parte del rediseño con pantallas),
-     no por CSS solo. */
-  font-size: 11px;
+  border: 1.5px solid var(--brand-dark);
+  border-radius: 8px;
+  box-shadow: 0 5px 16px rgba(39, 59, 64, 0.12);
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
+  font-size: 11.5px;
   overflow: hidden;
+  transition: box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.uml-class-node:hover {
+  box-shadow: 0 8px 22px rgba(39, 59, 64, 0.18);
 }
 
 .uml-class-node__name {
-  padding: 6px 8px;
+  padding: 7px 10px;
   font-weight: 700;
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
   text-align: center;
-  background: var(--color-bg-muted);
-  border-bottom: 1.5px solid var(--color-border-strong);
+  background: linear-gradient(135deg, #273b40 0%, #324b52 100%);
+  color: var(--color-text-on-dark);
+  border-bottom: 2px solid var(--brand-primary);
 }
 
 .uml-class-node__name--abstract {
@@ -35,7 +36,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 5px;
 }
 
 .uml-class-node__name-text {
@@ -50,27 +51,28 @@
 
 .uml-class-node__edit-btn {
   border: none;
-  background: none;
-  padding: 0 2px;
-  font-size: var(--font-size-canvas);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 5px;
+  font-size: 12px;
   line-height: 1;
   cursor: pointer;
-  color: var(--color-text-secondary);
-  border-radius: 3px;
+  color: var(--brand-light);
+  border-radius: 4px;
 }
 
 .uml-class-node__edit-btn:hover {
-  background: var(--color-bg-selected);
+  background: var(--brand-primary);
+  color: var(--color-primary-contrast);
 }
 
 .uml-class-node__edit-btn[data-locked="true"] {
-  color: var(--color-warning);
+  color: var(--color-warning-bg);
   cursor: not-allowed;
 }
 
 .uml-class-node__edit-btn--danger:hover {
-  background: var(--color-danger-bg);
-  color: var(--color-danger);
+  background: var(--color-danger);
+  color: var(--color-text-on-dark);
 }
 
 .uml-class-node__name-input {
@@ -78,14 +80,16 @@
   font: inherit;
   font-weight: 700;
   text-align: center;
-  border: 1px solid var(--color-primary);
-  border-radius: 3px;
-  padding: 2px 4px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1.5px solid var(--brand-light);
+  border-radius: 4px;
+  padding: 2px 6px;
   box-sizing: border-box;
 }
 
 .uml-class-node__section {
-  padding: 3px 8px;
+  padding: 5px 8px;
   border-bottom: 1px solid var(--color-border-muted);
   overflow-x: hidden;
   overflow-y: auto;
@@ -94,6 +98,7 @@
 
 .uml-class-node__section:last-child {
   border-bottom: none;
+  background: rgba(232, 243, 250, 0.32);
 }
 
 .uml-class-node__row {
@@ -101,13 +106,18 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 6px;
+  padding: 1.5px 4px;
+  border-radius: 4px;
   white-space: normal;
   overflow-wrap: break-word;
-  line-height: 1.35;
-  /* Identificadores (nombre/tipo de atributo, firma de metodo): la
-     monoespaciada alinea y hace escaneable, no es decoracion (regla 4 de
-     la pasada visual). */
+  line-height: 1.4;
   font-family: var(--font-mono);
+  color: var(--color-text);
+  transition: background-color 0.12s ease;
+}
+
+.uml-class-node__row:hover {
+  background: var(--brand-tint);
 }
 
 .uml-class-node__attr-text {
@@ -119,9 +129,6 @@
   display: flex;
   gap: 2px;
   flex-shrink: 0;
-  /* Solo visibles al pasar el mouse por la caja (ver .uml-class-node__add-attr
-     mas abajo, mismo criterio): en una lamina proyectada, un lapiz y un
-     tacho por cada fila compiten con el contenido real de la clase. */
   opacity: 0;
   transition: opacity 0.15s;
 }
@@ -134,33 +141,32 @@
 .uml-class-node__mini-btn {
   border: none;
   background: none;
-  padding: 0 2px;
+  padding: 1px 4px;
   font-size: 11px;
   line-height: 1;
   cursor: pointer;
-  color: var(--color-text-tertiary);
+  color: var(--color-text-secondary);
   border-radius: 3px;
 }
 
 .uml-class-node__mini-btn:hover {
-  background: var(--color-bg-selected);
+  background: var(--brand-light);
+  color: var(--brand-dark);
 }
 
 .uml-class-node__add-attr {
-  margin-top: 2px;
-  border: 1px dashed var(--color-border);
-  background: none;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  margin-top: 3px;
+  border: 1px dashed var(--brand-primary);
+  background: rgba(123, 178, 216, 0.1);
+  color: var(--brand-dark);
+  font-size: 11px;
+  font-weight: 600;
   padding: 2px 6px;
-  border-radius: 3px;
+  border-radius: 4px;
   cursor: pointer;
   width: 100%;
-  /* Permanente competia con el contenido real de la clase en una lamina
-     proyectada (pulido pedido para esta pasada) -- aparece al pasar el
-     mouse por la caja, igual que las acciones de fila de arriba. */
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s, background-color 0.15s;
 }
 
 .uml-class-node:hover .uml-class-node__add-attr,
@@ -169,38 +175,49 @@
 }
 
 .uml-class-node__add-attr:hover {
-  background: var(--color-bg-muted);
+  background: var(--brand-primary);
+  color: var(--color-primary-contrast);
+  border-style: solid;
 }
 
 .uml-class-node__row--pk {
+  font-weight: 700;
   text-decoration: underline;
+  text-decoration-color: var(--brand-primary);
 }
 
 .uml-class-node__empty {
   color: var(--color-text-tertiary);
   font-style: italic;
+  padding: 2px 4px;
 }
 
-/* De acá se arrastra una conexion nueva (ADD_RELATIONSHIP). El path que
-   efectivamente se dibuja lo calcula UmlRelationshipEdge a partir del
-   canonico, no la posicion exacta de este handle — pero tiene que ser
-   visible y clickeable para poder arrastrar desde él. */
+/* De acá se arrastra una conexion nueva (ADD_RELATIONSHIP). Solo se muestra al pasar el mouse. */
 .uml-class-node__handle {
   width: 10px;
   height: 10px;
-  background: var(--color-bg);
-  border: 1.5px solid var(--color-primary);
+  background: var(--brand-primary);
+  border: 2px solid var(--color-bg);
+  box-shadow: 0 1px 4px rgba(39, 59, 64, 0.35);
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease, background-color 0.15s ease;
 }
 
-/* El agarre de redimensionar (solo esquina inferior-derecha, ver
-   UmlClassNode.tsx). Visible siempre, no solo al pasar el mouse -- sin eso
-   nadie descubre que la caja se puede agrandar, que es justamente lo que
-   esta funcion viene a resolver (una caja con altura fija que recorta
-   texto, ver el comentario de arriba). */
+.uml-class-node:hover .uml-class-node__handle {
+  opacity: 1;
+}
+
+.uml-class-node__handle:hover {
+  transform: scale(1.3);
+  background: var(--brand-dark);
+}
+
+/* El agarre de redimensionar (solo esquina inferior-derecha, ver UmlClassNode.tsx). */
 .uml-class-node__resize-handle {
   width: 12px;
   height: 12px;
-  border-right: 2px solid var(--color-border-strong);
-  border-bottom: 2px solid var(--color-border-strong);
+  border-right: 2.5px solid var(--brand-primary);
+  border-bottom: 2.5px solid var(--brand-primary);
+  border-bottom-right-radius: 3px;
   cursor: nwse-resize;
 }

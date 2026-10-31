@@ -1,5 +1,5 @@
 .share-modal {
-  width: 440px;
+  width: 460px;
   max-width: 100%;
 }
 
@@ -10,23 +10,26 @@
 .share-modal__section h3 {
   margin: 0 0 var(--space-2);
   font-size: var(--font-size-sm);
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-text-tertiary);
+  letter-spacing: 0.05em;
+  color: var(--brand-dark);
 }
 
 .share-modal__inline-form {
   display: flex;
   gap: var(--space-2);
   align-items: center;
+  margin-bottom: var(--space-2);
 }
 
 .share-modal__inline-form select,
 .share-modal__inline-form input {
   font-size: var(--font-size-base);
-  padding: 6px var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
+  padding: 7px 10px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-page);
 }
 
 .share-modal__inline-form input[type="email"] {
@@ -34,9 +37,7 @@
 }
 
 .share-modal__inline-form input[type="number"] {
-  /* 70px cortaba su propio placeholder: se leía "días (opc" y quedaba como un campo roto
-     justo en la pantalla que se proyecta al compartir el proyecto. */
-  width: 130px;
+  width: 135px;
 }
 
 .share-modal__link-row {
@@ -47,7 +48,7 @@
   padding: var(--space-2);
   background: var(--color-bg-subtle);
   border: 1px solid var(--color-border);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .share-modal__link-row code {
@@ -62,8 +63,8 @@
 .share-modal__list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  max-height: 180px;
+  gap: 6px;
+  max-height: 190px;
   overflow-y: auto;
 }
 
@@ -72,10 +73,26 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: 6px var(--space-2);
+  padding: 8px 12px;
+  background: var(--color-bg-page);
   border: 1px solid var(--color-border-muted);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
+}
+
+.share-modal__list-item button:not(.share-modal__revoke) {
+  border: 1px solid var(--brand-primary);
+  background: var(--color-bg);
+  color: var(--brand-dark);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.share-modal__list-item button:not(.share-modal__revoke):hover {
+  background: var(--brand-tint);
 }
 
 .share-modal__list-item--inactive {
@@ -91,6 +108,7 @@
 
 .share-modal__list-item-name {
   font-weight: 600;
+  color: var(--brand-dark);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -102,13 +120,19 @@
 
 .share-modal__revoke {
   border: 1px solid var(--color-danger);
-  background: none;
+  background: var(--color-bg);
   color: var(--color-danger);
-  border-radius: 4px;
-  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
   font-size: var(--font-size-sm);
+  font-weight: 600;
   cursor: pointer;
   flex-shrink: 0;
+}
+
+.share-modal__revoke:hover {
+  background: var(--color-danger);
+  color: var(--color-text-on-dark);
 }
 
 .share-modal__empty {
