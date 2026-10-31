@@ -1,113 +1,172 @@
 .access-page {
   min-height: 100vh;
-  background: var(--color-bg-page);
-  font-family: "Segoe UI", Roboto, sans-serif;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(123, 178, 216, 0.22), transparent 50%),
+    radial-gradient(circle at 90% 100%, rgba(75, 151, 197, 0.14), transparent 50%),
+    var(--color-bg-page);
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
 }
 
 .access-page__header {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-4);
-  background: var(--color-bg-subtle);
-  border-bottom: 1px solid var(--color-border);
+  padding: 12px var(--space-5);
+  background: linear-gradient(135deg, #273b40 0%, #314950 100%);
+  border-bottom: 2px solid var(--brand-primary);
+  box-shadow: 0 3px 12px rgba(39, 59, 64, 0.16);
 }
 
 .access-page__brand {
-  font-weight: 700;
-  color: var(--color-text);
+  font-weight: 800;
+  font-size: var(--font-size-lg);
+  letter-spacing: -0.02em;
+  color: var(--color-text-on-dark);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.access-page__brand::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--brand-primary);
+  box-shadow: 0 0 0 2px var(--brand-light);
 }
 
 .access-page__back {
-  color: var(--color-link);
+  color: var(--color-text-on-dark);
+  background: rgba(123, 178, 216, 0.15);
+  border: 1px solid rgba(123, 178, 216, 0.35);
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
   text-decoration: none;
   font-size: var(--font-size-sm);
+  font-weight: 600;
+  transition: all 0.16s ease;
 }
 
 .access-page__back:hover {
-  text-decoration: underline;
+  background: rgba(75, 151, 197, 0.38);
+  border-color: var(--brand-light);
+  text-decoration: none;
 }
 
 .access-page__session {
   margin-left: auto;
   font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  font-weight: 500;
+  color: var(--brand-light);
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .access-page__body {
-  max-width: 880px;
+  max-width: 920px;
   margin: 0 auto;
-  padding: var(--space-5) var(--space-4);
+  padding: var(--space-6) var(--space-4);
 }
 
 .access-page__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-4);
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
 }
 
 .access-page__row h1 {
   margin: 0;
-  font-size: var(--font-size-xl);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--color-text);
 }
 
+.access-page__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Estilo para botones secundarios dentro de .access-page__actions (ej. "Compartir") */
+.access-page__actions button:not(.access-page__primary-btn) {
+  padding: 9px 16px;
+  border: 1.5px solid var(--brand-primary);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--brand-dark);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+
+.access-page__actions button:not(.access-page__primary-btn):hover {
+  background: var(--brand-tint);
+  border-color: var(--brand-dark);
+  transform: translateY(-1px);
+}
+
 .access-page__primary-btn {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--color-primary);
-  border-radius: 4px;
-  background: var(--color-primary);
+  padding: 9px 18px;
+  border: 1px solid var(--brand-primary);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #4b97c5 0%, #3b82b0 100%);
   color: var(--color-primary-contrast);
   font-size: var(--font-size-base);
+  font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 3px 10px rgba(75, 151, 197, 0.3);
+}
+
+.access-page__primary-btn:hover {
+  background: linear-gradient(135deg, #3b82b0 0%, #2e6d96 100%);
+  box-shadow: 0 5px 14px rgba(75, 151, 197, 0.4);
+  transform: translateY(-1px);
 }
 
 .access-page__error {
   color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border: 1px solid rgba(201, 42, 42, 0.25);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
   font-size: var(--font-size-base);
-}
-
-.access-page__actions {
-  /* Estaba como style inline en ProjectScreen. Una regla de maquetado en el JSX es una regla
-     que los verificadores de contraste y de estilo no miran. */
-  display: flex;
-  gap: var(--space-2);
+  font-weight: 500;
 }
 
 .access-page__empty-box {
-  /* Un estado vacio que solo dice "no hay nada" deja al usuario parado. Esta es la
-     primera pantalla que ve alguien recien registrado —y la primera del guion de la
-     defensa—, asi que tiene que decir cual es el proximo paso. */
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-6) var(--space-4);
-  border: 1px dashed var(--color-border);
-  border-radius: 8px;
+  padding: 44px var(--space-5);
+  background: rgba(255, 255, 255, 0.85);
+  border: 2px dashed var(--brand-light);
+  border-radius: var(--radius-lg);
   text-align: center;
+  box-shadow: var(--shadow-sm);
 }
 
 .access-page__empty-title {
   font-size: var(--font-size-lg);
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--brand-dark);
 }
 
-/* Dentro de la caja el texto no lleva el relleno vertical que tiene cuando va suelto: ahi
-   separaba de la lista, aca solo abre un hueco entre el titulo y el boton. Y sin cursiva,
-   que hacia parecer un marcador de posicion en vez de una explicacion. */
 .access-page__empty-box .access-page__empty {
   margin: 0;
   padding: 0;
   font-style: normal;
+  max-width: 460px;
 }
 
 .access-page__empty {
-  /* --color-text-tertiary da 4.83:1 sobre --color-bg (blanco), pero esto
-     se pinta directo sobre --color-bg-page (4.38:1, no llega a 4.5) --
-     medido con web/scripts/check-rendered-contrast.mjs contra el fondo
-     REAL, no contra el par de tokens que se penso al principio. */
   color: var(--color-text-secondary);
   font-style: italic;
   padding: var(--space-4) 0;
@@ -116,7 +175,7 @@
 .access-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 .access-list__item {
@@ -124,67 +183,66 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-4);
+  padding: 18px 20px;
   background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border: 1px solid var(--color-border-muted);
+  border-left: 5px solid var(--brand-light);
+  border-radius: var(--radius-md);
   cursor: pointer;
   text-align: left;
   font: inherit;
   color: inherit;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.18s ease;
 }
 
 .access-list__item:hover {
   background: var(--color-bg-selected);
+  border-color: var(--brand-primary);
+  border-left-color: var(--brand-primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
 .access-list__item-text {
-  /* El nombre y la descripcion son una unidad; el hueco entre ellos tiene que ser
-     menor que el que las separa de la pastilla, o se leen como tres cosas sueltas. */
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
 }
 
 .access-list__item-name {
-  font-weight: 600;
-  /* Antes el nombre y la descripcion pesaban casi igual: mismo tamanio, solo
-     cambiaba el grosor. Con una lista de varios proyectos, el ojo no encontraba
-     donde empezaba cada uno. */
+  font-weight: 700;
   font-size: var(--font-size-lg);
+  color: var(--brand-dark);
   line-height: 1.3;
 }
 
 .access-list__item-meta {
   font-size: var(--font-size-sm);
-  /* Una descripcion larga no puede empujar la pastilla fuera de la fila. */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  /* text-tertiary pasa 4.83:1 sobre blanco, pero la fila entera cambia a
-     --color-bg-selected al pasar el mouse -- ahi cae a 3.57:1. secondary
-     pasa los dos casos (7.53:1 y 5.56:1). */
   color: var(--color-text-secondary);
 }
 
 .access-role-badge {
-  /* Ocupaba mucho para lo que dice. El rol es un dato secundario —lo que importa de
-     una fila es el proyecto— asi que se achica y deja de competir con el nombre.
-     flex-shrink: 0 para que no la aplaste una descripcion larga. */
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  padding: 2px var(--space-2);
+  padding: 4px 12px;
   border-radius: 999px;
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   background: var(--color-bg-muted);
-  color: var(--color-text-secondary);
+  color: var(--brand-dark);
+  border: 1px solid var(--brand-light);
 }
 
 .access-role-badge--owner {
-  background: var(--color-bg-selected);
-  color: var(--color-primary);
+  background: var(--brand-dark);
+  color: var(--color-text-on-dark);
+  border-color: var(--brand-dark);
 }

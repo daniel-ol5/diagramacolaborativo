@@ -4,30 +4,35 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: "Segoe UI", Roboto, sans-serif;
-  background: var(--color-bg-page);
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(123, 178, 216, 0.35), transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(75, 151, 197, 0.25), transparent 50%),
+    linear-gradient(145deg, #273b40 0%, #344f56 55%, #4b97c5 100%);
 }
 
 .invite-page__card {
-  width: 380px;
+  width: 400px;
   max-width: 90vw;
   padding: var(--space-6) var(--space-5);
   background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--brand-light);
+  border-top: 5px solid var(--brand-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   text-align: center;
 }
 
 .invite-page__card h1 {
   margin: 0 0 var(--space-3);
-  font-size: var(--font-size-lg);
-  color: var(--color-text);
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--brand-dark);
 }
 
 .invite-page__role {
   font-weight: 700;
-  color: var(--color-primary);
+  color: var(--brand-primary);
 }
 
 .invite-page__error {
@@ -37,24 +42,28 @@
 
 .invite-page__action {
   margin-top: var(--space-3);
-  padding: var(--space-2) var(--space-4);
+  padding: 10px 22px;
   border: none;
-  border-radius: 4px;
-  background: var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #4b97c5 0%, #3b82b0 100%);
   color: var(--color-primary-contrast);
   font-size: var(--font-size-base);
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(75, 151, 197, 0.35);
   cursor: pointer;
+}
+
+.invite-page__action:hover:not(:disabled) {
+  background: linear-gradient(135deg, #3b82b0 0%, #273b40 100%);
+  transform: translateY(-1px);
 }
 
 .invite-page__action:disabled {
   background: var(--color-primary-muted);
+  box-shadow: none;
   cursor: default;
 }
 
-/* La linea de contexto bajo el titulo: con que cuenta se acepta, o que hace falta una.
-   Secundaria a proposito —lo primero que se lee es a que proyecto te invitaron— pero
-   --color-text-secondary (7.53:1) y no --color-text-tertiary: los dos pasan 4.5:1, la
-   diferencia es que esto NO es adorno, dice con que cuenta vas a entrar al proyecto. */
 .invite-page__nota {
   margin: 0 0 var(--space-2);
   font-size: var(--font-size-sm);

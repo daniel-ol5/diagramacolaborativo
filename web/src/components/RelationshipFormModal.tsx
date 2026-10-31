@@ -21,6 +21,7 @@ interface Props {
   sourceName: string;
   targetId: string;
   targetName: string;
+  initialType?: RelationshipType | "ASSOCIATION_CLASS";
   onSubmit: (relationship: Relationship) => void;
   onCreateAssociationClass?: (className: string) => void;
   onClose: () => void;
@@ -31,21 +32,25 @@ export function RelationshipFormModal({
   sourceName,
   targetId,
   targetName,
+  initialType = "ASSOCIATION",
   onSubmit,
   onCreateAssociationClass,
   onClose,
 }: Props) {
-  const [type, setType] = useState<RelationshipType | "ASSOCIATION_CLASS">("ASSOCIATION");
-  const [sourceMultiplicity, setSourceMultiplicity] = useState<Multiplicity>("1..1");
+  const [type, setType] = useState<RelationshipType | "ASSOCIATION_CLASS">(initialType);
+  const [sourceMultiplicity, setSourceMultiplicity] = useState<Multiplicity>(
+    initialType === "MANY_TO_MANY" ? "0..*" : "1..1",
+  );
   const [targetMultiplicity, setTargetMultiplicity] = useState<Multiplicity>("0..*");
   const [sourceRole, setSourceRole] = useState("");
   const [targetRole, setTargetRole] = useState("");
   const [joinTableName, setJoinTableName] = useState("");
   const [createAsClassOnCanvas, setCreateAsClassOnCanvas] = useState(false);
   const [associationClassName, setAssociationClassName] = useState("");
-  const [owningSide, setOwningSide] = useState<OwningSide>(
-    () => deriveOwningSide("ASSOCIATION", "1..1", "0..*") ?? "SOURCE",
-  );
+  const [owningSide, setOwningSide] = useState<OwningSide>(() => {
+    const baseType = initialType === "ASSOCIATION_CLASS" ? "ASSOCIATION" : initialType;
+    return deriveOwningSide(baseType, "1..1", "0..*") ?? "SOURCE";
+  });
   const [owningSideTouched, setOwningSideTouched] = useState(false);
 
   const derivada = type !== "ASSOCIATION_CLASS"

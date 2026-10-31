@@ -41,7 +41,7 @@ export function ImportXmiModal({ projectId, token, onClose, onImported }: Props)
     setReport(null);
     try {
       const resultado = await importXmi(projectId, token, file);
-      if (resultado.ok) {
+      if ("diagram" in resultado) {
         onImported(resultado.diagram);
       } else {
         setReport(resultado.report);

@@ -4,90 +4,115 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: "Segoe UI", Roboto, sans-serif;
-  background: var(--color-bg-subtle);
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(123, 178, 216, 0.35), transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(75, 151, 197, 0.25), transparent 50%),
+    linear-gradient(145deg, #273b40 0%, #344f56 55%, #4b97c5 100%);
 }
 
 .login-screen__form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  width: 340px;
-  padding: 50px;
+  gap: 14px;
+  width: 390px;
+  max-width: 92vw;
+  padding: 40px 36px;
   background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  /* Borde fino en vez de sombra difusa (regla 5). */
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(123, 178, 216, 0.5);
+  border-top: 5px solid var(--brand-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
 }
 
 .login-screen__form h1 {
   margin: 0 0 var(--space-2);
-  font-size: var(--font-size-xl);
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   text-align: center;
-  /* El rojo es la señal de error, no un titulo -- si el encabezado ya la
-     usa, un error de credenciales debajo deja de resaltar. */
-  color: var(--color-text);
+  color: var(--brand-dark);
 }
 
 .login-screen__form label {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  font-size: 17px;
-  /* Una etiqueta de campo no es la accion principal ni una seleccion: el
-     acento se usa con avaricia (regla 2), no en cada texto. */
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--color-text-secondary);
 }
 
 .login-screen__form input {
   font-size: var(--font-size-base);
-  padding: 6px var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
+  padding: 9px 12px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-page);
+}
+
+.login-screen__form input:focus {
+  background: var(--color-bg);
 }
 
 .login-screen__form button {
-  margin-top: var(--space-1);
-  padding: var(--space-2);
+  margin-top: var(--space-2);
+  padding: 11px var(--space-3);
   font-size: var(--font-size-base);
+  font-weight: 700;
   border: none;
-  border-radius: 4px;
-  background: var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #4b97c5 0%, #3b82b0 100%);
   color: var(--color-primary-contrast);
+  box-shadow: 0 4px 12px rgba(75, 151, 197, 0.35);
   cursor: pointer;
+}
+
+.login-screen__form button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #3b82b0 0%, #273b40 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(39, 59, 64, 0.28);
 }
 
 .login-screen__form button:disabled {
   background: var(--color-primary-muted);
+  box-shadow: none;
   cursor: default;
 }
 
 .login-screen__error {
   margin: 0;
+  padding: 8px 12px;
+  background: var(--color-danger-bg);
+  border: 1px solid rgba(201, 42, 42, 0.25);
+  border-radius: var(--radius-sm);
   color: var(--color-danger);
   font-size: var(--font-size-sm);
-}
-.login-screen__ayuda {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
+  font-weight: 500;
 }
 
-/* El camino secundario: existe y se encuentra, pero no compite con el boton principal.
-   Es un boton y no un enlace porque no navega a ningun lado — cambia esta misma pantalla.
-   
-   VA CON EL SELECTOR DEL FORMULARIO DELANTE, y no a secas: ".login-screen__form button" tiene
-   mas especificidad (una clase y un elemento) que ".login-screen__alternar" (una clase), asi
-   que le ganaba y este boton salia pintado igual que el principal. Lo vi en la captura: dos
-   botones azules identicos, uno arriba del otro — justo la competencia de jerarquia que este
-   pulido existe para sacar. */
+.login-screen__ayuda {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--color-text-tertiary);
+}
+
 .login-screen__form .login-screen__alternar {
-  margin-top: var(--space-1);
-  padding: var(--space-1);
-  font-size: var(--font-size-base);
+  margin-top: 2px;
+  padding: 6px;
+  font-size: 13px;
+  font-weight: 600;
   background: none;
   border: none;
-  color: var(--color-primary);
+  box-shadow: none;
+  color: var(--color-link);
   cursor: pointer;
   text-decoration: underline;
+}
+
+.login-screen__form .login-screen__alternar:hover {
+  background: var(--brand-tint);
+  color: var(--brand-dark);
+  transform: none;
+  box-shadow: none;
 }

@@ -149,7 +149,7 @@ export function UmlClassNode({ data, selected }: NodeProps<ClassEntity>) {
       className="uml-class-node"
       style={
         selected
-          ? { borderColor: "#3b5bdb", borderWidth: 2 }
+          ? { borderColor: "#4b97c5", borderWidth: 2, boxShadow: "0 0 0 3px rgba(75, 151, 197, 0.32), 0 8px 22px rgba(39, 59, 64, 0.18)" }
           : lock
             ? { borderColor: lock.color, borderWidth: 2 }
             : undefined
@@ -171,8 +171,10 @@ export function UmlClassNode({ data, selected }: NodeProps<ClassEntity>) {
       >
         <div className="uml-class-node__resize-handle nodrag" />
       </NodeResizeControl>
-      <Handle type="target" position={Position.Top} className="uml-class-node__handle" />
-      <Handle type="source" position={Position.Bottom} className="uml-class-node__handle" />
+      <Handle id="top" type="target" position={Position.Top} className="uml-class-node__handle" />
+      <Handle id="bottom" type="source" position={Position.Bottom} className="uml-class-node__handle" />
+      <Handle id="left" type="source" position={Position.Left} className="uml-class-node__handle" />
+      <Handle id="right" type="source" position={Position.Right} className="uml-class-node__handle" />
       <div
         className={
           data.isAbstract

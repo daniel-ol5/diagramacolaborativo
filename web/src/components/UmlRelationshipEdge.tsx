@@ -241,7 +241,7 @@ export function UmlRelationshipEdge({ id, data, source, target, style }: EdgePro
           {targetLabel}
         </text>
       )}
-      <foreignObject x={midPoint.x - 9} y={midPoint.y - 9} width={18} height={18} className="uml-edge-delete-fo">
+      <foreignObject x={midPoint.x - 12} y={midPoint.y - 12} width={24} height={24} className="uml-edge-delete-fo">
         <button
           type="button"
           className="uml-edge-delete-btn nodrag nopan"
@@ -252,7 +252,7 @@ export function UmlRelationshipEdge({ id, data, source, target, style }: EdgePro
             if (!isOffline) actions?.requestLock(id);
           }}
         >
-          ✕
+          🗑
         </button>
       </foreignObject>
     </>

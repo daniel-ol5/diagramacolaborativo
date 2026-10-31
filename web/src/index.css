@@ -17,12 +17,21 @@
      oscuro, el texto sin color propio cae en un token, no en un default de UA. */
   color: var(--color-text);
 
-  font: 14px/145% system-ui, "Segoe UI", Roboto, sans-serif;
+  font: 14px/150% "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
   color: var(--color-text);
+  background: var(--color-bg-page);
 }
 
 /*
@@ -39,6 +48,23 @@ body {
 button {
   color: inherit;
   font: inherit;
+  transition: all 0.16s ease;
+}
+
+input,
+select,
+textarea {
+  color: var(--color-text);
+  font: inherit;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--brand-primary) !important;
+  box-shadow: var(--focus-ring);
 }
 
 #root {

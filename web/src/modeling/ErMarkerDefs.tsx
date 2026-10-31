@@ -14,31 +14,31 @@
  * relacion se este dibujando, y con "auto" simple quedaria orientado al
  * reves en uno de los dos casos.
  */
-const TINTA = "#1a1a2e"; // --color-border-strong / --color-text -- la misma tinta del lienzo, no un token nuevo (mismo criterio que UmlMarkerDefs).
-const FONDO_LIENZO = "#fbfcfd"; // --canvas-bg
+const TINTA = "#273b40"; // --color-border-strong / --color-text
+const FONDO_LIENZO = "#f7fafc"; // --canvas-bg
 
 export function ErMarkerDefs() {
   return (
     <svg width={0} height={0} style={{ position: "absolute" }} aria-hidden="true">
       <defs>
         <marker id="er-mult-0-1" viewBox="0 0 30 16" markerWidth={30} markerHeight={16} markerUnits="userSpaceOnUse" refX={29} refY={8} orient="auto-start-reverse">
-          <line x1={25} y1={1} x2={25} y2={15} stroke={TINTA} strokeWidth={1.5} />
-          <circle cx={12} cy={8} r={6} fill={FONDO_LIENZO} stroke={TINTA} strokeWidth={1.5} />
+          <line x1={25} y1={1} x2={25} y2={15} stroke={TINTA} strokeWidth={1.75} />
+          <circle cx={12} cy={8} r={6} fill={FONDO_LIENZO} stroke={TINTA} strokeWidth={1.75} />
         </marker>
 
         <marker id="er-mult-1-1" viewBox="0 0 20 16" markerWidth={20} markerHeight={16} markerUnits="userSpaceOnUse" refX={19} refY={8} orient="auto-start-reverse">
-          <line x1={12} y1={1} x2={12} y2={15} stroke={TINTA} strokeWidth={1.5} />
-          <line x1={17} y1={1} x2={17} y2={15} stroke={TINTA} strokeWidth={1.5} />
+          <line x1={12} y1={1} x2={12} y2={15} stroke={TINTA} strokeWidth={1.75} />
+          <line x1={17} y1={1} x2={17} y2={15} stroke={TINTA} strokeWidth={1.75} />
         </marker>
 
         <marker id="er-mult-0-many" viewBox="0 0 34 16" markerWidth={34} markerHeight={16} markerUnits="userSpaceOnUse" refX={33} refY={8} orient="auto-start-reverse">
-          <path d="M14,8 L32,1 M14,8 L32,8 M14,8 L32,15" fill="none" stroke={TINTA} strokeWidth={1.5} />
-          <circle cx={6} cy={8} r={6} fill={FONDO_LIENZO} stroke={TINTA} strokeWidth={1.5} />
+          <path d="M14,8 L32,1 M14,8 L32,8 M14,8 L32,15" fill="none" stroke={TINTA} strokeWidth={1.75} />
+          <circle cx={6} cy={8} r={6} fill={FONDO_LIENZO} stroke={TINTA} strokeWidth={1.75} />
         </marker>
 
         <marker id="er-mult-1-many" viewBox="0 0 30 16" markerWidth={30} markerHeight={16} markerUnits="userSpaceOnUse" refX={29} refY={8} orient="auto-start-reverse">
-          <path d="M12,8 L28,1 M12,8 L28,8 M12,8 L28,15" fill="none" stroke={TINTA} strokeWidth={1.5} />
-          <line x1={4} y1={1} x2={4} y2={15} stroke={TINTA} strokeWidth={1.5} />
+          <path d="M12,8 L28,1 M12,8 L28,8 M12,8 L28,15" fill="none" stroke={TINTA} strokeWidth={1.75} />
+          <line x1={4} y1={1} x2={4} y2={15} stroke={TINTA} strokeWidth={1.75} />
         </marker>
       </defs>
     </svg>
