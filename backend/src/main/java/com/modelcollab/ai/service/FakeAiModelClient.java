@@ -13,31 +13,6 @@ import java.util.regex.Pattern;
 
 /**
  * El modelo simulado: reglas y ranuras, sin red y sin clave.
- *
- * <h2>Para qué existe</h2>
- *
- * <p>La parte de CU16 que cuesta y que se defiende no es la llamada HTTP — es el guardarraíl, la
- * validación del contrato de salida y el mapeo a las operaciones de §8.1. Todo eso se construye y
- * se prueba sin tocar la red. Este cliente es lo que permite que el caso de uso <b>funcione de
- * punta a punta igual</b> mientras la clave de Gemini no llegue: se dicta un comando, aparece la
- * clase en el lienzo de los dos navegadores, y el rechazo educado sale cuando corresponde.
- *
- * <p>Si la clave nunca llega, lo que falta es la parte que nadie duda que funciona.
- *
- * <h2>Determinista, y eso es la mitad del valor</h2>
- *
- * <p>El mismo comando produce siempre el mismo plan. Eso permite que los tests afirmen
- * exactamente qué operaciones salen, en vez de conformarse con "salió algo". Es también, de
- * paso, la misma técnica que §10 define para la IA local del móvil en modo avión: reglas y
- * ranuras derivadas del metamodelo, sin modelo de lenguaje.
- *
- * <h2>Sus límites, dichos de frente</h2>
- *
- * <p>Entiende las formas de comando que enumera RF-02.2 a RF-02.4 y nada más. No generaliza, no
- * infiere sinónimos que no estén en las listas y no desambigua. Eso no es un defecto a esconder:
- * es la diferencia entre un modelo de lenguaje y un analizador de reglas, y es exactamente lo
- * que la clave de API viene a resolver. Lo que no cambia con la clave es todo lo que está
- * después de esta clase.
  */
 public class FakeAiModelClient implements AiModelClient {
 
@@ -85,14 +60,22 @@ public class FakeAiModelClient implements AiModelClient {
             "(?:la\\s+clase\\s+)?(\\w+)\\s+hereda\\s+de\\s+(?:la\\s+clase\\s+)?(\\w+)\\s*$",
             BANDERAS);
 
+    /** "Elimina el atributo telefono de Proveedor". */
+    private static final Pattern ELIMINAR_ATRIBUTO = Pattern.compile(
+            "(?:elimina|eliminá|eliminar|borra|borrá|borrar|quita|quitá|quitar)\\s+"
+                    + "(?:el\\s+|un\\s+)?(?:atributo|campo)\\s+(\\w+)\\s+"
+                    + "(?:de|en)\\s+(?:la\\s+)?(?:clase\\s+)?(\\w+)\\s*$",
+            BANDERAS);
+
+    /** "Elimina la clase Factura". */
+    private static final Pattern ELIMINAR_CLASE = Pattern.compile(
+            "(?:elimina|eliminá|eliminar|borra|borrá|borrar|quita|quitá|quitar)\\s+"
+                    + "(?:la\\s+|una\\s+)?clase\\s+(\\w+)\\s*$",
+            BANDERAS);
+
     /** Separa "total decimal, fecha date y cliente varchar". */
     private static final Pattern SEPARADOR_DE_ATRIBUTOS = Pattern.compile("\\s*,\\s*|\\s+y\\s+");
 
-    /**
-     * Palabras de tipo. Sólo éstas: si la segunda palabra de un atributo no está acá, se asume
-     * que el usuario no dijo el tipo y no que dijo uno raro — es más seguro caer en VARCHAR que
-     * inventar un tipo a partir de una palabra que no reconocemos.
-     */
     private static final Map<String, String> TIPOS = Map.ofEntries(
             Map.entry("entero", "INTEGER"),
             Map.entry("int", "INTEGER"),
@@ -142,12 +125,7 @@ public class FakeAiModelClient implements AiModelClient {
         return true;
     }
 
-    // ----------------------------------------------------------- las reglas
-
     private AiPlan interpretar(String comando) {
-        // El mismo criterio que usa el servidor antes de llamar. Acá se repite a propósito: el
-        // cliente tiene que comportarse como se comportaría el modelo de verdad, o los tests
-        // que lo usan estarían probando un camino que en producción no existe.
         if (guardarrail.pideUnDominioEntero(comando)) {
             return new AiPlan(AiPlan.GENERAR_DOMINIO, CommandGuardrail.RECHAZO, List.of());
         }
@@ -165,6 +143,21 @@ public class FakeAiModelClient implements AiModelClient {
             return plan("Agrego el atributo " + nombre + " a " + clase + ".",
                     new AiOperation("ADD_ATTRIBUTE", clase,
                             Map.of("name", nombre, "type", tipo)));
+        }
+
+        Matcher delAttr = ELIMINAR_ATRIBUTO.matcher(comando);
+        if (delAttr.matches()) {
+            String nombre = delAttr.group(1);
+            String clase = delAttr.group(2);
+            return plan("Elimino el atributo " + nombre + " de " + clase + ".",
+                    new AiOperation("DELETE_ATTRIBUTE", clase, Map.of("name", nombre)));
+        }
+
+        Matcher delClase = ELIMINAR_CLASE.matcher(comando);
+        if (delClase.matches()) {
+            String clase = delClase.group(1);
+            return plan("Elimino la clase " + clase + ".",
+                    new AiOperation("DELETE_CLASS", clase, Map.of()));
         }
 
         Matcher renombrar = RENOMBRAR.matcher(comando);
@@ -213,8 +206,6 @@ public class FakeAiModelClient implements AiModelClient {
                         Map.of("name", palabras[0], "type", tipo)));
             }
         }
-        // Sin recorte acá: si el comando produce más del tope, que lo rechace el tope. Un
-        // cliente que se autolimita escondería que el guardarraíl funciona.
         return new AiPlan(AiPlan.EDITAR, "Creo la clase " + nombre + ".", operaciones);
     }
 
@@ -233,8 +224,6 @@ public class FakeAiModelClient implements AiModelClient {
                         "sourceMultiplicity", multiplicidadOrigen,
                         "targetMultiplicity", multiplicidadDestino)));
     }
-
-    // ------------------------------------------------------------ utilitarios
 
     private static boolean esPlural(String palabra) {
         if (palabra == null) {
@@ -265,11 +254,6 @@ public class FakeAiModelClient implements AiModelClient {
         return new AiPlan(AiPlan.EDITAR, respuesta, List.of(operaciones));
     }
 
-    /**
-     * El plan sale como texto, no como objeto, porque la interfaz devuelve texto crudo: este
-     * cliente tiene que pasar por el mismo validador que pasaría la respuesta de Gemini. Si
-     * devolviera el objeto ya armado, el camino que se prueba con él no sería el de producción.
-     */
     private String serializar(AiPlan plan) {
         try {
             return objectMapper.writeValueAsString(plan);

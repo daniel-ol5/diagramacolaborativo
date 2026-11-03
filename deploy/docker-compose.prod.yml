@@ -67,6 +67,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?falta JWT_SECRET (ver deploy/.env)}
       # Opcional: sin clave, CU16 y CU17 arrancan en modo simulado y lo avisan
       # en el log. No impide levantar.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     # SIN ports: sólo Nginx habla con el backend, por la red interna.
     healthcheck:

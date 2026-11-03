@@ -19,6 +19,14 @@ interface Entrada {
 /** El pedido exacto que el plan (§19) usa como pregunta del tribunal para el guardarraíl -- un clic alcanza para mostrarlo en una demo. */
 const EJEMPLO_GUARDARRAIL = "Créame un sistema para un banco";
 
+function isDeleteCommand(cmd: string): boolean {
+  const clean = cmd
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  return /\b(elimina|eliminar|borra|borrar|quita|quitar|remover|remueve|delete)\b/.test(clean);
+}
+
 /**
  * CU16: modelado por comando de texto y voz.
  *
@@ -37,6 +45,7 @@ export function AiCommandBox({ diagramId, token, onClose, initialListening }: Pr
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [autoSendVoice, setAutoSendVoice] = useState(false);
+  const [pendingDeleteCommand, setPendingDeleteCommand] = useState<string | null>(null);
 
   const {
     isSupported,
@@ -69,10 +78,21 @@ export function AiCommandBox({ diagramId, token, onClose, initialListening }: Pr
       startListening((finalText) => {
         setCommand(finalText);
         if (autoSendVoice && finalText.trim()) {
-          void enviar(finalText.trim());
+          solicitarEnvio(finalText.trim());
         }
       });
     }
+  }
+
+  function solicitarEnvio(texto: string) {
+    const trimmed = texto.trim();
+    if (!trimmed || sending) return;
+    if (isDeleteCommand(trimmed)) {
+      setPendingDeleteCommand(trimmed);
+      setCommand("");
+      return;
+    }
+    void enviar(trimmed);
   }
 
   async function enviar(texto: string) {
@@ -93,7 +113,7 @@ export function AiCommandBox({ diagramId, token, onClose, initialListening }: Pr
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    void enviar(command);
+    solicitarEnvio(command);
   }
 
   return (
@@ -145,6 +165,35 @@ export function AiCommandBox({ diagramId, token, onClose, initialListening }: Pr
         {error && <p className="ai-command__response ai-command__response--failed">⚠ {error}</p>}
         {voiceError && <p className="ai-command__response ai-command__response--failed">⚠ {voiceError}</p>}
       </div>
+
+      {pendingDeleteCommand && (
+        <div className="ai-command__confirm-dialog">
+          <div className="ai-command__confirm-text">
+            <strong>⚠️ ¿Estás seguro de eliminar?</strong>
+            <span>"{pendingDeleteCommand}"</span>
+          </div>
+          <div className="ai-command__confirm-buttons">
+            <button
+              type="button"
+              className="ai-command__confirm-yes"
+              onClick={() => {
+                const cmd = pendingDeleteCommand;
+                setPendingDeleteCommand(null);
+                void enviar(cmd);
+              }}
+            >
+              Sí, eliminar
+            </button>
+            <button
+              type="button"
+              className="ai-command__confirm-no"
+              onClick={() => setPendingDeleteCommand(null)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       {isListening && (
         <div className="ai-command__listening-bar" role="status" aria-live="polite">

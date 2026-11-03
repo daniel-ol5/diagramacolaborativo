@@ -31,7 +31,7 @@ import org.springframework.web.client.HttpServerErrorException;
 class ModeloConRespaldoTest {
 
     private static final AiProperties PROPIEDADES =
-            new AiProperties("clave", "principal", "respaldo", null, null);
+            new AiProperties("openai", "clave", "principal", "respaldo", null, null);
 
     private final List<Duration> esperas = new ArrayList<>();
     private final ModeloConRespaldo conRespaldo =

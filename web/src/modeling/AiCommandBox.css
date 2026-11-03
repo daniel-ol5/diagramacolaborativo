@@ -257,3 +257,87 @@
 .ai-command__auto-send-toggle input {
   cursor: pointer;
 }
+
+.ai-command__confirm-dialog {
+  margin: var(--space-2) var(--space-3);
+  padding: 10px 14px;
+  background: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeInConfirm 0.2s ease-in-out;
+}
+
+@keyframes fadeInConfirm {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-command__confirm-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--font-size-sm);
+  color: #92400e;
+}
+
+.ai-command__confirm-text strong {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  color: #78350f;
+}
+
+.ai-command__confirm-text span {
+  font-style: italic;
+  color: #451a03;
+  word-break: break-word;
+}
+
+.ai-command__confirm-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ai-command__confirm-yes {
+  padding: 5px 12px;
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.ai-command__confirm-yes:hover {
+  background: #b91c1c;
+}
+
+.ai-command__confirm-no {
+  padding: 5px 12px;
+  background: #ffffff;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.ai-command__confirm-no:hover {
+  background: var(--color-bg-page);
+  color: var(--color-text);
+}

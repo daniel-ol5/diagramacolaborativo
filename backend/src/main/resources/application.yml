@@ -49,18 +49,18 @@ jwt:
   secret: ${JWT_SECRET:}
   expiration-ms: ${JWT_EXPIRATION_MS:28800000}
 
-# CU16. La clave NO tiene valor por defecto a proposito: sin ella la aplicacion
+# CU16 y CU17. La clave NO tiene valor por defecto a proposito: sin ella la aplicacion
 # arranca igual, en modo simulado, y lo dice en el log de arranque. Si no arrancara,
 # el backend entero quedaria rehen de un servicio de terceros.
+# Proveedor soportado: openai (por defecto) o gemini.
 modelcollab:
   ai:
-    api-key: ${GEMINI_API_KEY:}
-    model: ${GEMINI_MODEL:gemini-3-flash-preview}
-    # Al que se recurre cuando el principal esta saturado o sin cuota: la saturacion es POR
-    # MODELO, asi que cambiar de modelo es lo unico que recupera cuando reintentar no alcanza.
-    modelo-de-respaldo: ${GEMINI_MODELO_RESPALDO:gemini-flash-lite-latest}
-    endpoint: ${GEMINI_ENDPOINT:https://generativelanguage.googleapis.com/v1beta}
-    timeout-ms: ${GEMINI_TIMEOUT_MS:30000}
+    provider: ${AI_PROVIDER:openai}
+    api-key: ${OPENAI_API_KEY:${GEMINI_API_KEY:}}
+    model: ${OPENAI_MODEL:${GEMINI_MODEL:gpt-4o-mini}}
+    modelo-de-respaldo: ${OPENAI_MODELO_RESPALDO:${GEMINI_MODELO_RESPALDO:gpt-4o}}
+    endpoint: ${OPENAI_ENDPOINT:${GEMINI_ENDPOINT:https://api.openai.com/v1}}
+    timeout-ms: ${AI_TIMEOUT_MS:${GEMINI_TIMEOUT_MS:30000}}
 
 logging:
   level:

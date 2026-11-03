@@ -5,15 +5,18 @@ import com.modelcollab.metamodel.model.Attribute;
 import com.modelcollab.metamodel.model.AttributeType;
 import com.modelcollab.metamodel.model.CanonicalModel;
 import com.modelcollab.metamodel.model.ClassEntity;
+import com.modelcollab.metamodel.model.Method;
 import com.modelcollab.metamodel.model.Multiplicity;
 import com.modelcollab.metamodel.model.OwningSide;
 import com.modelcollab.metamodel.model.Position;
 import com.modelcollab.metamodel.model.Relationship;
 import com.modelcollab.metamodel.model.RelationshipType;
+import com.modelcollab.metamodel.model.Visibility;
 import com.modelcollab.metamodel.service.OwningSideRule;
 import com.modelcollab.vision.dto.VisionAttribute;
 import com.modelcollab.vision.dto.VisionClass;
 import com.modelcollab.vision.dto.VisionDraft;
+import com.modelcollab.vision.dto.VisionMethod;
 import com.modelcollab.vision.dto.VisionRelationship;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -151,11 +154,39 @@ public class VisionMerger {
                 atributosSaneados.add(new VisionAttribute(nombreDelAtributo, tipo.name()));
             }
 
+            List<Method> metodos = new ArrayList<>();
+            List<VisionMethod> metodosSaneados = new ArrayList<>();
+            if (leida.methods() != null) {
+                Set<String> nombresDeMetodo = new HashSet<>();
+                for (VisionMethod vm : leida.methods()) {
+                    if (vm == null) continue;
+                    String nombreMetodo = vm.name() == null ? "" : vm.name().strip();
+                    if (nombreMetodo.isEmpty()) continue;
+                    // Limpiar paréntesis ej. "Vender()" -> "Vender"
+                    if (nombreMetodo.endsWith("()")) {
+                        nombreMetodo = nombreMetodo.substring(0, nombreMetodo.length() - 2).strip();
+                    }
+                    if (!nombresDeMetodo.add(normalizar(nombreMetodo))) {
+                        continue;
+                    }
+                    String retorno = vm.returnType() == null || vm.returnType().isBlank()
+                            ? "void"
+                            : vm.returnType().strip();
+                    metodos.add(new Method(
+                            UUID.randomUUID().toString(),
+                            nombreMetodo,
+                            retorno,
+                            Visibility.PUBLIC,
+                            List.of()));
+                    metodosSaneados.add(new VisionMethod(nombreMetodo, retorno));
+                }
+            }
+
             ClassEntity clase = new ClassEntity(
                     UUID.randomUUID().toString(), nombre, null, false, posicion,
-                    null, null, atributos, List.of());
+                    null, null, atributos, metodos);
             nuevas.add(clase);
-            saneadas.add(new VisionClass(nombre, atributosSaneados));
+            saneadas.add(new VisionClass(nombre, atributosSaneados, metodosSaneados));
             idPorNombre.put(normalizar(nombre), clase.id());
         }
 
@@ -269,10 +300,43 @@ public class VisionMerger {
         if (texto == null || texto.isBlank()) {
             return Optional.empty();
         }
-        try {
-            return Optional.of(AttributeType.valueOf(texto.strip().toUpperCase(Locale.ROOT)));
-        } catch (IllegalArgumentException e) {
-            return Optional.empty();
+        String normalizado = texto.strip().toUpperCase(Locale.ROOT);
+        // Mapeo amigable de tipos comunes en diagramas UML
+        switch (normalizado) {
+            case "NUMBER", "INT", "NUM", "INT4", "INTEGER" -> {
+                return Optional.of(AttributeType.INTEGER);
+            }
+            case "STRING", "STR", "TEXTO", "CHAR", "VARCHAR" -> {
+                return Optional.of(AttributeType.VARCHAR);
+            }
+            case "BOOL", "BOOLEAN" -> {
+                return Optional.of(AttributeType.BOOLEAN);
+            }
+            case "FLOAT", "DOUBLE", "REAL", "DECIMAL" -> {
+                return Optional.of(AttributeType.DECIMAL);
+            }
+            case "LONG", "INT8", "BIGINT" -> {
+                return Optional.of(AttributeType.BIGINT);
+            }
+            case "DATE", "FECHA" -> {
+                return Optional.of(AttributeType.DATE);
+            }
+            case "DATETIME", "TIMESTAMP", "TIME" -> {
+                return Optional.of(AttributeType.DATETIME);
+            }
+            case "UUID", "GUID" -> {
+                return Optional.of(AttributeType.UUID);
+            }
+            case "TEXT" -> {
+                return Optional.of(AttributeType.TEXT);
+            }
+            default -> {
+                try {
+                    return Optional.of(AttributeType.valueOf(normalizado));
+                } catch (IllegalArgumentException e) {
+                    return Optional.empty();
+                }
+            }
         }
     }
 
@@ -299,6 +363,21 @@ public class VisionMerger {
 
         if (texto == null || texto.isBlank()) {
             return porDefecto;
+        }
+        String limpio = texto.strip().toUpperCase(Locale.ROOT);
+        // Normalizar abreviaciones comunes: "1" -> "1..1", "0" -> "0..1", "*" / "N" -> "0..*"
+        if ("1".equals(limpio)) {
+            return Multiplicity.ONE_ONE;
+        }
+        if ("0".equals(limpio)) {
+            return Multiplicity.ZERO_ONE;
+        }
+        if ("*".equals(limpio) || "N".equals(limpio) || "M".equals(limpio)
+                || "0..*".equals(limpio) || "0..N".equals(limpio) || "0..M".equals(limpio)) {
+            return Multiplicity.ZERO_MANY;
+        }
+        if ("1..*".equals(limpio) || "1..N".equals(limpio) || "1..M".equals(limpio)) {
+            return Multiplicity.ONE_MANY;
         }
         try {
             return Multiplicity.fromValue(texto.strip());
