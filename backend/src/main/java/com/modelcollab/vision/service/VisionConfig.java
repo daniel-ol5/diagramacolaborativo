@@ -11,8 +11,8 @@ import org.springframework.context.annotation.Configuration;
  * Elige el lector de pizarras al arrancar, con el mismo criterio que CU16: sin clave, simulado, y
  * la aplicación levanta igual.
  *
- * <p>Comparte {@code AiProperties} con CU16 a propósito — es la misma clave de Gemini y el mismo
- * modelo. Duplicar la configuración llevaría a que alguien ponga la clave en una sola de las dos
+ * <p>Comparte {@code AiProperties} con CU16 a propósito — es la misma clave de IA y la misma
+ * configuración. Duplicar la configuración llevaría a que alguien ponga la clave en una sola de las dos
  * y no entienda por qué media funcionalidad sigue simulada.
  */
 @Configuration
@@ -25,11 +25,17 @@ public class VisionConfig {
             AiProperties propiedades, ObjectMapper objectMapper) {
 
         if (!propiedades.hayClave()) {
-            log.warn("Sin GEMINI_API_KEY: la lectura de fotos de CU17 arranca SIMULADA. "
+            log.warn("Sin clave de IA (OPENAI_API_KEY): la lectura de fotos de CU17 arranca SIMULADA. "
                     + "Devuelve un borrador fijo que no corresponde a la imagen, y la respuesta "
                     + "lo declara para que la interfaz lo muestre.");
             return new FakeVisionModelClient();
         }
+
+        if (propiedades.esOpenAi()) {
+            log.info("Lectura de fotos de CU17 contra OpenAI multimodal ({})", propiedades.model());
+            return new OpenAiVisionModelClient(propiedades, objectMapper);
+        }
+
         log.info("Lectura de fotos de CU17 contra Gemini multimodal ({})", propiedades.model());
         return new GeminiVisionModelClient(propiedades, objectMapper);
     }

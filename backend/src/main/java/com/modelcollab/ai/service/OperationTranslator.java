@@ -71,7 +71,10 @@ public class OperationTranslator {
             "RENAME_CLASS", Set.of("name"),
             "MOVE_CLASS", Set.of("direction"),
             "ADD_RELATIONSHIP",
-            Set.of("to", "type", "sourceMultiplicity", "targetMultiplicity"));
+            Set.of("to", "type", "sourceMultiplicity", "targetMultiplicity"),
+            "DELETE_CLASS", Set.of(),
+            "DELETE_ATTRIBUTE", Set.of("name"),
+            "DELETE_RELATIONSHIP", Set.of("to"));
 
     private final CanonicalMutationApplier applier;
     private final GridLayoutEngine grilla;
@@ -113,6 +116,9 @@ public class OperationTranslator {
             case "RENAME_CLASS" -> renombrarClase(modelo, propuesta);
             case "MOVE_CLASS" -> moverClase(modelo, propuesta);
             case "ADD_RELATIONSHIP" -> agregarRelacion(modelo, propuesta);
+            case "DELETE_CLASS" -> borrarClase(modelo, propuesta);
+            case "DELETE_ATTRIBUTE" -> borrarAtributo(modelo, propuesta);
+            case "DELETE_RELATIONSHIP" -> borrarRelacion(modelo, propuesta);
             // Inalcanzable: el parser ya filtró contra la lista blanca. Está para que, si
             // alguien agrega una operación a la lista y se olvida de traducirla, falle acá y
             // no la deje pasar sin efecto.
@@ -236,6 +242,46 @@ public class OperationTranslator {
         return new Traduccion(
                 mensaje(OperationType.ADD_RELATIONSHIP, null, aMapa(relacion)),
                 "Relacioné '" + origen.name() + "' con '" + destino.name() + "'" + comoQueda + ".");
+    }
+
+    private Traduccion borrarClase(CanonicalModel modelo, AiOperation propuesta) {
+        ClassEntity clase = exigirClase(modelo, propuesta.target());
+        return new Traduccion(
+                mensaje(OperationType.DELETE_CLASS, clase.id(), Map.of()),
+                "Eliminé la clase '" + clase.name() + "'.");
+    }
+
+    private Traduccion borrarAtributo(CanonicalModel modelo, AiOperation propuesta) {
+        ClassEntity clase = exigirClase(modelo, propuesta.target());
+        String nombre = exigirTexto(propuesta, "name");
+
+        Attribute atributo = clase.attributes().stream()
+                .filter(a -> nombre.equalsIgnoreCase(a.name()))
+                .findFirst()
+                .orElseThrow(() -> new ComandoRechazadoException(
+                        AiCommandResponse.OBJETIVO_INEXISTENTE,
+                        "'" + clase.name() + "' no tiene ningún atributo llamado '" + nombre + "'."));
+
+        return new Traduccion(
+                mensaje(OperationType.DELETE_ATTRIBUTE, atributo.id(), Map.of()),
+                "Eliminé el atributo '" + atributo.name() + "' de '" + clase.name() + "'.");
+    }
+
+    private Traduccion borrarRelacion(CanonicalModel modelo, AiOperation propuesta) {
+        ClassEntity origen = exigirClase(modelo, propuesta.target());
+        ClassEntity destino = exigirClase(modelo, exigirTexto(propuesta, "to"));
+
+        Relationship relacion = modelo.relationships().stream()
+                .filter(r -> (r.sourceClassId().equals(origen.id()) && r.targetClassId().equals(destino.id()))
+                        || (r.sourceClassId().equals(destino.id()) && r.targetClassId().equals(origen.id())))
+                .findFirst()
+                .orElseThrow(() -> new ComandoRechazadoException(
+                        AiCommandResponse.OBJETIVO_INEXISTENTE,
+                        "No encontré ninguna relación entre '" + origen.name() + "' y '" + destino.name() + "'."));
+
+        return new Traduccion(
+                mensaje(OperationType.DELETE_RELATIONSHIP, relacion.id(), Map.of()),
+                "Eliminé la relación entre '" + origen.name() + "' y '" + destino.name() + "'.");
     }
 
     // ------------------------------------------------------------ ensayo seco

@@ -40,6 +40,7 @@ services:
       # application.yml cae a una clave de desarrollo si esto falta; en un
       # despliegue real eso firmaria JWT con una clave publica en el repo.
       JWT_SECRET: ${JWT_SECRET:?falta JWT_SECRET (ver .env, no commitear)}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     ports:
       - "8080:8080"
     healthcheck:

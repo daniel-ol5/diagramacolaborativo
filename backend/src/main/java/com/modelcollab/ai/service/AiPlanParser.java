@@ -31,21 +31,17 @@ import org.springframework.stereotype.Component;
 public class AiPlanParser {
 
     /**
-     * <b>Lista blanca</b> de operaciones que la IA puede pedir. Es un subconjunto chico de los 22
-     * de §8.1, y las ausencias son deliberadas.
+     * <b>Lista blanca</b> de operaciones que la IA puede pedir.
      *
-     * <p>No hay ningún {@code DELETE_}. RF-02 pide crear, modificar, mover y relacionar, y nada
-     * más. Un comando dictado por voz pasa por un reconocedor que confunde palabras: la
-     * diferencia entre "borra la clase Cliente" y algo que suene parecido es el trabajo de otra
-     * persona. Borrar sigue siendo un gesto deliberado en el lienzo, donde se ve qué se
-     * selecciona antes de confirmarlo.
+     * <p>Permite crear, modificar, mover, relacionar y eliminar elementos específicos (clases, atributos, relaciones).
      *
      * <p>Tampoco hay {@code BULK_MERGE}: es la operación que reemplaza el diagrama entero, o sea
      * exactamente lo que el guardarraíl de RF-02.6 existe para impedir. Dejarla entrar por la
      * puerta de la IA sería poner el candado y regalar la llave.
      */
     public static final Set<String> OPERACIONES_PERMITIDAS = Set.of(
-            "ADD_CLASS", "ADD_ATTRIBUTE", "RENAME_CLASS", "MOVE_CLASS", "ADD_RELATIONSHIP");
+            "ADD_CLASS", "ADD_ATTRIBUTE", "RENAME_CLASS", "MOVE_CLASS", "ADD_RELATIONSHIP",
+            "DELETE_CLASS", "DELETE_ATTRIBUTE", "DELETE_RELATIONSHIP");
 
     private static final Set<String> INTENCIONES = Set.of(
             AiPlan.EDITAR, AiPlan.GENERAR_DOMINIO, AiPlan.NO_SOPORTADO);

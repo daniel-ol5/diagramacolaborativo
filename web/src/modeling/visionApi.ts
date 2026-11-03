@@ -6,9 +6,15 @@ export interface VisionAttribute {
   type: string;
 }
 
+export interface VisionMethod {
+  name: string;
+  returnType: string;
+}
+
 export interface VisionClass {
   name: string;
   attributes: VisionAttribute[];
+  methods?: VisionMethod[];
 }
 
 export interface VisionRelationship {

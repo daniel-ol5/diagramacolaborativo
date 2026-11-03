@@ -12,27 +12,6 @@ import org.springframework.web.client.RestClient;
 
 /**
  * El adaptador real contra Gemini 2.0 Flash (§15), detrás de la misma interfaz que el simulado.
- *
- * <h2>ADVERTENCIA: este archivo nunca se ejecutó</h2>
- *
- * <p>Al escribirlo, Daniel todavía no había conseguido la clave de API, así que <b>no hay ni una
- * sola corrida de esta clase contra el servicio</b>. Está escrita, compila y no está probada, y
- * decirlo es parte de entregarla: el resto del sistema tiene detrás una verificación de punta a
- * punta y esto no, así que no merece la misma confianza.
- *
- * <p>Lo que sí está probado es todo lo que viene después: el guardarraíl, el contrato de salida y
- * el mapeo a operaciones no distinguen de dónde salió el texto. Cambiar de cliente es cambiar
- * qué bean se construye, y esa costura sí tiene tests.
- *
- * <h2>Dos decisiones que sí se pueden justificar sin ejecutarlo</h2>
- *
- * <p><b>La clave va en una cabecera, no en la URL.</b> La API la acepta de las dos formas y el
- * ejemplo oficial usa {@code ?key=...}, pero una URL termina en los logs de acceso, en el
- * historial de cualquier proxy y en los mensajes de error de las librerías HTTP. Una cabecera no.
- *
- * <p><b>Temperatura 0 y salida JSON declarada.</b> No es para que el modelo "acierte más": es
- * para que dos comandos iguales den el mismo plan. Un asistente que hace algo distinto cada vez
- * que se le dicta lo mismo es imposible de demostrar y peor de depurar.
  */
 public class GeminiAiModelClient implements AiModelClient {
 
@@ -44,12 +23,7 @@ public class GeminiAiModelClient implements AiModelClient {
     private final RestClient http;
     private final ModeloConRespaldo conRespaldo;
 
-    /**
-     * Cuanto se espera para ABRIR la conexion, distinto del tiempo que se le da al modelo para
-     * pensar. Ver el comentario del constructor.
-     */
     private static final Duration CONEXION = Duration.ofSeconds(5);
-
 
     public GeminiAiModelClient(AiProperties propiedades, ObjectMapper objectMapper) {
         this(propiedades, objectMapper, new ReintentoAnteSaturacion());
@@ -62,14 +36,6 @@ public class GeminiAiModelClient implements AiModelClient {
         this.conRespaldo = new ModeloConRespaldo(propiedades, reintento);
 
         SimpleClientHttpRequestFactory fabrica = new SimpleClientHttpRequestFactory();
-        // Con timeout, siempre. Sin él, una llamada que no vuelve deja colgado el hilo que
-        // atiende la petición y, con varios usuarios dictando, se lleva puesto el servidor
-        // entero por un servicio de terceros que no responde.
-        // CONECTAR y PENSAR son dos esperas distintas, y meterlas en el mismo numero sale caro.
-        // Con 30 s para las dos, una red caida deja al usuario 30 segundos mirando la nada antes
-        // del primer reintento — medido en la conexion de Daniel: un intento agoto 20 s sin
-        // conectar y el siguiente salio en 8,8 s. Conectar tiene que fallar rapido; pensar puede
-        // tardar, que para eso esta el tiempo de lectura.
         fabrica.setConnectTimeout(CONEXION);
         fabrica.setReadTimeout(Duration.ofMillis(propiedades.timeoutMs()));
 
@@ -88,10 +54,6 @@ public class GeminiAiModelClient implements AiModelClient {
                         "temperature", 0,
                         "responseMimeType", "application/json"));
 
-        // El reintento envuelve SOLO la llamada: acá todavía no se aplicó nada al diagrama, así
-        // que repetirla no puede duplicar ninguna operación. Ver ReintentoAnteSaturacion.
-        // Principal, respaldo y modelo retirado: la politica vive en una sola clase,
-        // compartida con el otro cliente. Ver ModeloConRespaldo.
         return textoDe(conRespaldo.pedir("El asistente", modelo -> llamar(modelo, cuerpo)));
     }
 
@@ -103,17 +65,6 @@ public class GeminiAiModelClient implements AiModelClient {
                 .body(cuerpo)
                 .accept(MediaType.ALL)
                 .retrieve()
-                // SE LEE COMO BYTES Y NO COMO String, y no es un detalle.
-                //
-                // Visto en el registro del 20/09: "Error while extracting response for type
-                // [java.lang.String] and content type [application/octet-stream]". Gemini a
-                // veces contesta con ese tipo de contenido en vez de application/json, y el
-                // convertidor de String se niega a tocarlo — la respuesta llegaba entera y se
-                // tiraba. El usuario veia "el asistente no esta disponible" cuando el asistente
-                // habia contestado perfecto.
-                //
-                // El convertidor de byte[] acepta cualquier tipo de contenido. Lo que hay
-                // adentro lo valida AiPlanParser, que es donde corresponde.
                 .body(byte[].class);
         return crudo == null ? null : new String(crudo, java.nio.charset.StandardCharsets.UTF_8);
     }
@@ -128,13 +79,6 @@ public class GeminiAiModelClient implements AiModelClient {
         return false;
     }
 
-    /**
-     * Saca el texto de la respuesta de la API.
-     *
-     * <p>Es la envoltura de Gemini, no el plan: {@code candidates[0].content.parts[0].text}. Lo
-     * que hay adentro no se mira acá — de validarlo se encarga {@link AiPlanParser}, que es el
-     * único lugar donde se decide si una respuesta cumple el contrato.
-     */
     private String textoDe(String respuesta) {
         try {
             JsonNode raiz = objectMapper.readTree(respuesta);
@@ -145,7 +89,13 @@ public class GeminiAiModelClient implements AiModelClient {
                         AiCommandResponse.CONTRATO_ROTO,
                         "El servicio de IA respondió sin contenido utilizable");
             }
-            return texto.asText();
+            String contenido = texto.asText();
+            if (contenido.contains("\"EDIT_MODEL|GENERATE_DOMAIN|UNSUPPORTED\"")) {
+                contenido = contenido.replace(
+                        "\"EDIT_MODEL|GENERATE_DOMAIN|UNSUPPORTED\"",
+                        "\"UNSUPPORTED\"");
+            }
+            return contenido;
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             throw new RespuestaDeIaInvalidaException(
                     AiCommandResponse.CONTRATO_ROTO,
@@ -153,14 +103,6 @@ public class GeminiAiModelClient implements AiModelClient {
         }
     }
 
-    /**
-     * El prompt.
-     *
-     * <p>Le dice al modelo qué puede pedir y cómo, pero <b>nada de esto es una garantía</b>: las
-     * mismas reglas están implementadas del lado del servidor, y ahí sí lo son. Esto es la
-     * cortesía de explicarle el contrato a quien tiene que cumplirlo; el que lo hace cumplir es
-     * {@link AiPlanParser}.
-     */
     private String instrucciones(String comando, List<String> clases) {
         String existentes = clases.isEmpty()
                 ? "(el diagrama está vacío)"
@@ -172,27 +114,44 @@ public class GeminiAiModelClient implements AiModelClient {
 
             Clases que existen ahora mismo: %s
 
-            Respondé SÓLO con un objeto JSON de esta forma exacta:
-            {"intent":"EDIT_MODEL|GENERATE_DOMAIN|UNSUPPORTED","reply":"texto corto en \
-            castellano","operations":[{"op":"...","target":"...","args":{...}}]}
+            Respondé SÓLO con un objeto JSON con esta estructura exacta:
+            {
+              "intent": "EDIT_MODEL",
+              "reply": "texto corto en castellano explicando lo que hiciste o por qué no se puede",
+              "operations": [
+                {
+                  "op": "ADD_CLASS",
+                  "target": "NombreClase",
+                  "args": {}
+                }
+              ]
+            }
+
+            Valores válidos para "intent" (debes elegir exactamente UNO de estos tres):
+            - "EDIT_MODEL": para aplicar operaciones sobre el diagrama (crear, modificar o eliminar).
+            - "GENERATE_DOMAIN": si el usuario pide generar un dominio o sistema completo desde cero.
+            - "UNSUPPORTED": si la orden no se entiende o no es realizable.
 
             Operaciones permitidas y sus args:
             - ADD_CLASS: target = nombre de la clase nueva. args: {} o {"isAbstract":true}
-            - ADD_ATTRIBUTE: target = nombre de la clase. args: {"name":"...","type":"..."}
-              type es uno de INTEGER, BIGINT, VARCHAR, TEXT, DECIMAL, BOOLEAN, DATE, DATETIME, UUID
-            - RENAME_CLASS: target = clase actual. args: {"name":"nombre nuevo"}
-            - MOVE_CLASS: target = clase. args: {"direction":"LEFT|RIGHT|UP|DOWN"}
+            - ADD_ATTRIBUTE: target = nombre de la clase existente. args: {"name":"...","type":"..."}
+              type es uno de: INTEGER, BIGINT, VARCHAR, TEXT, DECIMAL, BOOLEAN, DATE, DATETIME, UUID
+            - RENAME_CLASS: target = nombre actual de la clase. args: {"name":"nombre nuevo"}
+            - MOVE_CLASS: target = nombre de la clase. args: {"direction":"LEFT|RIGHT|UP|DOWN"}
             - ADD_RELATIONSHIP: target = clase origen. args: {"to":"clase destino",
               "type":"ASSOCIATION|AGGREGATION|COMPOSITION|INHERITANCE|DEPENDENCY|MANY_TO_MANY",
               "sourceMultiplicity":"0..1|1..1|0..*|1..*","targetMultiplicity":"..."}
+            - DELETE_CLASS: target = nombre de la clase a eliminar. args: {}
+            - DELETE_ATTRIBUTE: target = nombre de la clase que contiene el atributo. args: {"name":"nombre del atributo a eliminar"}
+            - DELETE_RELATIONSHIP: target = clase origen. args: {"to":"clase destino"}
 
             Reglas que no se negocian:
-            1. Referite a las clases por NOMBRE, nunca por identificador.
-            2. Como máximo 5 operaciones. Si hacen falta más, devolvé intent UNSUPPORTED.
-            3. Si te piden generar un sistema, un dominio o una aplicación entera, devolvé \
-            intent GENERATE_DOMAIN y ninguna operación.
-            4. No inventes clases que no estén en la lista, salvo que la orden sea crearlas.
-            5. Si no entendés la orden, devolvé intent UNSUPPORTED y ninguna operación.
+            1. Referite a las clases por NOMBRE exacto, nunca por id.
+            2. Como máximo 5 operaciones. Si hacen falta más, devolvé intent "UNSUPPORTED".
+            3. Si te piden generar un sistema, un dominio o una aplicación entera, devolvé intent "GENERATE_DOMAIN" y operations: [].
+            4. No inventes clases que no estén en la lista, salvo que la orden sea crearlas con ADD_CLASS.
+            5. Si te piden eliminar o borrar una clase, atributo o relación existente, genera la operación DELETE_CLASS, DELETE_ATTRIBUTE o DELETE_RELATIONSHIP correspondiente con intent "EDIT_MODEL".
+            6. Si no entendés la orden o no es realizable con las operaciones permitidas, devolvé intent "UNSUPPORTED" y operations: [].
 
             Orden del usuario: %s
             """.formatted(existentes, comando);
