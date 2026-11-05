@@ -11,6 +11,11 @@ dist/
 .vite/
 *.local
 
+# Flutter / Dart (apps generadas dentro de evidencias/: `flutter pub get` las regenera)
+.dart_tool/
+.flutter-plugins-dependencies
+evidencias/**/pubspec.lock
+
 # IDE
 .idea/
 .vscode/
