@@ -8,4 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface DiagramRepository extends JpaRepository<Diagram, UUID> {
 
     List<Diagram> findByProjectId(UUID projectId);
+
+    /** Si el diagrama existe y pertenece al proyecto. Lo usa el chat (CU19) para validar diagramId. */
+    boolean existsByIdAndProjectId(UUID id, UUID projectId);
 }
