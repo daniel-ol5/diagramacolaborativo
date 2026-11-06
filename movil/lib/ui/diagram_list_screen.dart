@@ -5,6 +5,7 @@ import '../models/project.dart';
 import '../services/api_service.dart';
 import '../services/config_service.dart';
 import 'capture_screen.dart';
+import 'chat_screen.dart';
 import 'error_view.dart';
 
 class DiagramListScreen extends StatefulWidget {
@@ -58,7 +59,24 @@ class _DiagramListScreenState extends State<DiagramListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.proyecto.name)),
+      appBar: AppBar(
+        title: Text(widget.proyecto.name),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline),
+            tooltip: 'Chat del proyecto',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ChatScreen(
+                  sesion: widget.sesion,
+                  projectId: widget.proyecto.id,
+                  projectName: widget.proyecto.name,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: FutureBuilder<List<DiagramSummary>>(
         future: _futuro,
         builder: (context, snapshot) {
