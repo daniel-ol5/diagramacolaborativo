@@ -1,4 +1,5 @@
 import type { ChatMessage } from "./types";
+import { partirPorCoincidencia } from "./highlight";
 import "./MessageBubble.css";
 
 interface Props {
@@ -11,6 +12,8 @@ interface Props {
   onRetry?: () => void;
   /** Sin conexion no se puede reintentar. */
   retryDisabled?: boolean;
+  /** En los resultados de busqueda: lo buscado, para resaltarlo con <mark>. */
+  highlight?: string | null;
 }
 
 const HORA = new Intl.DateTimeFormat("es", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
@@ -26,13 +29,25 @@ function horaLocal(iso: string): string {
  * lo escapa; nada de dangerouslySetInnerHTML, Markdown ni enlaces clicables.
  * Cualquier `kind` (CHAT, ANSWER, REVIEW, SUMMARY, SYSTEM) se ve igual.
  */
-export function MessageBubble({ message, mine, status, errorText, onRetry, retryDisabled }: Props) {
+export function MessageBubble({ message, mine, status, errorText, onRetry, retryDisabled, highlight }: Props) {
   const hora = horaLocal(message.createdAt);
+  // Tramos de texto plano; los coincidentes van en <mark>. Nunca HTML crudo.
+  const texto = highlight
+    ? partirPorCoincidencia(message.text, highlight).map((p, i) =>
+        p.m ? (
+          <mark key={i} className="message-bubble__match">
+            {p.t}
+          </mark>
+        ) : (
+          p.t
+        ),
+      )
+    : message.text;
 
   if (message.authorType === "SYSTEM") {
     return (
-      <li className="message-bubble message-bubble--system">
-        <p className="message-bubble__text">{message.text}</p>
+      <li className="message-bubble message-bubble--system" data-chat-id={message.id}>
+        <p className="message-bubble__text">{texto}</p>
         {hora && (
           <time className="message-bubble__time" dateTime={message.createdAt}>
             {hora}
@@ -49,7 +64,7 @@ export function MessageBubble({ message, mine, status, errorText, onRetry, retry
     (status === "failed" ? " message-bubble--failed" : "");
 
   return (
-    <li className={`message-bubble${variante}`}>
+    <li className={`message-bubble${variante}`} data-chat-id={message.id}>
       <div className="message-bubble__meta">
         {esIa ? (
           <span className="message-bubble__author message-bubble__author--ai">
@@ -71,7 +86,7 @@ export function MessageBubble({ message, mine, status, errorText, onRetry, retry
           </time>
         )}
       </div>
-      <p className="message-bubble__text">{message.text}</p>
+      <p className="message-bubble__text">{texto}</p>
       {status === "sending" && <p className="message-bubble__status">Enviando…</p>}
       {status === "failed" && (
         <div className="message-bubble__status message-bubble__status--failed">

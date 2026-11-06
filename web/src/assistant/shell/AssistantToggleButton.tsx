@@ -1,16 +1,20 @@
+import { etiquetaNoLeidos, textoInsignia } from "../chat/unread";
 import "./AssistantToggleButton.css";
 
 interface Props {
   open: boolean;
   onToggle: () => void;
+  /** Mensajes sin leer del chat (CU23). 0 = sin insignia. */
+  unread?: number;
 }
 
 /**
  * Boton "Chat IA" del lado derecho de la barra, junto a "● en vivo". Ya no
  * va dentro de .app__toolbar-group, asi que trae su propio estilo (mismo
  * aspecto que los demas botones de la barra) y su propio estado activo.
+ * Con mensajes sin leer muestra una insignia (99+ como tope).
  */
-export function AssistantToggleButton({ open, onToggle }: Props) {
+export function AssistantToggleButton({ open, onToggle, unread = 0 }: Props) {
   return (
     <button
       type="button"
@@ -30,6 +34,12 @@ export function AssistantToggleButton({ open, onToggle }: Props) {
         />
       </svg>
       Chat IA
+      {unread > 0 && (
+        // role="img" + aria-label: el nombre del boton queda "Chat IA N mensajes sin leer".
+        <span className="assistant-toggle__badge" role="img" aria-label={etiquetaNoLeidos(unread)}>
+          {textoInsignia(unread)}
+        </span>
+      )}
     </button>
   );
 }

@@ -28,3 +28,49 @@
   color: var(--color-danger);
   font-size: var(--font-size-sm);
 }
+
+.chat-panel__error--top {
+  margin-top: var(--space-3);
+}
+
+/* Banner de resultados (CU23): "N resultados" + "Salir de la búsqueda". */
+.chat-panel__results-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px var(--space-4);
+  background: var(--brand-tint);
+  border-bottom: 1px solid var(--color-border-muted);
+}
+
+.chat-panel__results-count {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--brand-dark);
+}
+
+/* Blanco con borde y texto --brand-dark, como "Reintentar". */
+.chat-panel__exit-search {
+  margin-left: auto;
+  padding: 4px 10px;
+  border: 1px solid var(--brand-dark);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--brand-dark);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chat-panel__exit-search:hover {
+  background: var(--brand-tint-strong);
+}
+
+.chat-panel__exit-search:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}

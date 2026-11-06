@@ -7,6 +7,8 @@ import { fetchDiagramSnapshot } from "./services/diagramApi";
 import { StompConnectionProvider } from "./assistant/shell/StompConnectionProvider";
 import { AssistantPanel } from "./assistant/shell/AssistantPanel";
 import { ChatPanel } from "./assistant/chat/ChatPanel";
+import { ProjectChatFeed } from "./assistant/chat/ProjectChatFeed";
+import { useChatStore } from "./assistant/chat/chatStore";
 
 interface Props {
   session: Session;
@@ -26,6 +28,8 @@ export function DiagramScreen({ session }: Props) {
   const [loaded, setLoaded] = useState(false);
   // CU19: el panel del asistente se monta aca (no dentro del lienzo).
   const [assistantOpen, setAssistantOpen] = useState(false);
+  // CU23: no leidos del chat, para la insignia del boton "Chat IA".
+  const unread = useChatStore((s) => (projectId && s.projectId === projectId ? s.unreadCount : 0));
 
   useEffect(() => {
     if (!diagramId) return;
@@ -58,7 +62,7 @@ export function DiagramScreen({ session }: Props) {
     return <p style={{ padding: "var(--space-4)" }}>Cargando diagrama…</p>;
   }
 
-  // Una sola conexion STOMP para el lienzo y (luego) el chat del proyecto.
+  // Una sola conexion STOMP para el lienzo y el chat del proyecto.
   // Dentro de la rama "cargado": se monta y desmonta junto con el lienzo, como antes.
   return (
     <StompConnectionProvider diagramId={diagramId} token={session.token}>
@@ -66,7 +70,9 @@ export function DiagramScreen({ session }: Props) {
         session={session}
         diagramId={diagramId}
         projectId={projectId ?? null}
-        assistant={projectId ? { open: assistantOpen, onToggle: () => setAssistantOpen((v) => !v) } : undefined}
+        assistant={
+          projectId ? { open: assistantOpen, onToggle: () => setAssistantOpen((v) => !v), unread } : undefined
+        }
         sidePanel={
           projectId && assistantOpen ? (
             <AssistantPanel onClose={() => setAssistantOpen(false)}>
@@ -86,6 +92,10 @@ export function DiagramScreen({ session }: Props) {
           </Link>
         }
       />
+      {/* El chat sigue recibiendo con el panel cerrado (no leidos). Va DESPUES
+          del lienzo: asi registra sus handlers despues y, en cada CONNECT, las
+          4 suscripciones del lienzo salen primero y en el mismo orden de antes. */}
+      {projectId && <ProjectChatFeed projectId={projectId} token={session.token} myUserId={session.userId} />}
     </StompConnectionProvider>
   );
 }
