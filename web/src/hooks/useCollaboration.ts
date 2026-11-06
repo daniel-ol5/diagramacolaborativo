@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Client, type IMessage } from "@stomp/stompjs";
-import { WS_URL } from "../services/config";
+import type { IMessage } from "@stomp/stompjs";
+import { useStompConnectionOrOwn } from "../assistant/shell/stompConnection";
 import { useCanonicalStore } from "../store/canonicalStore";
 import { useCollaborationStore } from "../store/collaborationStore";
 import { useOfflineStore } from "../store/offlineStore";
@@ -131,7 +131,10 @@ export function useCollaboration(
   const [error, setError] = useState<string | null>(null);
   const [sequenceGap, setSequenceGap] = useState<SequenceGap | null>(null);
 
-  const clientRef = useRef<Client | null>(null);
+  // La conexion STOMP compartida (StompConnectionProvider) o, sin provider
+  // (/demo), una propia. Declarada antes del efecto de abajo a proposito: en
+  // /demo su efecto corre primero, como antes corria el `new Client`.
+  const connection = useStompConnectionOrOwn(diagramId, token);
   const ownMutationIds = useRef<Set<string>>(new Set());
   const lastSequenceNum = useRef<number | null>(null);
   const lastSentAt = useRef(0);
@@ -248,18 +251,14 @@ export function useCollaboration(
       }
     }
 
-    const client = new Client({
-      brokerURL: WS_URL,
-      connectHeaders: { Authorization: `Bearer ${token}` },
-      reconnectDelay: 3000,
-      // Sin esto, una conexion "muerta en silencio" (el servidor se cayo
-      // sin cerrar el socket prolijamente, o hay un router en el medio que
-      // se traga los paquetes) puede quedar como "conectado" indefinidamente
-      // — exactamente el peor fallo del modo offline: creer que se esta
-      // guardando cuando no. Los latidos hacen que stomp.js lo note solo.
-      heartbeatIncoming: 4000,
-      heartbeatOutgoing: 4000,
-      onConnect: () => {
+    // El Client (reconexion 3 s, latidos 4000/4000, JWT en el CONNECT) vive
+    // ahora en assistant/shell/stompConnection.ts. Sin los latidos, una
+    // conexion "muerta en silencio" (el servidor se cayo sin cerrar el socket
+    // prolijamente, o hay un router en el medio que se traga los paquetes)
+    // puede quedar como "conectado" indefinidamente — exactamente el peor
+    // fallo del modo offline: creer que se esta guardando cuando no.
+    connection.setHandlers("canvas", {
+      onConnect: (client) => {
         setStatus("conectado");
 
         const offlineState = useOfflineStore.getState().state;
@@ -270,7 +269,10 @@ export function useCollaboration(
         // el broker que no se puede evitar desde el servidor — el cliente
         // es el unico que sabe cuando ya termino de suscribirse a todo.
         client.subscribe(`/topic/diagrams/${diagramId}`, (message) => handleTopic(message));
-        client.subscribe("/user/queue/errors", (message) => handleError(message));
+        // Una sola suscripcion a errores para lienzo y chat: solo los de
+        // destination "/app/project/..." o "/topic/projects/..." son del chat;
+        // todo lo demas llega a handleError exactamente como antes.
+        client.subscribe("/user/queue/errors", (message) => connection.routeError(message, handleError));
         client.subscribe("/user/queue/locks", (message) => handleLockDenied(message));
         client.subscribe("/user/queue/presence", (message) => handlePresenceResponse(message));
 
@@ -530,16 +532,15 @@ export function useCollaboration(
       }
     }
 
-    client.activate();
-    clientRef.current = client;
-
-    return () => {
-      client.deactivate();
-      clientRef.current = null;
-    };
+    // Sin cleanup a proposito: la activacion y el deactivate() los hace la
+    // conexion compartida. El cliente viejo conserva estos handlers hasta
+    // cerrarse, asi su onWebSocketClose tardio (al salir de un diagrama)
+    // sigue poniendo OFFLINE como antes -- y el proximo onConnect sincroniza
+    // la cola pendiente. Re-ejecutar el efecto reemplaza la clave "canvas".
   }, [
     diagramId,
     token,
+    connection,
     setModel,
     updateClassPosition,
     resizeClassLocal,
@@ -562,7 +563,7 @@ export function useCollaboration(
 
   function publishMutate(op: string, targetId: string | null, payload: Record<string, unknown>) {
     if (!diagramId) return;
-    const client = clientRef.current;
+    const client = connection.getClient();
     const clientMutationId = crypto.randomUUID();
 
     if (!client?.connected) {
@@ -590,7 +591,7 @@ export function useCollaboration(
   }
 
   function publishLock(targetId: string, action: "ACQUIRE" | "RELEASE" | "HEARTBEAT") {
-    const client = clientRef.current;
+    const client = connection.getClient();
     if (!diagramId || !client?.connected) return;
     client.publish({
       destination: `/app/diagram/${diagramId}/lock`,
@@ -599,7 +600,7 @@ export function useCollaboration(
   }
 
   function sendCursor(x: number, y: number, selectedId: string | null) {
-    const client = clientRef.current;
+    const client = connection.getClient();
     if (!diagramId || !client?.connected) return;
     const now = performance.now();
     if (now - lastCursorSentAt.current < THROTTLE_MS) return;

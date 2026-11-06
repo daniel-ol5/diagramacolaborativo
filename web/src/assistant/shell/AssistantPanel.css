@@ -1,0 +1,89 @@
+/* Panel lateral del asistente. Ocupa su propia columna a la derecha del
+   lienzo (no se superpone): el panel "Relacionar", que es absolute dentro
+   de .app__canvas, se corre con el borde derecho del lienzo y nunca lo tapa. */
+.assistant-panel {
+  /* Sin transicion de ancho a proposito: React Flow se reajusta UNA vez al
+     abrir y otra al cerrar (su ResizeObserver), sin saltos intermedios. */
+  flex: 0 0 clamp(340px, 28vw, 400px);
+  width: clamp(340px, 28vw, 400px);
+  max-width: 100%;
+  min-height: 0;
+  position: relative;
+  /* Por encima de la barra "Relacionar" (18), por debajo de los avisos del
+     lienzo (20) y de la barra superior (25). */
+  z-index: 19;
+  display: flex;
+  flex-direction: column;
+  background: var(--gray-page);
+  border-left: 1px solid var(--color-border-muted);
+  box-shadow: var(--shadow-md);
+  color: var(--brand-dark);
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
+  font-size: var(--font-size-base);
+}
+
+/* Pantallas angostas: el panel se superpone al lienzo en vez de achicarlo. */
+@media (max-width: 1099.98px) {
+  .assistant-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+  }
+}
+
+/* Misma altura visual que la barra superior (10 + 28 + 10 + borde de 2 = 50 px). */
+.assistant-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 50px;
+  padding: 0 var(--space-4);
+  background: var(--brand-dark);
+  border-bottom: 2px solid var(--brand-light);
+}
+
+.assistant-panel__title {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--color-text-on-dark);
+}
+
+.assistant-panel__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--brand-light);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+}
+
+/* Nada de texto blanco sobre --brand-primary (3,21:1): el hover sube a
+   --brand-dark-elevated y el texto pasa a blanco sobre fondo oscuro. */
+.assistant-panel__close:hover {
+  background: var(--brand-dark-elevated);
+  color: var(--color-text-on-dark);
+}
+
+.assistant-panel__close:focus-visible {
+  outline: 2px solid var(--brand-light);
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+/* El desplazamiento y el relleno (--space-4) los pone el contenido: la
+   lista de mensajes scrollea sola y el campo de envio queda fijo abajo. */
+.assistant-panel__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}

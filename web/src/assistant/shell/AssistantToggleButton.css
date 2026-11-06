@@ -1,0 +1,42 @@
+/* Mismo aspecto que .app__toolbar-group button (App.css), con estilo propio
+   porque el boton vive en el bloque derecho de la barra. */
+.assistant-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 9px;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(123, 178, 216, 0.32);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-on-dark);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.assistant-toggle:hover {
+  background: rgba(123, 178, 216, 0.22);
+  border-color: var(--brand-light);
+}
+
+/* Activo: --brand-light con texto --brand-dark (~5,1:1). Nada de texto
+   blanco sobre --brand-primary (3,21:1). */
+.assistant-toggle--active,
+.assistant-toggle--active:hover {
+  background: var(--brand-light);
+  border-color: var(--brand-light);
+  color: var(--brand-dark);
+  font-weight: 600;
+}
+
+.assistant-toggle:focus-visible {
+  outline: 2px solid var(--brand-light);
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+.assistant-toggle__icon {
+  flex-shrink: 0;
+}

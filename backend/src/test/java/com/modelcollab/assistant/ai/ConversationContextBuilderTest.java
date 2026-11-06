@@ -209,7 +209,7 @@ class ConversationContextBuilderTest {
         String intermedio = builder.build(d, List.of(), null).system();
 
         assertThat(basico).contains("palabras simples");
-        assertThat(intermedio).contains("conocen lo básico de UML");
+        assertThat(intermedio).contains("conocen lo básico de desarrollo de software y de UML");
     }
 
     @Test

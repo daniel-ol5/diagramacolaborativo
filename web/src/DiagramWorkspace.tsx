@@ -43,6 +43,8 @@ import { toErEdges } from "./modeling/toErEdges";
 import { fetchSchemaPreview, type SchemaPreview } from "./modeling/schemaPreviewApi";
 import { exportXmi } from "./xmi/xmiApi";
 import { ImportXmiModal } from "./xmi/ImportXmiModal";
+import { AssistantToggleButton } from "./assistant/shell/AssistantToggleButton";
+import { blackOrWhiteText } from "./lib/readableTextColor";
 import "./App.css";
 
 const nodeTypes = { umlClass: UmlClassNode, erTable: ErTableNode };
@@ -79,23 +81,62 @@ function CollaborationToasts() {
   );
 }
 
-/** Quienes estan en la sala ahora. Dos pestañas del mismo usuario cuentan como una sola persona: lo dedupe el servidor. */
+/** Primera letra en mayuscula, para los circulos de presencia y de sesion. */
+function inicial(texto: string): string {
+  return (texto.trim()[0] ?? "?").toUpperCase();
+}
+
+/** Cuantos circulos de presencia se muestran antes del "+N". */
+const ROSTER_VISIBLES = 3;
+
+/**
+ * Quienes estan en la sala ahora (el servidor incluye al propio usuario).
+ * Dos pestañas del mismo usuario cuentan como una sola persona: lo dedupe el servidor.
+ * El propio va PRIMERO, con anillo y "Tú (Nombre)"; los demas, en el orden
+ * en que llegan. Los colores son los del servidor (los mismos del cursor y
+ * del authorColor del chat): no se tocan.
+ */
 function RosterPanel() {
   const roster = useCollaborationStore((s) => s.roster);
+  const myUserId = useCollaborationStore((s) => s.myUserId);
   if (roster.length === 0) return null;
+
+  const yo = roster.find((p) => p.userId === myUserId);
+  const ordenados = yo ? [yo, ...roster.filter((p) => p !== yo)] : roster;
+  const visibles = ordenados.slice(0, ROSTER_VISIBLES);
+  const resto = ordenados.slice(ROSTER_VISIBLES);
+  const nombresResto = resto.map((p) => p.userName).join(", ");
+
   return (
-    <div className="app__roster" title={roster.map((p) => p.userName).join(", ")}>
-      {roster.map((p) => (
-        <span key={p.userId} className="app__roster-chip">
-          {/* El color de colaborador identifica, no rellena: un punto alcanza. La
-              paleta esta medida como trazo, no como fondo con texto encima --
-              con relleno, la legibilidad del texto dependia de cual de los ocho
-              colores le tocara (uno daba 4.41:1, por debajo de 4.5). Con el
-              punto, el texto siempre esta en el color normal de la interfaz. */}
-          <span className="app__roster-chip-dot" style={{ background: p.color }} aria-hidden="true" />
-          {p.userName.split(" ")[0]}
+    <div className="app__roster" role="group" aria-label="Personas conectadas">
+      {visibles.map((p) => {
+        const esYo = p === yo;
+        const etiqueta = esYo ? `Tú (${p.userName})` : p.userName;
+        return (
+          // El color del colaborador es RELLENO: la inicial va en blanco o
+          // negro, el que mas contraste dé con ESE color (todos >= 4,5:1).
+          <span
+            key={p.userId}
+            role="img"
+            className={`app__roster-avatar${esYo ? " app__roster-avatar--me" : ""}`}
+            style={{ background: p.color, color: blackOrWhiteText(p.color) }}
+            title={etiqueta}
+            aria-label={etiqueta}
+          >
+            {inicial(p.userName)}
+          </span>
+        );
+      })}
+      {resto.length > 0 && (
+        <span
+          role="img"
+          className="app__roster-avatar app__roster-avatar--more"
+          title={nombresResto}
+          aria-label={`y ${resto.length} más: ${nombresResto}`}
+        >
+          +{resto.length}
         </span>
-      ))}
+      )}
     </div>
   );
 }
@@ -203,6 +244,10 @@ interface Props {
   projectId: string | null;
   /** Lo que va a la izquierda de la barra de herramientas: el selector de fixtures del demo, o un enlace de "volver" en el flujo real. */
   toolbarLeft: ReactNode;
+  /** CU19: si viene, se muestra el boton "Chat IA" (despues de "Comando"). Lo maneja DiagramScreen. */
+  assistant?: { open: boolean; onToggle: () => void };
+  /** Panel lateral a la derecha del lienzo (lo monta DiagramScreen). */
+  sidePanel?: ReactNode;
 }
 
 /**
@@ -212,7 +257,7 @@ interface Props {
  * de un proyecto -- la diferencia entre los dos es solo `diagramId` (null
  * en el demo salvo para "barberia") y que hay a la izquierda de la barra.
  */
-export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft }: Props) {
+export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft, assistant, sidePanel }: Props) {
   const [showNewClass, setShowNewClass] = useState(false);
   const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
   const [validationReport, setValidationReport] = useState<{ report: ValidationReport; blocked: boolean } | null>(null);
@@ -541,8 +586,9 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft }:
               className={`app__view-toggle-btn${viewMode === "er" ? " app__view-toggle-btn--active" : ""}`}
               onClick={() => setViewMode("er")}
               title="Notación Entidad-Relación (esquema físico)"
+              aria-label="Entidad-Relación"
             >
-              Entidad-Relación
+              ER
             </button>
           </div>
         )}
@@ -573,22 +619,40 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft }:
           )}
         </div>
 
-        {diagramId && (
-          <span
-            className="app__collab-status"
-            data-status={collaboration.error ? "error" : collaboration.status}
-          >
-            {collaboration.error && `⚠ ${collaboration.error}`}
-            {!collaboration.error && collaboration.status === "conectado" && "● en vivo"}
-            {!collaboration.error && collaboration.status === "conectando" && "○ conectando…"}
-            {!collaboration.error && collaboration.status === "desconectado" && "○ desconectado"}
-            {!collaboration.error && collaboration.status === "error" && "⚠ error de conexión"}
+        {/* Lado derecho: estado en vivo, Chat IA, presencia y sesion, en un solo bloque. */}
+        <div className="app__toolbar-right">
+          {diagramId && (
+            <span
+              className="app__collab-status"
+              data-status={collaboration.error ? "error" : collaboration.status}
+              title={collaboration.error ?? undefined}
+            >
+              {collaboration.error && `⚠ ${collaboration.error}`}
+              {!collaboration.error && collaboration.status === "conectado" && "● en vivo"}
+              {!collaboration.error && collaboration.status === "conectando" && "○ conectando…"}
+              {!collaboration.error && collaboration.status === "desconectado" && "○ desconectado"}
+              {!collaboration.error && collaboration.status === "error" && "⚠ error de conexión"}
+            </span>
+          )}
+          {assistant && <AssistantToggleButton open={assistant.open} onToggle={assistant.onToggle} />}
+          {diagramId && <RosterPanel />}
+          {/* Divisor: la cuenta no es una persona mas de la presencia. */}
+          <span className="app__toolbar-divider" aria-hidden="true" />
+          <span className="app__session" role="img" title={session.email} aria-label={session.email}>
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+              <circle cx="8" cy="5.5" r="2.75" fill="none" stroke="currentColor" strokeWidth="1.5" />
+              <path
+                d="M2.75 13.5c.6-2.6 2.7-4 5.25-4s4.65 1.4 5.25 4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
           </span>
-        )}
-        {diagramId && <RosterPanel />}
-
-        <span className="app__session">{session.email}</span>
+        </div>
       </header>
+      <div className="app__body">
       <div className="app__canvas">
         <UmlMarkerDefs />
         <ErMarkerDefs />
@@ -607,6 +671,8 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft }:
                     type="button"
                     className={`app__rel-tool-btn${isActive ? " app__rel-tool-btn--active" : ""}`}
                     title={`${tool.label} — Clic en clase origen y luego en destino`}
+                    aria-label={tool.label}
+                    aria-pressed={isActive}
                     onClick={() => {
                       if (isActive) {
                         setActiveRelTool(null);
@@ -701,6 +767,8 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft }:
             {diagramId && <CursorOverlay />}
           </ReactFlow>
         </CollaborationActionsContext.Provider>
+      </div>
+      {sidePanel}
       </div>
 
       {showNewClass && <NewClassModal onCreate={handleCreateClass} onClose={() => setShowNewClass(false)} />}

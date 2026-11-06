@@ -576,6 +576,21 @@ class AssistantOrchestratorTest {
     }
 
     @Test
+    @DisplayName("Con FakeChatClient, el pedido real lleva el rol senior y las reglas de alcance y honestidad")
+    void pedidoConReglasDeAlcance() {
+        escribir(ana, "@IA ¿qué clima hace hoy?");
+
+        assertThat(systemDelUnicoPedido())
+                .contains("un desarrollador senior más del grupo")
+                .contains("ANTE LA DUDA DE SI ALGO ES DE DESARROLLO DE SOFTWARE, AYUDAS.")
+                .contains("No tienes acceso a internet ni a datos en tiempo real")
+                .contains("Si no estás seguro de algo, dilo en vez de inventar.")
+                .contains("Comando sugerido:")
+                .contains("Responde SIEMPRE dirigiéndote a Ana por su nombre");
+        respondioSinAvisos();
+    }
+
+    @Test
     @DisplayName("Un diagramId que no es UUID (dato raro en el store) no rompe la respuesta")
     void diagramIdMalFormado() {
         ChatMessage raro = new ChatMessage("m1", PROYECTO.toString(), "no-es-uuid", 1, ChatAuthorType.USER,
