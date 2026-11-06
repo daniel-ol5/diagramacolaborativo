@@ -11,6 +11,8 @@ import com.modelcollab.assistant.core.ChatMessageKind;
 import com.modelcollab.assistant.core.ChatPublisher;
 import com.modelcollab.assistant.store.InMemoryChatStore;
 import com.modelcollab.collaboration.interceptor.StompPrincipal;
+import com.modelcollab.metamodel.model.CanonicalModel;
+import com.modelcollab.metamodel.model.ClassEntity;
 import com.modelcollab.project.model.ProjectRole;
 import java.time.Clock;
 import java.time.Duration;
@@ -67,11 +69,32 @@ class AssistantOrchestratorTest {
 
     private static final class Participantes implements ChatParticipants {
         final Map<UUID, String> nombres = new ConcurrentHashMap<>();
+        /** Diagramas que ChatService acepta al guardar, sea cual sea el proyecto (simula una validación vieja). */
+        final java.util.Set<UUID> diagramasAceptados = ConcurrentHashMap.newKeySet();
         @Override public Optional<ProjectRole> roleIn(UUID p, UUID u) {
             return nombres.containsKey(u) ? Optional.of(ProjectRole.VIEWER) : Optional.empty();
         }
         @Override public Optional<String> fullName(UUID u) { return Optional.ofNullable(nombres.get(u)); }
-        @Override public boolean diagramBelongsToProject(UUID d, UUID p) { return false; }
+        @Override public boolean diagramBelongsToProject(UUID d, UUID p) { return diagramasAceptados.contains(d); }
+    }
+
+    /** Fuente de diagramas en memoria, con la misma comprobación de proyecto que la de JPA. */
+    private static final class Diagramas implements DiagramContextSource {
+        private record Guardado(UUID proyecto, CanonicalModel modelo) {}
+        final Map<UUID, Guardado> guardados = new ConcurrentHashMap<>();
+        final List<UUID> consultados = Collections.synchronizedList(new ArrayList<>());
+        volatile boolean fallar;
+        void guardar(UUID diagrama, UUID proyecto, CanonicalModel modelo) {
+            guardados.put(diagrama, new Guardado(proyecto, modelo));
+        }
+        @Override public Optional<CanonicalModel> cargar(UUID diagrama, UUID proyecto) {
+            consultados.add(diagrama);
+            if (fallar) {
+                throw new IllegalStateException("fallo simulado");
+            }
+            Guardado g = guardados.get(diagrama);
+            return g == null || !g.proyecto().equals(proyecto) ? Optional.empty() : Optional.of(g.modelo());
+        }
     }
 
     /** Por defecto responde como FakeChatClient; cada test puede cambiar el comportamiento. */
@@ -108,6 +131,7 @@ class AssistantOrchestratorTest {
     private InMemoryChatStore store;
     private Publicador publicador;
     private Participantes participantes;
+    private Diagramas diagramas;
     private Modelo modelo;
     private Control control;
     private volatile AssistantMode modo;
@@ -127,11 +151,12 @@ class AssistantOrchestratorTest {
         store = new InMemoryChatStore();
         publicador = new Publicador();
         participantes = new Participantes();
+        diagramas = new Diagramas();
         modelo = new Modelo();
         modo = AssistantMode.ON_MENTION;
         chat = new ChatService(store, publicador, participantes, List.of(m -> orquestador.onUserMessage(m)), reloj);
         orquestador = new AssistantOrchestrator(chat, store, publicador, modelo,
-                p -> new AssistantSettings(modo, null, null), ejecutor, reloj, tope);
+                p -> new AssistantSettings(modo, null, null), ejecutor, diagramas, reloj, tope);
         ana = UUID.randomUUID();
         carlos = UUID.randomUUID();
         participantes.nombres.put(ana, "Ana Pérez");
@@ -145,6 +170,12 @@ class AssistantOrchestratorTest {
     private ChatMessage escribirEn(UUID proyecto, UUID quien, String texto, String replyToId) {
         return chat.postFromUser(proyecto, new StompPrincipal(quien),
                 new ChatPostRequest(UUID.randomUUID().toString(), texto, null, replyToId)).message();
+    }
+
+    private ChatMessage escribirConDiagrama(UUID quien, String texto, UUID diagrama) {
+        participantes.diagramasAceptados.add(diagrama);
+        return chat.postFromUser(PROYECTO, new StompPrincipal(quien),
+                new ChatPostRequest(UUID.randomUUID().toString(), texto, diagrama, null)).message();
     }
 
     private List<ChatMessage> de(UUID proyecto, ChatAuthorType tipo) {
@@ -448,5 +479,110 @@ class AssistantOrchestratorTest {
         // El orden en el broker: la respuesta de la IA se difunde antes del "off".
         assertThat(publicador.difundidos).extracting(ChatMessage::authorType)
                 .containsExactly(ChatAuthorType.USER, ChatAuthorType.AI);
+    }
+
+    // ------------------------------------------------- contexto del diagrama (CU20)
+
+    private static CanonicalModel conCita() {
+        return new CanonicalModel(null, 1L, List.of(),
+                List.of(new ClassEntity("c1", "Cita", null, false, null, null, null, List.of(), List.of())),
+                List.of());
+    }
+
+    private String systemDelUnicoPedido() {
+        assertThat(modelo.pedidos).hasSize(1);
+        return modelo.pedidos.get(0).system();
+    }
+
+    private void respondioSinAvisos() {
+        assertThat(de(PROYECTO, ChatAuthorType.AI)).extracting(ChatMessage::text)
+                .containsExactly("Hola Ana, (respuesta simulada)");
+        assertThat(avisos()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Con diagramId del proyecto, el modelo recibe el resumen del diagrama")
+    void conDiagrama() {
+        UUID diagrama = UUID.randomUUID();
+        diagramas.guardar(diagrama, PROYECTO, conCita());
+
+        escribirConDiagrama(ana, "@IA ¿qué le falta a mi diagrama?", diagrama);
+
+        assertThat(systemDelUnicoPedido())
+                .contains(ConversationContextBuilder.ENCABEZADO_DIAGRAMA + "\n<<<\nClases (1):\n- Cita\n>>>");
+        assertThat(diagramas.consultados).containsExactly(diagrama);
+        respondioSinAvisos();
+    }
+
+    @Test
+    @DisplayName("Con un diagrama vacío, el bloque lo dice")
+    void diagramaVacio() {
+        UUID diagrama = UUID.randomUUID();
+        diagramas.guardar(diagrama, PROYECTO, CanonicalModel.empty());
+
+        escribirConDiagrama(ana, "@IA ¿por dónde empiezo?", diagrama);
+
+        assertThat(systemDelUnicoPedido()).contains("<<<\n" + DiagramDigest.VACIO + "\n>>>");
+        respondioSinAvisos();
+    }
+
+    @Test
+    @DisplayName("Sin diagramId no se consulta nada ni hay bloque, y responde igual")
+    void sinDiagramId() {
+        escribir(ana, "@IA hola");
+
+        assertThat(systemDelUnicoPedido()).doesNotContain(ConversationContextBuilder.ENCABEZADO_DIAGRAMA);
+        assertThat(diagramas.consultados).isEmpty();
+        respondioSinAvisos();
+    }
+
+    @Test
+    @DisplayName("Si el diagrama ya no existe, responde sin bloque")
+    void diagramaInexistente() {
+        UUID diagrama = UUID.randomUUID();
+
+        escribirConDiagrama(ana, "@IA hola", diagrama);
+
+        assertThat(systemDelUnicoPedido()).doesNotContain(ConversationContextBuilder.ENCABEZADO_DIAGRAMA);
+        assertThat(diagramas.consultados).containsExactly(diagrama);
+        respondioSinAvisos();
+    }
+
+    @Test
+    @DisplayName("Si el diagrama es de otro proyecto, la carga lo vuelve a comprobar y no hay bloque")
+    void diagramaDeOtroProyecto() {
+        UUID diagrama = UUID.randomUUID();
+        diagramas.guardar(diagrama, OTRO, conCita());
+
+        escribirConDiagrama(ana, "@IA hola", diagrama);
+
+        assertThat(systemDelUnicoPedido())
+                .doesNotContain(ConversationContextBuilder.ENCABEZADO_DIAGRAMA).doesNotContain("- Cita");
+        respondioSinAvisos();
+    }
+
+    @Test
+    @DisplayName("Si la carga del diagrama falla, responde sin bloque y sin aviso de error")
+    void cargaQueFalla() {
+        UUID diagrama = UUID.randomUUID();
+        diagramas.guardar(diagrama, PROYECTO, conCita());
+        diagramas.fallar = true;
+
+        escribirConDiagrama(ana, "@IA hola", diagrama);
+
+        assertThat(systemDelUnicoPedido()).doesNotContain(ConversationContextBuilder.ENCABEZADO_DIAGRAMA);
+        respondioSinAvisos();
+        assertThat(publicador.escribiendo).extracting(Escribiendo::active).containsExactly(true, false);
+    }
+
+    @Test
+    @DisplayName("Un diagramId que no es UUID (dato raro en el store) no rompe la respuesta")
+    void diagramIdMalFormado() {
+        ChatMessage raro = new ChatMessage("m1", PROYECTO.toString(), "no-es-uuid", 1, ChatAuthorType.USER,
+                ana.toString(), "Ana Pérez", null, null, null, null, "c1", ChatMessageKind.CHAT,
+                "@IA hola", Instant.EPOCH, null);
+
+        assertThat(orquestador.resumenDelDiagrama(PROYECTO, raro)).isNull();
+        assertThat(diagramas.consultados).isEmpty();
     }
 }

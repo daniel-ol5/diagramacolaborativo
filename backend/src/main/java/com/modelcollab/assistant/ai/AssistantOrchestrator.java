@@ -48,7 +48,9 @@ import org.springframework.stereotype.Component;
  *       aviso del sistema y esa pregunta se descarta.
  *   <li>Todo en el {@link AssistantExecutor} (hilos virtuales): {@link #onUserMessage} vuelve
  *       enseguida, sin bloquear el hilo de STOMP ni la petición REST.
- *   <li>Secuencia: AI_TYPING on → últimos {@value #VENTANA} mensajes → {@link
+ *   <li>Secuencia: AI_TYPING on → últimos {@value #VENTANA} mensajes → resumen del diagrama del
+ *       mensaje, si trae {@code diagramId} y es del proyecto ({@link DiagramContextSource} y
+ *       {@link DiagramDigest}; si falla, sin resumen) → {@link
  *       ConversationContextBuilder} → modelo (tope de 30 s) → {@link AddressingGuard} → {@code
  *       postFromAi} → AI_TYPING off, <b>siempre</b>, también si algo falla.
  *   <li>Hasta {@value #LLAMADAS_POR_MINUTO} llamadas al modelo por minuto y proyecto; al
@@ -84,6 +86,7 @@ public class AssistantOrchestrator implements UserMessageListener {
     private final AiChatModelClient cliente;
     private final AssistantSettingsProvider ajustes;
     private final AssistantExecutor ejecutor;
+    private final DiagramContextSource diagramas;
     private final Clock reloj;
     private final Duration tope;
     private final ConversationContextBuilder contexto = new ConversationContextBuilder();
@@ -111,8 +114,10 @@ public class AssistantOrchestrator implements UserMessageListener {
             ChatPublisher publisher,
             AiChatModelClient cliente,
             AssistantSettingsProvider ajustes,
-            AssistantExecutor ejecutor) {
-        this(chatService, store, publisher, cliente, ajustes, ejecutor, Clock.systemUTC(), TOPE_DEL_MODELO);
+            AssistantExecutor ejecutor,
+            DiagramContextSource diagramas) {
+        this(chatService, store, publisher, cliente, ajustes, ejecutor, diagramas,
+                Clock.systemUTC(), TOPE_DEL_MODELO);
     }
 
     /** Con reloj y tope inyectables, para los tests. */
@@ -123,6 +128,7 @@ public class AssistantOrchestrator implements UserMessageListener {
             AiChatModelClient cliente,
             AssistantSettingsProvider ajustes,
             AssistantExecutor ejecutor,
+            DiagramContextSource diagramas,
             Clock reloj,
             Duration tope) {
         this.chatService = chatService;
@@ -131,6 +137,7 @@ public class AssistantOrchestrator implements UserMessageListener {
         this.cliente = cliente;
         this.ajustes = ajustes;
         this.ejecutor = ejecutor;
+        this.diagramas = diagramas == null ? DiagramContextSource.ninguno() : diagramas;
         this.reloj = reloj;
         this.tope = tope;
         this.limite = new SlidingWindowRateLimiter<>(LLAMADAS_POR_MINUTO, Duration.ofMinutes(1), reloj);
@@ -257,7 +264,8 @@ public class AssistantOrchestrator implements UserMessageListener {
         escribiendo(proyecto, pregunta, true);
         try {
             List<ChatMessage> historial = store.latest(proyecto.toString(), VENTANA);
-            ChatRequest pedido = contexto.build(pregunta, historial, pendiente.ajustes());
+            ChatRequest pedido = contexto.build(
+                    pregunta, historial, pendiente.ajustes(), resumenDelDiagrama(proyecto, pregunta));
             ChatCompletion respuesta = llamarConTope(pedido);
             String texto = AddressingGuard.apply(respuesta.text(), pedido.askerFirstName());
             chatService.postFromAi(proyecto, ChatAuthorType.AI, texto, pregunta);
@@ -275,6 +283,24 @@ public class AssistantOrchestrator implements UserMessageListener {
             sistema(proyecto, NO_DISPONIBLE);
         } finally {
             escribiendo(proyecto, pregunta, false);
+        }
+    }
+
+    /**
+     * El digest del diagrama del mensaje, o {@code null}: sin {@code diagramId}, si no existe, es
+     * de otro proyecto o falla la carga. Nunca lanza; el log no lleva ids ni contenido.
+     */
+    String resumenDelDiagrama(UUID proyecto, ChatMessage pregunta) {
+        String id = pregunta.diagramId();
+        if (id == null || id.isBlank()) {
+            return null;
+        }
+        try {
+            return diagramas.cargar(UUID.fromString(id), proyecto).map(DiagramDigest::of).orElse(null);
+        } catch (RuntimeException e) {
+            log.warn("Chat: no se pudo armar el resumen del diagrama; se responde sin él ({})",
+                    e.getClass().getSimpleName());
+            return null;
         }
     }
 
