@@ -7,6 +7,7 @@ import { fetchDiagramSnapshot } from "./services/diagramApi";
 import { StompConnectionProvider } from "./assistant/shell/StompConnectionProvider";
 import { AssistantPanel } from "./assistant/shell/AssistantPanel";
 import { ChatPanel } from "./assistant/chat/ChatPanel";
+import { AssistantSettingsModal } from "./assistant/settings/AssistantSettingsModal";
 
 interface Props {
   session: Session;
@@ -26,6 +27,8 @@ export function DiagramScreen({ session }: Props) {
   const [loaded, setLoaded] = useState(false);
   // CU19: el panel del asistente se monta aca (no dentro del lienzo).
   const [assistantOpen, setAssistantOpen] = useState(false);
+  // CU21: modal de configuracion de la IA para el proyecto.
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     if (!diagramId) return;
@@ -69,7 +72,10 @@ export function DiagramScreen({ session }: Props) {
         assistant={projectId ? { open: assistantOpen, onToggle: () => setAssistantOpen((v) => !v) } : undefined}
         sidePanel={
           projectId && assistantOpen ? (
-            <AssistantPanel onClose={() => setAssistantOpen(false)}>
+            <AssistantPanel
+              onClose={() => setAssistantOpen(false)}
+              onOpenSettings={() => setSettingsOpen(true)}
+            >
               <ChatPanel
                 projectId={projectId}
                 diagramId={diagramId}
@@ -86,6 +92,13 @@ export function DiagramScreen({ session }: Props) {
           </Link>
         }
       />
+      {settingsOpen && projectId && (
+        <AssistantSettingsModal
+          projectId={projectId}
+          token={session.token}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
     </StompConnectionProvider>
   );
 }

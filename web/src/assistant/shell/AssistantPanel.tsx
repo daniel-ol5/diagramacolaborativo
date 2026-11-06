@@ -3,6 +3,7 @@ import "./AssistantPanel.css";
 
 interface Props {
   onClose: () => void;
+  onOpenSettings?: () => void;
   /** El contenido de la pestaña activa (hoy, solo el chat). */
   children: ReactNode;
 }
@@ -16,16 +17,32 @@ interface Props {
  * revision) en la cabecera sin cambiar el marco: el contenido llega como
  * children.
  */
-export function AssistantPanel({ onClose, children }: Props) {
+export function AssistantPanel({ onClose, onOpenSettings, children }: Props) {
   return (
     <aside id="assistant-panel" className="assistant-panel" aria-labelledby="assistant-panel-title">
       <header className="assistant-panel__header">
         <h2 id="assistant-panel-title" className="assistant-panel__title">
           Chat IA
         </h2>
-        <button type="button" className="assistant-panel__close" onClick={onClose} aria-label="Cerrar el chat IA">
-          ✕
-        </button>
+        <div className="assistant-panel__header-actions">
+          {onOpenSettings && (
+            <button
+              type="button"
+              className="assistant-panel__icon-btn"
+              onClick={onOpenSettings}
+              title="Configuración de la IA del proyecto"
+              aria-label="Configuración de la IA"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+              </svg>
+            </button>
+          )}
+          <button type="button" className="assistant-panel__close" onClick={onClose} aria-label="Cerrar el chat IA">
+            ✕
+          </button>
+        </div>
       </header>
       <div className="assistant-panel__body">{children}</div>
     </aside>

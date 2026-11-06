@@ -117,7 +117,7 @@ public final class ConversationContextBuilder {
         String trato = pila.isEmpty() ? nombre : pila;
         return new ChatRequest(
                 systemPrompt(nombre, trato, conf.level(), hilo, bloqueDeDiagrama(digest)),
-                turnos, null, null, pila);
+                turnos, null, conf.maxTokens(), pila);
     }
 
     /** El digest listo para el bloque, o {@code null} si no hay. */
