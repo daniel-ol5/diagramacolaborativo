@@ -61,12 +61,16 @@ public class ChatService {
     static final int LARGO_MAXIMO_CLIENT_ID = 100;
     public static final int HISTORIAL_POR_DEFECTO = 50;
     public static final int HISTORIAL_MAXIMO = 100;
+    public static final int BUSQUEDA_MINIMA = 2;
+    public static final int BUSQUEDA_MAXIMA = 100;
     public static final String NOMBRE_IA = "IA";
     public static final String NOMBRE_SISTEMA = "Sistema";
     static final String PREFIJO_IA = "ai-";
     static final String PREFIJO_SISTEMA = "sys-";
 
     private final ChatStore store;
+    /** CU23. Null solo si alguien construye el servicio con un ChatStore que no lo implementa. */
+    private final ChatHistoryStore historyStore;
     private final ChatPublisher publisher;
     private final ChatParticipants participants;
     private final List<UserMessageListener> listeners;
@@ -75,6 +79,19 @@ public class ChatService {
     private final Map<UUID, ReentrantLock> candados = new ConcurrentHashMap<>();
 
     @Autowired
+    public ChatService(
+            ChatStore store,
+            ChatHistoryStore historyStore,
+            ChatPublisher publisher,
+            ChatParticipants participants,
+            List<UserMessageListener> listeners) {
+        this(store, historyStore, publisher, participants, listeners, Clock.systemUTC());
+    }
+
+    /**
+     * Sin ChatHistoryStore explícito: lo toma del propio store si lo implementa (los dos de
+     * {@code assistant/store} lo hacen). Así los tests que ya existían no cambian.
+     */
     public ChatService(
             ChatStore store,
             ChatPublisher publisher,
@@ -90,7 +107,18 @@ public class ChatService {
             ChatParticipants participants,
             List<UserMessageListener> listeners,
             Clock reloj) {
+        this(store, store instanceof ChatHistoryStore h ? h : null, publisher, participants, listeners, reloj);
+    }
+
+    public ChatService(
+            ChatStore store,
+            ChatHistoryStore historyStore,
+            ChatPublisher publisher,
+            ChatParticipants participants,
+            List<UserMessageListener> listeners,
+            Clock reloj) {
         this.store = store;
+        this.historyStore = historyStore;
         this.publisher = publisher;
         this.participants = participants;
         this.listeners = List.copyOf(listeners);
@@ -196,11 +224,37 @@ public class ChatService {
      */
     public ChatHistoryPage history(
             UUID projectId, Principal principal, Long beforeSeq, Long afterSeq, Integer limit) {
-        UUID userId = usuarioDe(principal);
-        if (projectId == null || participants.roleIn(projectId, userId).isEmpty()) {
-            throw new ChatRejectedException(
-                    ChatErrorCode.NOT_PROJECT_MEMBER, "No sos miembro de este proyecto");
-        }
+        return history(projectId, principal, beforeSeq, afterSeq, limit, null, null, null);
+    }
+
+    /**
+     * Igual que {@link #history(UUID, Principal, Long, Long, Integer)}, con filtros opcionales y
+     * combinables (CU23). Los cursores, {@code limit} y {@code hasMore} funcionan igual, pero
+     * <b>sobre el conjunto filtrado</b>.
+     *
+     * <ul>
+     *   <li>{@code q}: se recorta; de {@value #BUSQUEDA_MINIMA} a {@value #BUSQUEDA_MAXIMA}
+     *       caracteres. Texto literal ({@code %}, {@code _} y {@code \} no son comodines), sin
+     *       distinguir mayúsculas, solo en este proyecto. Distingue acentos.
+     *   <li>{@code authorType}: USER, AI o SYSTEM. {@code kind}: CHAT, ANSWER, REVIEW, SUMMARY o
+     *       SYSTEM. Sin distinguir mayúsculas.
+     *   <li>{@code null} = sin ese filtro. Cualquier otro valor inválido, en blanco incluido:
+     *       {@code INVALID_PAYLOAD}.
+     * </ul>
+     *
+     * <p>Primero la membresía, después los cursores y por último los filtros. Sin ningún filtro
+     * se usa exactamente el camino de siempre ({@code latest}/{@code before}/{@code after}).
+     */
+    public ChatHistoryPage history(
+            UUID projectId,
+            Principal principal,
+            Long beforeSeq,
+            Long afterSeq,
+            Integer limit,
+            String q,
+            String authorType,
+            String kind) {
+        exigirMiembro(projectId, principal);
         if (beforeSeq != null && afterSeq != null) {
             throw new ChatRejectedException(
                     ChatErrorCode.INVALID_PAYLOAD, "Usá beforeSeq o afterSeq, no los dos");
@@ -209,23 +263,104 @@ public class ChatService {
             throw new ChatRejectedException(
                     ChatErrorCode.INVALID_PAYLOAD, "beforeSeq y afterSeq no pueden ser negativos");
         }
+        String busqueda = validarBusqueda(q);
+        ChatAuthorType tipo = enumDe(ChatAuthorType.class, authorType, "authorType");
+        ChatMessageKind clase = enumDe(ChatMessageKind.class, kind, "kind");
         int n = acotar(limit);
-        String proyecto = projectId.toString();
+        boolean adelante = afterSeq != null;
 
-        if (afterSeq != null) {
-            // Hacia adelante: el de más es el más nuevo, y se descarta del final.
-            List<ChatMessage> leidos = store.after(proyecto, afterSeq, n + 1);
-            boolean hayMas = leidos.size() > n;
-            return new ChatHistoryPage(hayMas ? leidos.subList(0, n) : leidos, hayMas);
+        List<ChatMessage> leidos;
+        if (busqueda == null && tipo == null && clase == null) {
+            String proyecto = projectId.toString();
+            leidos = adelante
+                    ? store.after(proyecto, afterSeq, n + 1)
+                    : beforeSeq != null
+                            ? store.before(proyecto, beforeSeq, n + 1)
+                            : store.latest(proyecto, n + 1);
+        } else {
+            leidos = historial().find(
+                    new ChatHistoryQuery(projectId, beforeSeq, afterSeq, n + 1, busqueda, tipo, clase));
         }
-        // Hacia atrás: el de más es el más viejo, y se descarta del principio.
-        List<ChatMessage> leidos =
-                beforeSeq != null
-                        ? store.before(proyecto, beforeSeq, n + 1)
-                        : store.latest(proyecto, n + 1);
         boolean hayMas = leidos.size() > n;
+        if (!hayMas) {
+            return new ChatHistoryPage(leidos, false);
+        }
+        // Hacia adelante el de más es el más nuevo (se descarta del final); hacia atrás es el
+        // más viejo (se descarta del principio).
         return new ChatHistoryPage(
-                hayMas ? leidos.subList(leidos.size() - n, leidos.size()) : leidos, hayMas);
+                adelante ? leidos.subList(0, n) : leidos.subList(leidos.size() - n, leidos.size()),
+                true);
+    }
+
+    /** null = sin búsqueda; si no, recortado y de 2 a 100 caracteres (code points). */
+    private static String validarBusqueda(String q) {
+        if (q == null) {
+            return null;
+        }
+        String recortado = q.strip();
+        int largo = recortado.codePointCount(0, recortado.length());
+        if (largo < BUSQUEDA_MINIMA || largo > BUSQUEDA_MAXIMA) {
+            throw new ChatRejectedException(
+                    ChatErrorCode.INVALID_PAYLOAD,
+                    "La búsqueda debe tener entre " + BUSQUEDA_MINIMA + " y " + BUSQUEDA_MAXIMA
+                            + " caracteres");
+        }
+        return recortado;
+    }
+
+    /** null = sin filtro; si no, el nombre del enum sin distinguir mayúsculas. */
+    private static <E extends Enum<E>> E enumDe(Class<E> tipo, String valor, String parametro) {
+        if (valor == null) {
+            return null;
+        }
+        try {
+            return Enum.valueOf(tipo, valor.strip().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new ChatRejectedException(
+                    ChatErrorCode.INVALID_PAYLOAD, "Valor inválido para " + parametro);
+        }
+    }
+
+    // ------------------------------------------------- estado de lectura (CU23)
+
+    /**
+     * Hasta dónde leyó esta persona el chat del proyecto, cuántos mensajes de otros (IA y
+     * sistema incluidos) tiene sin leer y cuál es el último seq. Cualquier miembro, VIEWER
+     * incluido: leer no modifica el diagrama.
+     */
+    public ChatReadState readState(UUID projectId, Principal principal) {
+        UUID userId = exigirMiembro(projectId, principal);
+        return historial().readState(projectId, userId);
+    }
+
+    /**
+     * Marca como leído hasta {@code upToSeq}. Solo avanza, se recorta al último seq del proyecto
+     * y es idempotente. {@code upToSeq} nulo o negativo: {@code INVALID_PAYLOAD}.
+     */
+    public ChatReadState markRead(UUID projectId, Principal principal, Long upToSeq) {
+        UUID userId = exigirMiembro(projectId, principal);
+        if (upToSeq == null || upToSeq < 0) {
+            throw new ChatRejectedException(
+                    ChatErrorCode.INVALID_PAYLOAD, "upToSeq es obligatorio y no puede ser negativo");
+        }
+        return historial().markRead(projectId, userId, upToSeq);
+    }
+
+    /** El usuario del Principal, si es miembro del proyecto (cualquier rol). */
+    private UUID exigirMiembro(UUID projectId, Principal principal) {
+        UUID userId = usuarioDe(principal);
+        if (projectId == null || participants.roleIn(projectId, userId).isEmpty()) {
+            throw new ChatRejectedException(
+                    ChatErrorCode.NOT_PROJECT_MEMBER, "No sos miembro de este proyecto");
+        }
+        return userId;
+    }
+
+    private ChatHistoryStore historial() {
+        if (historyStore == null) {
+            throw new IllegalStateException("El ChatStore configurado no implementa ChatHistoryStore");
+        }
+        return historyStore;
     }
 
     private static int acotar(Integer limit) {

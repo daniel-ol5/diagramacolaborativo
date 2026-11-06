@@ -5,6 +5,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.modelcollab.assistant.chat.ChatHistoryQuery;
+import com.modelcollab.assistant.chat.ChatHistoryStore;
+import com.modelcollab.assistant.chat.ChatReadState;
 import com.modelcollab.assistant.core.ChatMessage;
 import com.modelcollab.assistant.core.ChatStore;
 import jakarta.persistence.EntityManager;
@@ -43,7 +46,7 @@ import org.springframework.transaction.annotation.Transactional;
         name = "modelcollab.chat.store",
         havingValue = "postgres",
         matchIfMissing = true)
-public class JpaChatStore implements ChatStore {
+public class JpaChatStore implements ChatStore, ChatHistoryStore {
 
     /** Nombre del índice único parcial de V4; por él se reconoce un duplicado del cliente. */
     static final String INDICE_CLIENT_MESSAGE = "uq_chat_messages_client_message";
@@ -56,6 +59,40 @@ public class JpaChatStore implements ChatStore {
             INSERT INTO chat_counters (project_id, last_seq) VALUES (?, 1)
             ON CONFLICT (project_id) DO UPDATE SET last_seq = chat_counters.last_seq + 1
             RETURNING last_seq
+            """;
+
+    /**
+     * CU23: estado de lectura en una sola consulta, para que lastReadSeq, lastSeq y unreadCount
+     * salgan de la misma foto. Los parámetros van en orden de aparición: proyecto (lastSeq),
+     * proyecto y usuario (unread), proyecto y usuario (lastReadSeq). Los mensajes con
+     * {@code author_id} nulo (IA y sistema) cuentan como no leídos; {@code IS DISTINCT FROM} los
+     * incluye sin un OR aparte.
+     */
+    static final String ESTADO_DE_LECTURA =
+            """
+            SELECT r.last_read_seq,
+                   (SELECT COALESCE(MAX(m.seq), 0) FROM chat_messages m
+                     WHERE m.project_id = ?) AS last_seq,
+                   (SELECT COUNT(*) FROM chat_messages m
+                     WHERE m.project_id = ? AND m.seq > r.last_read_seq
+                       AND m.author_id IS DISTINCT FROM ?) AS unread
+              FROM (SELECT COALESCE(
+                       (SELECT s.last_read_seq FROM chat_read_state s
+                         WHERE s.project_id = ? AND s.user_id = ?), 0) AS last_read_seq) r
+            """;
+
+    /**
+     * CU23: marcar como leído en UNA sentencia atómica. El valor se recorta al mayor seq del
+     * proyecto (no se marca un futuro) y solo avanza (GREATEST con lo que ya había). Parámetros:
+     * proyecto, usuario, upToSeq, proyecto.
+     */
+    static final String MARCAR_LEIDO =
+            """
+            INSERT INTO chat_read_state (project_id, user_id, last_read_seq)
+            SELECT ?, ?, LEAST(?, COALESCE(MAX(m.seq), 0)) FROM chat_messages m WHERE m.project_id = ?
+            ON CONFLICT (project_id, user_id) DO UPDATE
+               SET last_read_seq = GREATEST(chat_read_state.last_read_seq, EXCLUDED.last_read_seq),
+                   updated_at = now()
             """;
 
     /**
@@ -210,6 +247,100 @@ public class JpaChatStore implements ChatStore {
                 .stream()
                 .map(JpaChatStore::aDominio)
                 .toList();
+    }
+
+    // ------------------------------------------------------ historial filtrado (CU23)
+
+    /** Carácter de escape del LIKE: ni barra invertida ni comillas, para no depender de cómo se escriben. */
+    static final char ESCAPE = '!';
+
+    /**
+     * El WHERE se arma solo con fragmentos fijos y todos los valores van como parámetros: nada
+     * del usuario se concatena al HQL.
+     *
+     * <p><b>Búsqueda:</b> {@code ilike} (Hibernate 6 lo traduce al ILIKE de PostgreSQL) sobre el
+     * texto, acotado al proyecto. No distingue mayúsculas, pero <b>sí distingue acentos</b>
+     * ("atributo" no encuentra "atribúto"); las mayúsculas fuera de ASCII dependen del LC_CTYPE de
+     * la base. Con el comodín al principio no hay índice para el texto: se recorre el índice
+     * {@code (project_id, seq)} del proyecto en el orden pedido y se cortan los primeros {@code
+     * limit} que coinciden. Suficiente para el chat de un proyecto.
+     *
+     * <p>Los comodines del usuario ({@code %}, {@code _}) se escapan con {@value #ESCAPE}; la barra
+     * invertida no es especial con {@code ESCAPE '!'}, así que también queda literal.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<ChatMessage> find(ChatHistoryQuery consulta) {
+        StringBuilder hql = new StringBuilder("select m from ChatMessageEntity m where m.projectId = :p");
+        if (consulta.beforeSeq() != null) {
+            hql.append(" and m.seq < :antes");
+        }
+        if (consulta.afterSeq() != null) {
+            hql.append(" and m.seq > :despues");
+        }
+        if (consulta.authorType() != null) {
+            hql.append(" and m.authorType = :tipo");
+        }
+        if (consulta.kind() != null) {
+            hql.append(" and m.kind = :clase");
+        }
+        if (consulta.q() != null) {
+            hql.append(" and m.text ilike :q escape '" + ESCAPE + "'");
+        }
+        boolean haciaAdelante = consulta.afterSeq() != null;
+        hql.append(haciaAdelante ? " order by m.seq asc" : " order by m.seq desc");
+
+        var query = em.createQuery(hql.toString(), ChatMessageEntity.class)
+                .setParameter("p", consulta.projectId())
+                .setMaxResults(consulta.limit());
+        if (consulta.beforeSeq() != null) {
+            query.setParameter("antes", consulta.beforeSeq());
+        }
+        if (consulta.afterSeq() != null) {
+            query.setParameter("despues", consulta.afterSeq());
+        }
+        if (consulta.authorType() != null) {
+            query.setParameter("tipo", consulta.authorType());
+        }
+        if (consulta.kind() != null) {
+            query.setParameter("clase", consulta.kind());
+        }
+        if (consulta.q() != null) {
+            query.setParameter("q", "%" + escaparLike(consulta.q()) + "%");
+        }
+        List<ChatMessageEntity> filas = query.getResultList();
+        return haciaAdelante ? filas.stream().map(JpaChatStore::aDominio).toList() : ascendente(filas);
+    }
+
+    /** {@code !}, {@code %} y {@code _} pasan a ser literales; el resto queda igual. */
+    static String escaparLike(String texto) {
+        StringBuilder s = new StringBuilder(texto.length() + 8);
+        for (char c : texto.toCharArray()) {
+            if (c == ESCAPE || c == '%' || c == '_') {
+                s.append(ESCAPE);
+            }
+            s.append(c);
+        }
+        return s.toString();
+    }
+
+    // ------------------------------------------------------ estado de lectura (CU23)
+
+    @Override
+    @Transactional(readOnly = true)
+    public ChatReadState readState(UUID projectId, UUID userId) {
+        return jdbc.queryForObject(
+                ESTADO_DE_LECTURA,
+                (rs, i) -> new ChatReadState(
+                        rs.getLong("last_read_seq"), rs.getLong("unread"), rs.getLong("last_seq")),
+                projectId, projectId, userId, projectId, userId);
+    }
+
+    @Override
+    @Transactional
+    public ChatReadState markRead(UUID projectId, UUID userId, long upToSeq) {
+        jdbc.update(MARCAR_LEIDO, projectId, userId, upToSeq, projectId);
+        return readState(projectId, userId);
     }
 
     /** "Los N más cercanos hacia atrás" se leen descendentes por el índice y se dan vuelta. */
