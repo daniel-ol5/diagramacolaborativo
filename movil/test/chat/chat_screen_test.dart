@@ -197,6 +197,8 @@ void main() {
     testWidgets('cada 3 s trae lo nuevo con afterSeq; pausa en segundo plano y reanuda al volver', (tester) async {
       final gets = <Map<String, String>>[];
       await _abrir(tester, (r) async {
+        // GET/PUT /chat/read (mensajes nuevos) no es parte del sondeo.
+        if (r.url.path.endsWith('/read')) return _json({'lastReadSeq': 0, 'unreadCount': 0, 'lastSeq': 0}, 200);
         gets.add(r.url.queryParameters);
         final after = r.url.queryParameters['afterSeq'];
         if (after == null) return _json({'messages': [_m('a', 1, 'primero')], 'hasMore': false}, 200);
@@ -230,6 +232,7 @@ void main() {
     testWidgets('hasMore=true vuelve a pedir en el acto, sin duplicar', (tester) async {
       final cursores = <String?>[];
       await _abrir(tester, (r) async {
+        if (r.url.path.endsWith('/read')) return _json({'lastReadSeq': 0, 'unreadCount': 0, 'lastSeq': 0}, 200);
         final after = r.url.queryParameters['afterSeq'];
         cursores.add(after);
         switch (after) {
@@ -410,13 +413,19 @@ void main() {
   });
 
   group('teclado', () {
-    Future<void> abrirConMensajes(WidgetTester tester) => _abrir(
-          tester,
-          (r) async => _json({
-            'messages': [for (var i = 1; i <= 30; i++) _m('m$i', i, 'mensaje $i')],
-            'hasMore': false,
-          }, 200),
-        );
+    Future<void> abrirConMensajes(WidgetTester tester) async {
+      await _abrir(
+        tester,
+        (r) async => _json({
+          'messages': [for (var i = 1; i <= 30; i++) _m('m$i', i, 'mensaje $i')],
+          'hasMore': false,
+        }, 200),
+      );
+      // El salto al final se completa en los frames siguientes.
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+      }
+    }
 
     bool campoConFoco(WidgetTester tester) =>
         tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus;
@@ -434,7 +443,7 @@ void main() {
       await abrirConMensajes(tester);
       await tester.showKeyboard(find.byType(TextField));
       expect(campoConFoco(tester), isTrue);
-      await tester.drag(find.byType(ListView), const Offset(0, 300));
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, 300));
       await tester.pump();
       expect(campoConFoco(tester), isFalse);
     });

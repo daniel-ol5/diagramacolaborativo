@@ -90,4 +90,46 @@ void main() {
       expect(t.pendientes, isEmpty);
     });
   });
+
+  group('anteponer historial (CU23)', () {
+    final t0 = DateTime.utc(2026, 11, 5);
+
+    test('primerSeq es el menor seq cargado', () {
+      final t = ChatTimeline();
+      expect(t.primerSeq, isNull);
+      t.fusionar([msg('b', 8), msg('a', 5)]);
+      expect(t.primerSeq, 5);
+      expect(t.ultimoSeq, 8);
+    });
+
+    test('pagina vieja con huecos y solapada: ordenada y sin duplicados', () {
+      final t = ChatTimeline()..fusionar([msg('m50', 50), msg('m51', 51), msg('m53', 53)]);
+      final nuevos = t.fusionar([msg('m40', 40), msg('m47', 47), msg('m50', 50)]);
+      expect(ids(t.mensajes), ['m40', 'm47', 'm50', 'm51', 'm53']);
+      expect(ids(nuevos), ['m40', 'm47']);
+      expect(t.primerSeq, 40);
+      expect(t.ultimoSeq, 53, reason: 'anteponer no mueve el cursor del sondeo');
+    });
+
+    test('anteponer y sondear en cualquier orden da lo mismo', () {
+      final a = ChatTimeline()..fusionar([msg('m10', 10)]);
+      a
+        ..fusionar([msg('m5', 5)])
+        ..fusionar([msg('m12', 12)]);
+      final b = ChatTimeline()..fusionar([msg('m10', 10)]);
+      b
+        ..fusionar([msg('m12', 12)])
+        ..fusionar([msg('m5', 5)]);
+      expect(ids(a.mensajes), ids(b.mensajes));
+    });
+
+    test('los pendientes propios siguen al final y no se tocan', () {
+      final t = ChatTimeline()
+        ..fusionar([msg('m50', 50)])
+        ..agregarPendiente('c1', 'hola', t0);
+      t.fusionar([msg('m40', 40, cmid: 'otro')]);
+      expect(t.pendientes.single.clientMessageId, 'c1');
+      expect(ids(t.mensajes), ['m40', 'm50']);
+    });
+  });
 }

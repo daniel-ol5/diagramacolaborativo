@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/chat_message.dart';
+import '../models/chat_read_state.dart';
 
 /// Error del chat ya traducido al español para mostrarlo tal cual.
 ///
@@ -62,7 +63,8 @@ class ChatService {
   Future<ChatPage> fetchAfter(String projectId, int afterSeq, {int limit = limitePorDefecto}) =>
       _leer(projectId, {'afterSeq': '$afterSeq', 'limit': '${_limitar(limit)}'});
 
-  /// Mensajes con seq < [beforeSeq] (para "cargar anteriores", otro CU).
+  /// Los mensajes INMEDIATAMENTE anteriores a [beforeSeq], ascendentes por
+  /// seq; hasMore=true significa que hay mas viejos todavia (CU23).
   Future<ChatPage> fetchBefore(String projectId, int beforeSeq, {int limit = limitePorDefecto}) =>
       _leer(projectId, {'beforeSeq': '$beforeSeq', 'limit': '${_limitar(limit)}'});
 
@@ -109,6 +111,47 @@ class ChatService {
     return ChatMessage.fromJson(Map<String, dynamic>.from(json));
   }
 
+  /// GET /chat/read (CU23): hasta donde leyo ESTE usuario y cuantos
+  /// mensajes de otros (IA y sistema incluidos) hay despues. El estado vive
+  /// en el servidor: es el mismo contador que ve la web.
+  Future<ChatReadState> fetchReadState(String projectId) async {
+    final http.Response respuesta;
+    try {
+      respuesta = await _client
+          .get(_uri(projectId, null, '/read'), headers: {'Authorization': 'Bearer $token'})
+          .timeout(_timeoutLectura);
+    } catch (_) {
+      throw ChatException(0, 'Sin conexión con el servidor.');
+    }
+    return _estadoDeLectura(respuesta);
+  }
+
+  /// PUT /chat/read {upToSeq}: marca como leido hasta [upToSeq]. El
+  /// servidor solo avanza (nunca retrocede), lo recorta a lastSeq y es
+  /// idempotente; devuelve el estado resultante.
+  Future<ChatReadState> markRead(String projectId, int upToSeq) async {
+    final http.Response respuesta;
+    try {
+      respuesta = await _client
+          .put(
+            _uri(projectId, null, '/read'),
+            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+            body: jsonEncode({'upToSeq': upToSeq}),
+          )
+          .timeout(_timeoutLectura);
+    } catch (_) {
+      throw ChatException(0, 'Sin conexión con el servidor.');
+    }
+    return _estadoDeLectura(respuesta);
+  }
+
+  static ChatReadState _estadoDeLectura(http.Response respuesta) {
+    if (respuesta.statusCode != 200) throw _traducir(respuesta);
+    final json = _decodificar(respuesta);
+    if (json is! Map) throw ChatException(-1, 'La respuesta del servidor no es válida.');
+    return ChatReadState.fromJson(Map<String, dynamic>.from(json));
+  }
+
   Future<ChatPage> _leer(String projectId, Map<String, String> query) async {
     final http.Response respuesta;
     try {
@@ -125,8 +168,8 @@ class ChatService {
     return ChatPage.fromJson(Map<String, dynamic>.from(json));
   }
 
-  Uri _uri(String projectId, [Map<String, String>? query]) {
-    final base = Uri.parse('$direccionServidor/api/v1/projects/${Uri.encodeComponent(projectId)}/chat');
+  Uri _uri(String projectId, [Map<String, String>? query, String subruta = '']) {
+    final base = Uri.parse('$direccionServidor/api/v1/projects/${Uri.encodeComponent(projectId)}/chat$subruta');
     return query == null ? base : base.replace(queryParameters: query);
   }
 

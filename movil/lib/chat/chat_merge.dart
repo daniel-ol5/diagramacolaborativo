@@ -71,8 +71,13 @@ class ChatTimeline {
   /// El seq mas alto confirmado: el cursor para pedir lo nuevo.
   int? get ultimoSeq => _mensajes.isEmpty ? null : _mensajes.last.seq;
 
+  /// El seq mas bajo cargado: el cursor para pedir lo anterior (CU23).
+  int? get primerSeq => _mensajes.isEmpty ? null : _mensajes.first.seq;
+
   /// Agrega mensajes del servidor y devuelve los que no se conocian.
   /// Un pendiente cuyo clientMessageId aparece queda confirmado.
+  /// Sirve igual para lo nuevo (sondeo, POST) que para anteponer lo
+  /// anterior (historial): todo se reordena por seq y se deduplica.
   List<ChatMessage> fusionar(Iterable<ChatMessage> nuevos) {
     final antes = {for (final m in _mensajes) m.id};
     _mensajes = List.unmodifiable(fusionarMensajes(_mensajes, nuevos));

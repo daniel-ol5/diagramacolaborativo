@@ -7,8 +7,12 @@ import '../chat/chat_merge.dart';
 import '../chat/chat_poller.dart';
 import '../chat/espera_ia.dart';
 import '../chat/formato.dart';
+import '../chat/historial.dart';
+import '../chat/no_leidos.dart';
+import '../chat/separadores_dia.dart';
 import '../chat/uuid_v4.dart';
 import '../models/chat_message.dart';
+import '../models/chat_read_state.dart';
 import '../services/chat_service.dart';
 import '../services/config_service.dart';
 import '../voz/servicio_de_voz.dart';
@@ -24,6 +28,7 @@ class ChatScreen extends StatefulWidget {
     required this.projectName,
     this.servicio,
     this.voz,
+    this.alCambiarLectura,
   });
 
   final Sesion sesion;
@@ -37,13 +42,18 @@ class ChatScreen extends StatefulWidget {
   /// VoiceCommandScreen (sin modificarlo).
   final ServicioDeVoz? voz;
 
+  /// Avisa cada estado de lectura que confirma el servidor (al entrar, al
+  /// marcar como leido y al salir), para que quien abrio el chat actualice
+  /// el contador del icono sin esperar otro pedido.
+  final void Function(ChatReadState estado)? alCambiarLectura;
+
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
-  late final ChatService _chat = widget.servicio ??
-      ChatService(direccionServidor: widget.sesion.direccionServidor, token: widget.sesion.token);
+  late final ChatService _chat =
+      widget.servicio ?? ChatService(direccionServidor: widget.sesion.direccionServidor, token: widget.sesion.token);
 
   late final ChatPoller _poller = ChatPoller(
     traer: (seq) => _chat.fetchAfter(widget.projectId, seq),
@@ -52,8 +62,62 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     alFallar: _alFallarSondeo,
   );
 
+  /// CU23: paginacion hacia atras (solo lectura).
+  late final HistorialChat _historial = HistorialChat(
+    traer: (seq) => _chat.fetchBefore(widget.projectId, seq),
+    primerSeq: () => _timeline.primerSeq,
+    alRecibir: (mensajes) {
+      if (!mounted) return;
+      final teniaSeparador = _separadorAlCentro();
+      setState(() => _timeline.fusionar(mensajes));
+      // La primera vez que se antepone algo del MISMO dia que el primer
+      // mensaje de la carga inicial, el separador de ese dia pasa del bloque
+      // de abajo al de arriba: lo de abajo subiria su altura (un salto).
+      // Como la altura es fija, se corrige exacto antes del proximo frame
+      // (correctPixels: sin animacion ni aviso a los listeners).
+      if (teniaSeparador && !_separadorAlCentro() && _scroll.hasClients) {
+        _scroll.position.correctPixels(_scroll.position.pixels - _alturaSeparador);
+      }
+    },
+    alCambiar: () {
+      if (mounted) setState(() {});
+    },
+  );
+
+  /// Seq del primer mensaje de la carga inicial. Lo anterior va en el
+  /// bloque de arriba del CustomScrollView, que crece HACIA ARRIBA desde
+  /// el centro: anteponer no mueve lo que se esta leyendo (sin saltos).
+  int? _anclaSeq;
+  static const _claveCentro = ValueKey<String>('chat-centro');
+
+  /// Altura FIJA de los separadores de dia (se recalcula con el tamaño de
+  /// letra del sistema en cada build). Fija para poder compensar exacto.
+  double _alturaSeparador = 40;
+
   final _timeline = ChatTimeline();
   final _esperaIa = EsperaIa();
+
+  /// CU23, mensajes nuevos. El estado de lectura vive en el servidor (el
+  /// mismo contador que la web): GET al entrar, PUT al leer.
+  late final MarcadorLeido _marcador = MarcadorLeido(
+    enviar: (seq) => _chat.markRead(widget.projectId, seq),
+    alConfirmar: (estado) => widget.alCambiarLectura?.call(estado),
+  );
+
+  /// lastReadSeq que dio el servidor al entrar (null hasta que contesta o
+  /// si fallo: entonces no hay linea "Mensajes nuevos").
+  int? _lastReadAlEntrar;
+
+  /// Hasta que seq habia al conocer el lastReadSeq: la linea marca lo que
+  /// no habias leido AL ENTRAR, no lo que llega mientras miras.
+  int? _techoLinea;
+
+  /// No se marca como leido hasta saber el lastReadSeq de entrada (si se
+  /// marcara antes, la linea "Mensajes nuevos" se perderia).
+  bool _lecturaLista = false;
+
+  /// Mensajes de otros que llegaron mientras leias mas arriba.
+  int _nuevosSinVer = 0;
   Timer? _timerIa;
 
   /// Se crea al primer toque del microfono: recien ahi Android pide el
@@ -81,6 +145,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   /// false si el usuario subio a leer: entonces no se lo arrastra al final.
   bool _seguirAlFinal = true;
 
+  /// Cuenta los arrastres CON EL DEDO sobre la lista. El salto al final se
+  /// corta si cambia: asi distingue "el usuario subio" de las correcciones
+  /// de posicion que hace Flutter solo al recalcular alturas.
+  int _arrastres = 0;
+
   static const int _avisoLongitud = 1800;
 
   @override
@@ -95,6 +164,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _poller.dispose();
+    _historial.dispose();
+    // Lo leido que quedo sin mandar se manda ya (sin esperar al temporizador),
+    // y su resultado se avisa aunque esta pantalla ya no exista.
+    final avisar = widget.alCambiarLectura;
+    _marcador.enviarAhora().then((estado) {
+      if (estado != null) avisar?.call(estado);
+    });
+    _marcador.dispose();
     _timerIa?.cancel();
     _voz?.detener();
     _texto.dispose();
@@ -110,11 +187,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     switch (state) {
       case AppLifecycleState.resumed:
         if (_puedeSondear) _poller.iniciar(inmediato: true);
+        _marcarSiCorresponde();
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
       case AppLifecycleState.detached:
         _poller.pausar();
         _voz?.detener();
+        _marcador.enviarAhora();
       case AppLifecycleState.inactive:
         break;
     }
@@ -134,12 +213,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       if (!mounted) return;
       setState(() {
         _timeline.fusionar(pagina.messages);
+        _anclaSeq = _timeline.primerSeq;
+        _historial.inicializar(hayMasViejos: pagina.hasMore);
         _cargando = false;
         _sinConexion = false;
       });
       _bajarAlFinal(forzar: true);
       final estado = WidgetsBinding.instance.lifecycleState;
       if (estado == null || estado == AppLifecycleState.resumed) _poller.iniciar();
+      _cargarEstadoLectura();
     } on ChatException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -158,8 +240,69 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       _sinConexion = false;
       _ultimoErrorSondeo = null;
       if (_esperaIa.procesar(nuevos, widget.sesion.userId)) _timerIa?.cancel();
+      // Leyendo mas arriba: no se baja solo, se avisa con el boton.
+      if (!_seguirAlFinal) _nuevosSinVer += contarNuevos(nuevos, widget.sesion.userId);
     });
     _bajarAlFinal();
+    _marcarSiCorresponde();
+  }
+
+  /// GET /chat/read. Si falla, el chat sigue igual: solo no hay linea
+  /// "Mensajes nuevos" (y se marca como leido igual, el servidor solo avanza).
+  Future<void> _cargarEstadoLectura() async {
+    try {
+      final estado = await _chat.fetchReadState(widget.projectId);
+      if (!mounted) return;
+      _marcador.inicializar(estado.lastReadSeq);
+      widget.alCambiarLectura?.call(estado);
+      setState(() {
+        _lastReadAlEntrar = estado.lastReadSeq;
+        _techoLinea = _timeline.ultimoSeq;
+      });
+      _bajarAlFinal();
+    } on ChatException {
+      // sin linea; el resto del chat no se entera
+    }
+    if (!mounted) return;
+    _lecturaLista = true;
+    _marcarSiCorresponde();
+  }
+
+  /// Marca como leido hasta el ultimo seq SOLO si de verdad lo estas
+  /// viendo: al final de la lista y con la app en primer plano.
+  void _marcarSiCorresponde() {
+    final ultimo = _timeline.ultimoSeq;
+    if (!_lecturaLista || ultimo == null || !_seguirAlFinal || _noMiembro || _sesionVencida) return;
+    final estado = WidgetsBinding.instance.lifecycleState;
+    if (estado != null && estado != AppLifecycleState.resumed) return;
+    _marcador.quiero(ultimo);
+  }
+
+  /// [_seqLinea] calculado una vez por dibujado (en _lista), no por fila.
+  int? _seqLineaDibujo;
+
+  /// Seq del mensaje encima del cual va la linea, o null.
+  int? get _seqLinea {
+    final lastRead = _lastReadAlEntrar;
+    final techo = _techoLinea;
+    if (lastRead == null || techo == null) return null;
+    // Si todavia no se cargo ningun mensaje ya leido y quedan anteriores,
+    // el primer no leido podria estar mas atras: la linea espera. Asi no
+    // cambia de lugar (ni hace saltar la vista) al cargar los anteriores.
+    if (_historial.hayMasViejos && !_timeline.mensajes.any((m) => m.seq <= lastRead)) return null;
+    return seqLineaNuevos(
+      [
+        for (final m in _timeline.mensajes)
+          if (m.seq <= techo) m,
+      ],
+      lastRead,
+      widget.sesion.userId,
+    );
+  }
+
+  void _irAlFinal() {
+    setState(() => _nuevosSinVer = 0);
+    _bajarAlFinal(forzar: true);
   }
 
   void _alFallarSondeo(ChatException e) {
@@ -274,8 +417,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       _vozLista = await voz.iniciar();
       if (!mounted) return;
       if (!_vozLista) {
-        _avisar('No se puede usar el micrófono. Revisa que la app tenga permiso de micrófono '
-            'y que el teléfono tenga reconocimiento de voz.');
+        _avisar(
+          'No se puede usar el micrófono. Revisa que la app tenga permiso de micrófono '
+          'y que el teléfono tenga reconocimiento de voz.',
+        );
         return;
       }
     }
@@ -302,14 +447,53 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     if (!_scroll.hasClients) return;
     final pos = _scroll.position;
     _seguirAlFinal = pos.pixels >= pos.maxScrollExtent - 72;
+    if (_seguirAlFinal) {
+      // Llegaste al final: lo nuevo ya se ve. En un microtask por la misma
+      // razon que la carga de anteriores (puede ser en medio de un layout).
+      Future.microtask(() {
+        if (!mounted) return;
+        if (_nuevosSinVer != 0) setState(() => _nuevosSinVer = 0);
+        _marcarSiCorresponde();
+      });
+    }
+    // Cerca del tope: carga lo anterior sola. Despues de un fallo NO
+    // reintenta sola (seria un bucle); espera el boton Reintentar.
+    if (pos.pixels <= pos.minScrollExtent + 300 && _historial.puedeCargar && _historial.ultimoError == null) {
+      // En un microtask: este listener puede correr en medio de un layout,
+      // donde setState no esta permitido.
+      Future.microtask(_cargarAnteriores);
+    }
+  }
+
+  Future<void> _cargarAnteriores() async {
+    final ok = await _historial.cargarAnteriores();
+    if (!mounted || ok) return;
+    final e = _historial.ultimoError;
+    // Sin red / sin permiso afectan a todo el chat (aviso fijo, campo).
+    if (e != null) _registrarError(e);
   }
 
   void _bajarAlFinal({bool forzar = false}) {
     if (!forzar && !_seguirAlFinal) return;
     _seguirAlFinal = true;
+    _saltarAlFinal(5, _arrastres);
+  }
+
+  /// Con alturas distintas (burbujas, separadores de dia) maxScrollExtent
+  /// es una ESTIMACION hasta que se dibujan los ultimos elementos: un solo
+  /// salto puede quedar unos pixeles antes del final. Se repite en los
+  /// frames siguientes hasta llegar (con tope de [intentos]).
+  ///
+  /// Si el usuario arrastra la lista entre un salto y el siguiente (subio a
+  /// leer), se corta: nunca se lo arrastra de vuelta al final. Las
+  /// correcciones que Flutter hace solo al recalcular alturas NO lo cortan.
+  void _saltarAlFinal(int intentos, int arrastresAlEmpezar) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scroll.hasClients) return;
-      _scroll.jumpTo(_scroll.position.maxScrollExtent);
+      if (!mounted || !_scroll.hasClients || _arrastres != arrastresAlEmpezar) return;
+      final pos = _scroll.position;
+      if (pos.pixels >= pos.maxScrollExtent) return;
+      _scroll.jumpTo(pos.maxScrollExtent);
+      if (intentos > 1) _saltarAlFinal(intentos - 1, arrastresAlEmpezar);
     });
   }
 
@@ -323,11 +507,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Chat del proyecto'),
-            Text(
-              widget.projectName,
-              style: Theme.of(context).textTheme.bodySmall,
-              overflow: TextOverflow.ellipsis,
-            ),
+            Text(widget.projectName, style: Theme.of(context).textTheme.bodySmall, overflow: TextOverflow.ellipsis),
           ],
         ),
       ),
@@ -347,11 +527,26 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         // Fuera de la semantica: si no, TalkBack anuncia toda la lista como
         // un boton sin nombre (lo detecto el test de accesibilidad).
         Expanded(
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            excludeFromSemantics: true,
-            onTap: _foco.unfocus,
-            child: _lista(),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  excludeFromSemantics: true,
+                  onTap: _foco.unfocus,
+                  child: _lista(),
+                ),
+              ),
+              if (_nuevosSinVer > 0)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 12,
+                  child: Center(
+                    child: _BotonNuevos(cantidad: _nuevosSinVer, onPressed: _irAlFinal),
+                  ),
+                ),
+            ],
           ),
         ),
         if (_esperaIa.activa(DateTime.now())) const _IaRespondiendo(),
@@ -373,27 +568,130 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         ),
       );
     }
-    final mensajes = _timeline.mensajes;
-    final pendientes = _timeline.pendientes;
-    return ListView.builder(
-      controller: _scroll,
-      // Deslizar la lista tambien baja el teclado.
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      itemCount: mensajes.length + pendientes.length,
-      itemBuilder: (context, i) {
-        if (i < mensajes.length) {
-          final m = mensajes[i];
-          if (m.esDeSistema) return _MensajeSistema(mensaje: m);
-          return _BurbujaMensaje(mensaje: m, esMio: !m.esDeIa && m.authorId == widget.sesion.userId);
-        }
-        final p = pendientes[i - mensajes.length];
-        return _BurbujaPendiente(
-          pendiente: p,
-          autor: widget.sesion.nombreCompleto,
-          onReintentar: () => _publicar(p.clientMessageId),
-        );
+    _alturaSeparador = (MediaQuery.textScalerOf(context).scale(12) * 1.5 + 16).ceilToDouble();
+    _seqLineaDibujo = _seqLinea;
+    final (:arriba, :abajo) = _partir(DateTime.now());
+
+    return NotificationListener<ScrollMetricsNotification>(
+      // Flutter recalcula el alto total (estimado) a medida que dibuja
+      // elementos de alturas distintas, o cuando aparece la linea "Mensajes
+      // nuevos". Si estabas al final, la vista se queda al final; si
+      // subiste a leer (_seguirAlFinal false), no se toca.
+      onNotification: (n) {
+        final m = n.metrics;
+        if (_seguirAlFinal && m.pixels < m.maxScrollExtent) _saltarAlFinal(1, _arrastres);
+        return false;
       },
+      child: NotificationListener<ScrollStartNotification>(
+        onNotification: (n) {
+          if (n.dragDetails != null) _arrastres++;
+          return false;
+        },
+        child: CustomScrollView(
+          controller: _scroll,
+          center: _claveCentro,
+          // Deslizar la lista tambien baja el teclado.
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          slivers: [
+            // Lo de antes del centro se dibuja hacia ARRIBA: este va en el tope.
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              sliver: SliverToBoxAdapter(child: _cabeceraHistorial()),
+            ),
+            // Hacia arriba: el indice 0 es el mas cercano al centro (la fila mas
+            // nueva de las viejas), por eso se recorre al reves.
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              sliver: SliverList.builder(
+                itemCount: arriba.length,
+                itemBuilder: (context, i) => _fila(arriba[arriba.length - 1 - i]),
+              ),
+            ),
+            SliverPadding(
+              key: _claveCentro,
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              sliver: SliverList.builder(itemCount: abajo.length, itemBuilder: (context, i) => _fila(abajo[i])),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Mensajes + pendientes con sus separadores de dia, partidos en el
+  /// mismo punto de siempre: lo anterior a la carga inicial va arriba del
+  /// centro. El separador del primer elemento de abajo viaja con el.
+  ({List<FilaChat<Object>> arriba, List<FilaChat<Object>> abajo}) _partir(DateTime hoy) {
+    final ancla = _anclaSeq;
+    final filas = intercalarDias<Object>(
+      [..._timeline.mensajes, ..._timeline.pendientes],
+      (e) => e is ChatMessage ? e.createdAt : (e as MensajePendiente).creado,
+      hoy,
+    );
+    var corte = filas.indexWhere(
+      (f) => switch (f) {
+        FilaElemento<Object>(:final elemento) =>
+          elemento is MensajePendiente || ancla == null || (elemento as ChatMessage).seq >= ancla,
+        FilaDia<Object>() => false,
+      },
+    );
+    if (corte < 0) corte = filas.length;
+    if (corte > 0 && filas[corte - 1] is FilaDia<Object>) corte--;
+    return (arriba: filas.sublist(0, corte), abajo: filas.sublist(corte));
+  }
+
+  bool _separadorAlCentro() {
+    final abajo = _partir(DateTime.now()).abajo;
+    return abajo.isNotEmpty && abajo.first is FilaDia<Object>;
+  }
+
+  Widget _fila(FilaChat<Object> fila) => switch (fila) {
+    FilaDia<Object>(:final etiqueta) => _SeparadorDia(etiqueta: etiqueta, altura: _alturaSeparador),
+    FilaElemento<Object>(:final elemento) =>
+      elemento is ChatMessage ? _filaMensaje(elemento) : _filaPendiente(elemento as MensajePendiente),
+  };
+
+  Widget _filaPendiente(MensajePendiente p) => _BurbujaPendiente(
+    pendiente: p,
+    autor: widget.sesion.nombreCompleto,
+    onReintentar: () => _publicar(p.clientMessageId),
+  );
+
+  Widget _filaMensaje(ChatMessage m) {
+    final Widget fila = m.esDeSistema
+        ? _MensajeSistema(mensaje: m)
+        : _BurbujaMensaje(mensaje: m, esMio: !m.esDeIa && m.authorId == widget.sesion.userId);
+    if (m.seq != _seqLineaDibujo) return fila;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [const _LineaNuevos(), fila]);
+  }
+
+  /// Arriba de todo: cargando, error con Reintentar, el boton "Cargar
+  /// anteriores" (alternativa accesible al deslizar) o el inicio del chat.
+  Widget _cabeceraHistorial() {
+    final h = _historial;
+    if (h.cargando) return const _CargandoAnteriores();
+    if (h.ultimoError != null) {
+      return _ErrorAnteriores(mensaje: h.ultimoError!.mensaje, onReintentar: _cargarAnteriores);
+    }
+    if (h.hayMasViejos) {
+      return Center(
+        child: TextButton.icon(
+          onPressed: _cargarAnteriores,
+          style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+          icon: const Icon(Icons.history),
+          label: const Text('Cargar anteriores'),
+        ),
+      );
+    }
+    if (_anclaSeq == null) return const SizedBox.shrink();
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Text(
+        'Inicio de la conversación',
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: cs.onSurfaceVariant),
+      ),
     );
   }
 
@@ -403,10 +701,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     final pista = _noMiembro
         ? 'No eres miembro de este proyecto.'
         : _sesionVencida
-            ? 'Tu sesión expiró. Vuelve a iniciar sesión.'
-            : _sinConexion
-                ? 'Sin conexión: no puedes enviar mensajes.'
-                : 'Escribe un mensaje';
+        ? 'Tu sesión expiró. Vuelve a iniciar sesión.'
+        : _sinConexion
+        ? 'Sin conexión: no puedes enviar mensajes.'
+        : 'Escribe un mensaje';
 
     return Material(
       color: cs.surfaceContainer,
@@ -441,11 +739,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                       maxLengthEnforcement: MaxLengthEnforcement.enforced,
                       keyboardType: TextInputType.multiline,
                       textCapitalization: TextCapitalization.sentences,
-                      decoration: InputDecoration(
-                        hintText: pista,
-                        border: const OutlineInputBorder(),
-                        isDense: true,
-                      ),
+                      decoration: InputDecoration(hintText: pista, border: const OutlineInputBorder(), isDense: true),
                       // El contador solo aparece cerca del limite.
                       buildCounter: (context, {required currentLength, required isFocused, maxLength}) {
                         if (maxLength == null || currentLength < _avisoLongitud) return null;
@@ -506,10 +800,7 @@ class _AvisoSinConexion extends StatelessWidget {
               Icon(Icons.cloud_off, color: cs.onErrorContainer),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  'Sin conexión con el servidor.',
-                  style: TextStyle(color: cs.onErrorContainer),
-                ),
+                child: Text('Sin conexión con el servidor.', style: TextStyle(color: cs.onErrorContainer)),
               ),
               TextButton(
                 onPressed: onReintentar,
@@ -519,6 +810,148 @@ class _AvisoSinConexion extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Linea "Mensajes nuevos" encima del primero que no habias leido.
+class _LineaNuevos extends StatelessWidget {
+  const _LineaNuevos();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Semantics(
+      header: true,
+      label: 'Mensajes nuevos',
+      child: ExcludeSemantics(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              Expanded(child: Divider(color: cs.primary, thickness: 1)),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  'Mensajes nuevos',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.primary),
+                ),
+              ),
+              Expanded(child: Divider(color: cs.primary, thickness: 1)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "3 mensajes nuevos ↓": aparece si llegan mensajes mientras lees arriba.
+class _BotonNuevos extends StatelessWidget {
+  const _BotonNuevos({required this.cantidad, required this.onPressed});
+
+  final int cantidad;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final texto = textoBotonNuevos(cantidad);
+    // El propio boton ya se anuncia como boton con su texto y se puede
+    // activar con TalkBack; liveRegion avisa cuando aparece o cambia.
+    return Semantics(
+      liveRegion: true,
+      hint: 'Ir al final del chat',
+      child: FilledButton.tonalIcon(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
+        icon: const Icon(Icons.arrow_downward),
+        label: Text(texto),
+      ),
+    );
+  }
+}
+
+/// "Hoy", "Ayer" o "5 nov 2026": centrado, discreto y de altura fija.
+class _SeparadorDia extends StatelessWidget {
+  const _SeparadorDia({required this.etiqueta, required this.altura});
+
+  final String etiqueta;
+  final double altura;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Semantics(
+      header: true,
+      label: 'Día: $etiqueta',
+      child: ExcludeSemantics(
+        child: SizedBox(
+          height: altura,
+          child: Center(
+            child: DecoratedBox(
+              decoration: BoxDecoration(color: cs.surfaceContainerHighest, borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                child: Text(etiqueta, maxLines: 1, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CargandoAnteriores extends StatelessWidget {
+  const _CargandoAnteriores();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Semantics(
+      liveRegion: true,
+      label: 'Cargando mensajes anteriores',
+      child: ExcludeSemantics(
+        child: SizedBox(
+          height: 48,
+          child: Center(
+            child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorAnteriores extends StatelessWidget {
+  const _ErrorAnteriores({required this.mensaje, required this.onReintentar});
+
+  final String mensaje;
+  final VoidCallback onReintentar;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Semantics(
+      liveRegion: true,
+      child: Column(
+        children: [
+          Text(
+            'No se pudieron cargar los mensajes anteriores. $mensaje',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: cs.error),
+          ),
+          TextButton(
+            onPressed: onReintentar,
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            child: Semantics(
+              label: 'Reintentar cargar mensajes anteriores',
+              excludeSemantics: true,
+              child: const Text('Reintentar'),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -612,9 +1045,7 @@ class _BurbujaMensaje extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final m = mensaje;
-    final encabezado = m.esDeIa
-        ? (m.addressedToName != null ? 'IA · para ${m.addressedToName}' : 'IA')
-        : m.authorName;
+    final encabezado = m.esDeIa ? (m.addressedToName != null ? 'IA · para ${m.addressedToName}' : 'IA') : m.authorName;
     return _Burbuja(
       alDerecha: esMio,
       esIa: m.esDeIa,
@@ -650,7 +1081,11 @@ class _BurbujaPendiente extends StatelessWidget {
               TextButton(
                 onPressed: onReintentar,
                 style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-                child: Semantics(label: 'Reintentar enviar el mensaje', excludeSemantics: true, child: const Text('Reintentar')),
+                child: Semantics(
+                  label: 'Reintentar enviar el mensaje',
+                  excludeSemantics: true,
+                  child: const Text('Reintentar'),
+                ),
               ),
             ],
           )

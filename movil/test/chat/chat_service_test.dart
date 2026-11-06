@@ -54,6 +54,47 @@ void main() {
     });
   });
 
+  group('estado de lectura (CU23)', () {
+    test('fetchReadState: GET /chat/read con token', () async {
+      late http.Request pedido;
+      final s = _servicio((r) async {
+        pedido = r;
+        return _json({'lastReadSeq': 10, 'unreadCount': 3, 'lastSeq': 14}, 200);
+      });
+      final e = await s.fetchReadState('p1');
+      expect(pedido.method, 'GET');
+      expect(pedido.url.path, '/api/v1/projects/p1/chat/read');
+      expect(pedido.headers['Authorization'], 'Bearer tok');
+      expect([e.lastReadSeq, e.unreadCount, e.lastSeq], [10, 3, 14]);
+    });
+
+    test('markRead: PUT /chat/read con {upToSeq} y devuelve el estado', () async {
+      late http.Request pedido;
+      final s = _servicio((r) async {
+        pedido = r;
+        return _json({'lastReadSeq': 14, 'unreadCount': 0, 'lastSeq': 14}, 200);
+      });
+      final e = await s.markRead('p1', 14);
+      expect(pedido.method, 'PUT');
+      expect(pedido.url.path, '/api/v1/projects/p1/chat/read');
+      expect(jsonDecode(pedido.body), {'upToSeq': 14});
+      expect(e.unreadCount, 0);
+    });
+
+    test('errores traducidos: 403 y sin red', () async {
+      final s403 = _servicio((_) async => http.Response('', 403));
+      await expectLater(
+        s403.fetchReadState('p1'),
+        throwsA(isA<ChatException>().having((e) => e.mensaje, 'mensaje', 'No eres miembro de este proyecto.')),
+      );
+      final sinRed = _servicio((_) async => throw http.ClientException('sin red'));
+      await expectLater(
+        sinRed.markRead('p1', 3),
+        throwsA(isA<ChatException>().having((e) => e.sinConexion, 'sinConexion', isTrue)),
+      );
+    });
+  });
+
   group('send', () {
     test('cuerpo sin autor ni opcionales nulos; 201 devuelve el mensaje', () async {
       late Map<String, dynamic> cuerpo;
