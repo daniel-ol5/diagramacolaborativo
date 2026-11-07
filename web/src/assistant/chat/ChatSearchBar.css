@@ -1,0 +1,130 @@
+/* Franja de busqueda y filtros, bajo la cabecera --brand-dark del panel.
+   Fondo claro; nada de texto blanco sobre --brand-primary. */
+.chat-search {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border-muted);
+  background: var(--color-bg);
+}
+
+.chat-search__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Control segmentado: activo --brand-dark con texto blanco (11,8:1);
+   inactivos blancos con texto --brand-dark. */
+.chat-search__filters {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.chat-search__filter {
+  padding: 4px 10px;
+  border: none;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--brand-dark);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chat-search__filter:first-child {
+  border-left: none;
+}
+
+.chat-search__filter:hover:not(.chat-search__filter--active) {
+  background: var(--brand-tint);
+}
+
+.chat-search__filter--active {
+  background: var(--brand-dark);
+  color: var(--color-text-on-dark);
+  font-weight: 600;
+}
+
+.chat-search__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 28px;
+  margin-left: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--brand-dark);
+  cursor: pointer;
+}
+
+.chat-search__toggle:hover {
+  background: var(--brand-tint);
+}
+
+.chat-search__toggle--active {
+  background: var(--brand-tint-strong);
+  border-color: var(--brand-primary);
+}
+
+.chat-search__filter:focus-visible,
+.chat-search__toggle:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+  position: relative;
+  z-index: 1;
+}
+
+.chat-search__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Etiqueta solo para lectores de pantalla (el placeholder no cuenta como etiqueta). */
+.chat-search__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.chat-search__input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--brand-dark);
+  font: inherit;
+  font-size: var(--font-size-sm);
+}
+
+.chat-search__input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.chat-search__input:focus-visible {
+  outline: none;
+  border-color: var(--brand-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.chat-search__hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}

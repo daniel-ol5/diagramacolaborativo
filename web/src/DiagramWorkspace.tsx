@@ -245,7 +245,7 @@ interface Props {
   /** Lo que va a la izquierda de la barra de herramientas: el selector de fixtures del demo, o un enlace de "volver" en el flujo real. */
   toolbarLeft: ReactNode;
   /** CU19: si viene, se muestra el boton "Chat IA" (despues de "Comando"). Lo maneja DiagramScreen. */
-  assistant?: { open: boolean; onToggle: () => void };
+  assistant?: { open: boolean; onToggle: () => void; unread?: number };
   /** Panel lateral a la derecha del lienzo (lo monta DiagramScreen). */
   sidePanel?: ReactNode;
 }
@@ -634,7 +634,9 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft, a
               {!collaboration.error && collaboration.status === "error" && "⚠ error de conexión"}
             </span>
           )}
-          {assistant && <AssistantToggleButton open={assistant.open} onToggle={assistant.onToggle} />}
+          {assistant && (
+            <AssistantToggleButton open={assistant.open} onToggle={assistant.onToggle} unread={assistant.unread ?? 0} />
+          )}
           {diagramId && <RosterPanel />}
           {/* Divisor: la cuenta no es una persona mas de la presencia. */}
           <span className="app__toolbar-divider" aria-hidden="true" />

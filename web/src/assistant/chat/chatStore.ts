@@ -1,10 +1,12 @@
 import { create } from "zustand";
 import type { ChatMessage } from "./types";
+import type { ChatReadState } from "./chatApi";
+import { debeContarNoLeido, noLeidosDesdeServidor, type Vista } from "./unread";
 
 /**
- * Estado del chat del proyecto abierto (CU19). Vive fuera del panel: al
- * cerrarlo y volver a abrirlo los mensajes siguen ahi y solo se piden los
- * nuevos (afterSeq).
+ * Estado del chat del proyecto abierto (CU19/CU23). Vive fuera del panel y
+ * lo alimenta ProjectChatFeed mientras DiagramScreen este montado, con el
+ * panel abierto o cerrado: asi se cuentan los no leidos.
  */
 export type ChatLoadStatus = "idle" | "loading" | "ready" | "error";
 
@@ -42,8 +44,37 @@ interface ChatState {
   /** AI_TYPING activos: forUserId -> forUserName. */
   aiTyping: Record<string, string>;
 
+  /** Si hay mensajes mas viejos que el primero cargado (hasMore del ultimo fetch hacia atras). */
+  hasOlder: boolean;
+  /** Carga de anteriores: "loading" protege contra pedidos repetidos. */
+  olderStatus: "idle" | "loading" | "error";
+  olderError: string | null;
+  setOlder: (patch: Partial<Pick<ChatState, "hasOlder" | "olderStatus" | "olderError">>) => void;
+
+  /** Yo (para no contar mis propios mensajes como no leidos). */
+  myUserId: string | null;
+  /** Ultimo lastReadSeq conocido (del servidor). Solo avanza. null = todavia no se pidio. */
+  lastReadSeq: number | null;
+  /** lastSeq de la ultima respuesta de /chat/read: hasta ahi el servidor ya conto. */
+  readLastSeq: number | null;
+  unreadCount: number;
+  /** Panel "Chat IA" abierto (lo marca ChatPanel al montarse/desmontarse). */
+  panelOpen: boolean;
+  /** La lista esta al final (lo informa MessageList). */
+  atBottom: boolean;
+  /** La pestaña del navegador esta visible. */
+  visible: boolean;
+
   ensureProject: (projectId: string) => void;
   mergeMessages: (incoming: ChatMessage[]) => void;
+  /** Un CHAT_MESSAGE del topic: lo fusiona y, si corresponde, suma 1 a no leidos. */
+  receiveLive: (message: ChatMessage) => void;
+  /** Respuesta de GET o PUT /chat/read. */
+  applyReadState: (resp: ChatReadState) => void;
+  setMyUserId: (userId: string | null) => void;
+  setPanelOpen: (open: boolean) => void;
+  setAtBottom: (atBottom: boolean) => void;
+  setVisible: (visible: boolean) => void;
   setLoadStatus: (status: ChatLoadStatus) => void;
   setError: (error: string | null) => void;
   setSendError: (error: string | null) => void;
@@ -118,6 +149,17 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   sendError: null,
   connected: false,
   aiTyping: {},
+  hasOlder: false,
+  olderStatus: "idle",
+  olderError: null,
+  setOlder: (patch) => set(patch),
+  myUserId: null,
+  lastReadSeq: null,
+  readLastSeq: null,
+  unreadCount: 0,
+  panelOpen: false,
+  atBottom: true,
+  visible: typeof document === "undefined" || document.visibilityState === "visible",
 
   ensureProject: (projectId) => {
     if (get().projectId === projectId) return;
@@ -130,8 +172,39 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       error: null,
       sendError: null,
       aiTyping: {},
+      hasOlder: false,
+      olderStatus: "idle",
+      olderError: null,
+      lastReadSeq: null,
+      readLastSeq: null,
+      unreadCount: 0,
     });
   },
+
+  receiveLive: (message) => {
+    const s = get();
+    const yaEstaba = s.messages.some((m) => m.id === message.id);
+    const suma = debeContarNoLeido(message, {
+      myUserId: s.myUserId,
+      yaEstaba,
+      readLastSeq: s.readLastSeq,
+      vista: vistaDe(s),
+    });
+    s.mergeMessages([message]);
+    if (suma) set((x) => ({ unreadCount: x.unreadCount + 1 }));
+  },
+
+  applyReadState: (resp) =>
+    set((s) => ({
+      lastReadSeq: s.lastReadSeq == null ? resp.lastReadSeq : Math.max(s.lastReadSeq, resp.lastReadSeq),
+      readLastSeq: s.readLastSeq == null ? resp.lastSeq : Math.max(s.readLastSeq, resp.lastSeq),
+      unreadCount: noLeidosDesdeServidor(resp, s.messages, s.myUserId, vistaDe(s)),
+    })),
+
+  setMyUserId: (myUserId) => set({ myUserId }),
+  setPanelOpen: (panelOpen) => set({ panelOpen }),
+  setAtBottom: (atBottom) => set((s) => (s.atBottom === atBottom ? s : { atBottom })),
+  setVisible: (visible) => set((s) => (s.visible === visible ? s : { visible })),
 
   mergeMessages: (incoming) =>
     set((s) => {
@@ -201,6 +274,24 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     }
   },
 }));
+
+export function vistaDe(s: Pick<ChatState, "panelOpen" | "atBottom" | "visible">): Vista {
+  return { panelOpen: s.panelOpen, atBottom: s.atBottom, visible: s.visible };
+}
+
+/**
+ * La sincronizacion del historial (afterSeq) del feed vivo, para que
+ * "Reintentar" la use desde el panel. La registra ProjectChatFeed.
+ */
+let sincronizador: (() => Promise<void>) | null = null;
+
+export function registrarSincronizador(fn: (() => Promise<void>) | null): void {
+  sincronizador = fn;
+}
+
+export function sincronizarChat(): Promise<void> {
+  return sincronizador ? sincronizador() : Promise.resolve();
+}
 
 function armarSeguroDeConfirmacion(clientMessageId: string) {
   clearTimer(confirmTimers, clientMessageId);

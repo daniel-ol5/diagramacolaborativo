@@ -3,6 +3,9 @@ package com.modelcollab.assistant.store;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.modelcollab.assistant.chat.ChatHistoryQuery;
+import com.modelcollab.assistant.chat.ChatHistoryStore;
+import com.modelcollab.assistant.chat.ChatReadState;
 import com.modelcollab.assistant.core.ChatAuthorType;
 import com.modelcollab.assistant.core.ChatMessage;
 import com.modelcollab.assistant.core.ChatMessageKind;
@@ -81,6 +84,7 @@ class JpaChatStoreIT {
 
     private static ConfigurableApplicationContext contexto;
     private static ChatStore store;
+    private static ChatHistoryStore historial;
     private static JdbcTemplate jdbc;
 
     /** Lo mínimo para JpaChatStore: DataSource, Flyway, JPA y transacciones. Sin web ni seguridad. */
@@ -134,6 +138,7 @@ class JpaChatStoreIT {
                 .web(WebApplicationType.NONE)
                 .run();
         store = contexto.getBean(ChatStore.class);
+        historial = contexto.getBean(ChatHistoryStore.class);
         jdbc = contexto.getBean(JdbcTemplate.class);
     }
 
@@ -202,7 +207,7 @@ class JpaChatStoreIT {
     // ------------------------------------------------------------ esquema
 
     @Test
-    @DisplayName("Flyway aplica V1 a V4 y Hibernate valida la entidad contra V4 (ddl-auto validate)")
+    @DisplayName("Flyway aplica V1 a V5 y Hibernate valida la entidad contra V4 (ddl-auto validate)")
     void esquemaValidado() {
         // Que el contexto haya arrancado ya es la prueba de la validación: con ddl-auto=validate,
         // una columna faltante o de otro tipo hace fallar el arranque en levantar().
@@ -211,7 +216,190 @@ class JpaChatStoreIT {
         List<String> versiones = jdbc.queryForList(
                 "SELECT version FROM flyway_schema_history WHERE success ORDER BY installed_rank",
                 String.class);
-        assertThat(versiones).containsSequence("1", "2", "3", "4");
+        assertThat(versiones).containsSequence("1", "2", "3", "4", "5");
+    }
+
+    // ------------------------------------------------- estado de lectura (CU23, V5)
+
+    private UUID crearUsuario() {
+        UUID id = UUID.randomUUID();
+        jdbc.update(
+                "INSERT INTO users (id, email, password_hash, full_name) VALUES (?, ?, ?, ?)",
+                id, id + DOMINIO_DE_PRUEBA, "no-es-un-hash", "Lector IT");
+        usuariosCreados.add(id);
+        return id;
+    }
+
+    private ChatMessage guardarDe(UUID proyecto, UUID autor, ChatAuthorType tipo) {
+        long seq = store.nextSeq(proyecto.toString());
+        return store.save(new ChatMessage(
+                UUID.randomUUID().toString(), proyecto.toString(), null, seq, tipo,
+                autor == null ? null : autor.toString(), tipo == ChatAuthorType.USER ? "Ana" : "IA",
+                null, null, null, null, null,
+                tipo == ChatAuthorType.SYSTEM ? ChatMessageKind.SYSTEM : ChatMessageKind.CHAT,
+                "texto " + seq, Instant.now(), null));
+    }
+
+    @Test
+    @DisplayName("V5: chat_read_state existe con su clave primaria (project_id, user_id)")
+    void v5Aplicada() {
+        List<String> pk = jdbc.queryForList(
+                """
+                SELECT a.attname FROM pg_index i
+                  JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+                 WHERE i.indrelid = 'chat_read_state'::regclass AND i.indisprimary
+                """,
+                String.class);
+        assertThat(pk).containsExactlyInAnyOrder("project_id", "user_id");
+    }
+
+    @Test
+    @DisplayName("readState y markRead: usuario nuevo en 0, no cuenta los propios, solo avanza y recorta")
+    void estadoDeLectura() {
+        UUID ana = crearUsuario();
+        UUID carlos = crearUsuario();
+        assertThat(historial.readState(proyecto, ana)).isEqualTo(new ChatReadState(0, 0, 0));
+
+        guardarDe(proyecto, ana, ChatAuthorType.USER);       // 1, propio
+        guardarDe(proyecto, carlos, ChatAuthorType.USER);    // 2
+        guardarDe(proyecto, null, ChatAuthorType.AI);        // 3
+        guardarDe(proyecto, null, ChatAuthorType.SYSTEM);    // 4
+        guardarDe(proyecto, ana, ChatAuthorType.USER);       // 5, propio
+
+        assertThat(historial.readState(proyecto, ana)).isEqualTo(new ChatReadState(0, 3, 5));
+        assertThat(historial.markRead(proyecto, ana, 3)).isEqualTo(new ChatReadState(3, 1, 5));
+        assertThat(historial.markRead(proyecto, ana, 1)).as("no retrocede").isEqualTo(new ChatReadState(3, 1, 5));
+        assertThat(historial.markRead(proyecto, ana, 3)).as("idempotente").isEqualTo(new ChatReadState(3, 1, 5));
+        assertThat(historial.markRead(proyecto, ana, 999)).as("recorta a lastSeq").isEqualTo(new ChatReadState(5, 0, 5));
+        assertThat(contar("SELECT last_read_seq FROM chat_read_state WHERE project_id = ? AND user_id = ?",
+                proyecto, ana)).isEqualTo(5);
+        assertThat(historial.readState(otroProyecto, ana)).as("por proyecto").isEqualTo(new ChatReadState(0, 0, 0));
+    }
+
+    @Test
+    @DisplayName("markRead sin mensajes deja la fila en 0")
+    void marcarSinMensajes() {
+        UUID ana = crearUsuario();
+        assertThat(historial.markRead(proyecto, ana, 10)).isEqualTo(new ChatReadState(0, 0, 0));
+        assertThat(contar("SELECT COUNT(*) FROM chat_read_state WHERE project_id = ?", proyecto)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("markRead con varios hilos: upsert atómico, una sola fila y queda el máximo recortado")
+    void markReadConcurrente() throws Exception {
+        UUID ana = crearUsuario();
+        for (int i = 0; i < 20; i++) {
+            guardarDe(proyecto, null, ChatAuthorType.AI);
+        }
+        int hilos = 8;
+        ExecutorService pool = Executors.newFixedThreadPool(hilos);
+        CountDownLatch largada = new CountDownLatch(1);
+        List<Future<ChatReadState>> tareas = new ArrayList<>();
+        for (int i = 0; i < hilos; i++) {
+            long hasta = i == 3 ? 500 : i * 2;  // uno pide un futuro
+            tareas.add(pool.submit(() -> {
+                largada.await();
+                return historial.markRead(proyecto, ana, hasta);
+            }));
+        }
+        largada.countDown();
+        for (Future<ChatReadState> t : tareas) {
+            assertThat(t.get().lastReadSeq()).isBetween(0L, 20L);
+        }
+        pool.shutdown();
+
+        assertThat(contar("SELECT COUNT(*) FROM chat_read_state WHERE project_id = ? AND user_id = ?",
+                proyecto, ana)).isEqualTo(1);
+        assertThat(historial.readState(proyecto, ana)).isEqualTo(new ChatReadState(20, 0, 20));
+    }
+
+    @Test
+    @DisplayName("Borrar el proyecto o el usuario borra su chat_read_state (ON DELETE CASCADE)")
+    void cascada() {
+        UUID ana = crearUsuario();
+        UUID carlos = crearUsuario();
+        guardarDe(proyecto, null, ChatAuthorType.AI);
+        guardarDe(otroProyecto, null, ChatAuthorType.AI);
+        historial.markRead(proyecto, ana, 1);
+        historial.markRead(proyecto, carlos, 1);
+        historial.markRead(otroProyecto, ana, 1);
+
+        jdbc.update("DELETE FROM users WHERE id = ?", carlos);
+        assertThat(contar("SELECT COUNT(*) FROM chat_read_state WHERE user_id = ?", carlos)).isZero();
+
+        jdbc.update("DELETE FROM projects WHERE id = ?", proyecto);
+        assertThat(contar("SELECT COUNT(*) FROM chat_read_state WHERE project_id = ?", proyecto)).isZero();
+        assertThat(contar("SELECT COUNT(*) FROM chat_read_state WHERE project_id = ? AND user_id = ?",
+                otroProyecto, ana)).as("lo de otro proyecto queda").isEqualTo(1);
+    }
+
+    // ------------------------------------------------- búsqueda y filtros (CU23)
+
+    private long guardarTexto(UUID proyecto, ChatAuthorType tipo, ChatMessageKind clase, String texto) {
+        long seq = store.nextSeq(proyecto.toString());
+        store.save(new ChatMessage(
+                UUID.randomUUID().toString(), proyecto.toString(), null, seq, tipo,
+                tipo == ChatAuthorType.USER ? UUID.randomUUID().toString() : null,
+                tipo == ChatAuthorType.USER ? "Ana" : "IA", null, null, null, null, null,
+                clase, texto, Instant.now(), null));
+        return seq;
+    }
+
+    private List<Long> buscar(UUID proyecto, Long antes, Long despues, int limit, String q,
+            ChatAuthorType tipo, ChatMessageKind clase) {
+        return historial.find(new ChatHistoryQuery(proyecto, antes, despues, limit, q, tipo, clase))
+                .stream().map(ChatMessage::seq).toList();
+    }
+
+    @Test
+    @DisplayName("ILIKE: sin mayúsculas, prefijos, solo en el proyecto y ascendente")
+    void busquedaIlike() {
+        long uno = guardarTexto(proyecto, ChatAuthorType.USER, ChatMessageKind.CHAT, "Agreguen los ATRIBUTOS");
+        guardarTexto(proyecto, ChatAuthorType.USER, ChatMessageKind.CHAT, "nada que ver");
+        long tres = guardarTexto(proyecto, ChatAuthorType.AI, ChatMessageKind.ANSWER, "los atributos van con tipo");
+        guardarTexto(otroProyecto, ChatAuthorType.USER, ChatMessageKind.CHAT, "atributos ajenos");
+
+        assertThat(buscar(proyecto, null, null, 10, "atrib", null, null)).containsExactly(uno, tres);
+    }
+
+    @Test
+    @DisplayName("Comodines del usuario literales en PostgreSQL: %, _, barra invertida y !")
+    void busquedaEscapada() {
+        long porciento = guardarTexto(proyecto, ChatAuthorType.USER, ChatMessageKind.CHAT, "al 100% listo");
+        guardarTexto(proyecto, ChatAuthorType.USER, ChatMessageKind.CHAT, "al 100 listo");
+        long guion = guardarTexto(proyecto, ChatAuthorType.USER, ChatMessageKind.CHAT, "fecha_alta");
+        guardarTexto(proyecto, ChatAuthorType.USER, ChatMessageKind.CHAT, "fechaXalta");
+        long ruta = guardarTexto(proyecto, ChatAuthorType.USER, ChatMessageKind.CHAT, "C:\\temp\\x");
+        guardarTexto(proyecto, ChatAuthorType.USER, ChatMessageKind.CHAT, "C:temp");
+        long admiracion = guardarTexto(proyecto, ChatAuthorType.USER, ChatMessageKind.CHAT, "hola!!");
+
+        assertThat(buscar(proyecto, null, null, 10, "0%", null, null)).containsExactly(porciento);
+        assertThat(buscar(proyecto, null, null, 10, "%%", null, null)).isEmpty();
+        assertThat(buscar(proyecto, null, null, 10, "fecha_alta", null, null)).containsExactly(guion);
+        assertThat(buscar(proyecto, null, null, 10, "C:\\temp", null, null)).containsExactly(ruta);
+        assertThat(buscar(proyecto, null, null, 10, "a!!", null, null)).containsExactly(admiracion);
+        assertThat(buscar(proyecto, null, null, 10, "!", null, null)).containsExactly(admiracion);
+    }
+
+    @Test
+    @DisplayName("Filtros por authorType y kind, combinados con cursores, en PostgreSQL")
+    void filtrosYCursores() {
+        for (int i = 1; i <= 12; i++) {
+            if (i % 2 == 0) {
+                guardarTexto(proyecto, ChatAuthorType.AI,
+                        i % 4 == 0 ? ChatMessageKind.SUMMARY : ChatMessageKind.ANSWER, "ia " + i);
+            } else {
+                guardarTexto(proyecto, ChatAuthorType.USER, ChatMessageKind.CHAT, "ana " + i);
+            }
+        }
+
+        assertThat(buscar(proyecto, null, null, 3, null, ChatAuthorType.AI, null)).containsExactly(8L, 10L, 12L);
+        assertThat(buscar(proyecto, 8L, null, 3, null, ChatAuthorType.AI, null)).containsExactly(2L, 4L, 6L);
+        assertThat(buscar(proyecto, null, 5L, 2, null, ChatAuthorType.AI, null)).containsExactly(6L, 8L);
+        assertThat(buscar(proyecto, null, null, 10, null, null, ChatMessageKind.SUMMARY)).containsExactly(4L, 8L, 12L);
+        assertThat(buscar(proyecto, null, null, 10, "ia 1", ChatAuthorType.AI, ChatMessageKind.SUMMARY))
+                .containsExactly(12L);
+        assertThat(buscar(proyecto, null, 0L, 10, "ana 1", ChatAuthorType.USER, null)).containsExactly(1L, 11L);
     }
 
     // ------------------------------------------------------------ nextSeq

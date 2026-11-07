@@ -151,3 +151,13 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* Coincidencia de la busqueda (CU23): --color-warning-bg con el texto del
+   mensaje (--brand-dark, ~11:1) y subrayado para no depender solo del color. */
+.message-bubble__match {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: var(--color-warning-bg);
+  color: inherit;
+  box-shadow: inset 0 -2px 0 var(--color-warning);
+}

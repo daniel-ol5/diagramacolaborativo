@@ -1,5 +1,17 @@
+import { ChatApiError } from "./chatApi";
+
 /** Tope del backend para el texto de un mensaje. */
 export const MAX_CHARS = 2000;
+
+/**
+ * Texto en espanol para un fallo de un GET del chat (historial, anteriores,
+ * busqueda). Un 403 ya trae "No eres miembro de este proyecto."; un fallo de
+ * red (sin respuesta) usa `porDefecto`.
+ */
+export function textoDeErrorDeCarga(e: unknown, porDefecto: string): string {
+  if (e instanceof ChatApiError) return e.status === 403 ? e.message : textoDeErrorDelChat(e.code, e.message);
+  return porDefecto;
+}
 
 /**
  * Texto en espanol para un rechazo del chat (/user/queue/errors con

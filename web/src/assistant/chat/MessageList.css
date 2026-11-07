@@ -20,3 +20,94 @@
   padding: 0;
   list-style: none;
 }
+
+/* Cargar anteriores (CU23): boton al principio de la lista, para teclado y
+   lectores de pantalla (tambien se cargan solos al acercarse al tope).
+   Blanco con borde y texto --brand-dark, como "Reintentar". */
+.message-list__older {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.message-list__older-btn {
+  padding: 4px 12px;
+  border: 1px solid var(--brand-dark);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--brand-dark);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.message-list__older-btn:hover:not(:disabled) {
+  background: var(--brand-tint);
+}
+
+.message-list__older-btn:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+.message-list__older-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.message-list__older-error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+/* Separador de dia: "Hoy", "Ayer", "5 nov 2026" entre dos lineas finas. */
+.message-list__day {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.message-list__day::before,
+.message-list__day::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-border-muted);
+}
+
+.message-list__day-label {
+  white-space: nowrap;
+}
+
+/* Linea "Mensajes nuevos" (CU23): --color-warning (~5,7:1 sobre --gray-page)
+   y una linea de 2 px, para que se distinga del separador de dia. */
+.message-list__new {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-1, 4px) 0;
+  color: var(--color-warning);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.message-list__new::before,
+.message-list__new::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  background: var(--color-warning);
+}
+
+.message-list__new-label {
+  white-space: nowrap;
+}

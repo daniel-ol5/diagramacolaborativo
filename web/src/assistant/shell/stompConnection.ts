@@ -137,9 +137,9 @@ export function useStompConnectionCore(diagramId: string | null, token: string |
             h.onChatError(body as StompErrorMessage);
           }
         });
-        // Con el panel del chat abierto lo recibe useProjectChat (onChatError);
-        // con el panel cerrado no hay nadie escuchando y queda en la consola.
-        if (!entregado) console.warn("[chat] error del chat con el panel cerrado:", message.body);
+        // Lo recibe useProjectChatFeed (onChatError), vivo mientras haya diagrama
+        // abierto en un proyecto; sin el (p. ej. /demo) queda en la consola.
+        if (!entregado) console.warn("[chat] error del chat sin nadie que lo reciba:", message.body);
       },
     }),
     [],

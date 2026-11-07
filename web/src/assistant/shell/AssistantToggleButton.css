@@ -40,3 +40,24 @@
 .assistant-toggle__icon {
   flex-shrink: 0;
 }
+
+/* Insignia de no leidos (CU23): --color-warning con texto blanco (6,25:1).
+   El borde --brand-dark la despega de la barra oscura y del boton activo
+   (--brand-light). */
+.assistant-toggle__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 2px;
+  border: 1.5px solid var(--brand-dark);
+  border-radius: 9px;
+  background: var(--color-warning);
+  color: var(--color-text-on-dark);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
