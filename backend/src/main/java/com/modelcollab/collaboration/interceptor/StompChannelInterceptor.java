@@ -2,11 +2,13 @@ package com.modelcollab.collaboration.interceptor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.modelcollab.assistant.core.ChatErrorCode;
 import com.modelcollab.auth.model.User;
 import com.modelcollab.auth.repository.UserRepository;
 import com.modelcollab.auth.service.JwtService;
 import com.modelcollab.collaboration.dto.Participante;
 import com.modelcollab.collaboration.dto.StompErrorMessage;
+import com.modelcollab.project.model.ProjectMember;
 import com.modelcollab.project.model.ProjectRole;
 import com.modelcollab.project.repository.ProjectMemberRepository;
 import java.security.Principal;
@@ -27,6 +29,7 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 
 /**
  * Arbitraje de seguridad del canal STOMP entrante. Es el equivalente WebSocket de la cadena de
@@ -42,6 +45,10 @@ import org.springframework.stereotype.Component;
  *   <li><b>SEND a {@code /app/diagram/&#123;id&#125;/**} — autorización.</b> Resuelve el rol del
  *       usuario sobre ese diagrama y descarta la operación si es {@code VIEWER} o si no hay
  *       membresía.
+ *   <li><b>Chat del proyecto (CU19) — membresía.</b> SEND a {@code /app/project/&#123;id&#125;/chat}
+ *       y SUBSCRIBE a {@code /topic/projects/&#123;id&#125;/chat} exigen ser miembro del proyecto,
+ *       con cualquier rol (el chat es conversación, no edición). Ningún otro SUBSCRIBE se
+ *       arbitra acá.
  * </ol>
  *
  * <h2>Por qué el 403 descarta el mensaje en vez de lanzar</h2>
@@ -89,6 +96,26 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     private static final String PREFIJO_BEARER = "Bearer ";
     private static final String COLA_ERRORES = "/queue/errors";
     private static final String PREFIJO_CACHE_ROL = "role:";
+    private static final String PREFIJO_CACHE_ROL_PROYECTO = "role:project:";
+
+    /** CU19: SEND al chat de un proyecto. Sólo este destino exacto. */
+    private static final Pattern DESTINO_CHAT_SEND =
+            Pattern.compile("^/app/project/(?<projectId>[^/]+)/chat$");
+
+    /** CU19: SUBSCRIBE al topic del chat de un proyecto. Sólo este destino exacto. */
+    private static final Pattern DESTINO_CHAT_TOPIC =
+            Pattern.compile("^/topic/projects/(?<projectId>[^/]+)/chat$");
+
+    /** Todo lo que cuelga de acá es del chat: sólo se entra por el destino exacto de arriba. */
+    private static final String PREFIJO_TOPIC_PROYECTOS = "/topic/projects/";
+
+    /**
+     * El mismo matcher que usa por defecto el broker simple ({@code DefaultSubscriptionRegistry}
+     * crea un {@code new AntPathMatcher()}). Un SUBSCRIBE con patrón se guarda como patrón y
+     * recibe todo destino que case, así que {@code /topic/**} vería el chat de todos los
+     * proyectos. Con el mismo matcher se decide aquí lo mismo que decidiría el broker.
+     */
+    private static final AntPathMatcher PATRONES_DEL_BROKER = new AntPathMatcher();
     /** Clave del Participante en los atributos de la sesion; la leen locks y presencia. */
     static final String ATRIBUTO_PARTICIPANTE = "participante";
 
@@ -124,6 +151,8 @@ public class StompChannelInterceptor implements ChannelInterceptor {
         return switch (accessor.getCommand()) {
             case CONNECT -> autenticar(accessor, message);
             case SEND -> autorizar(accessor, message);
+            // Sólo el topic del chat; cualquier otro SUBSCRIBE sigue pasando como antes.
+            case SUBSCRIBE -> autorizarSuscripcion(accessor, message);
             default -> message;
         };
     }
@@ -175,6 +204,17 @@ public class StompChannelInterceptor implements ChannelInterceptor {
         String destino = accessor.getDestination();
         if (destino == null) {
             return message;
+        }
+        if (destino.startsWith(PREFIJO_TOPIC_PROYECTOS)) {
+            // /topic es prefijo del broker: un SEND ahí no pasa por ningún controlador y le
+            // llega tal cual a todos los suscritos. Sería un mensaje de chat falsificado.
+            // (/topic/diagrams/* tiene el mismo hueco; queda pendiente, fuera de alcance.)
+            return descartar(accessor, destino, message, ChatErrorCode.INVALID_PAYLOAD,
+                    "No se publica directo en el topic del chat; usá /app/project/{id}/chat");
+        }
+        Matcher chat = DESTINO_CHAT_SEND.matcher(destino);
+        if (chat.matches()) {
+            return autorizarChat(accessor, message, destino, chat.group("projectId"));
         }
         Matcher matcher = DESTINO_DIAGRAMA.matcher(destino);
         if (!matcher.matches()) {
@@ -232,6 +272,140 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                 StompErrorMessage.rolInsuficiente(destino, clientMutationIdDe(message), motivo));
     }
 
+    // -------------------------------------------------------------- chat CU19
+
+    private Message<?> autorizarSuscripcion(StompHeaderAccessor accessor, Message<?> message) {
+        String destino = accessor.getDestination();
+        if (destino == null) {
+            return message;
+        }
+        boolean esPatron = esPatron(destino);
+        if (destino.startsWith(PREFIJO_TOPIC_PROYECTOS)) {
+            if (esPatron) {
+                return descartar(accessor, destino, message, ChatErrorCode.INVALID_PAYLOAD,
+                        "No se permiten comodines en el topic del chat");
+            }
+            Matcher chat = DESTINO_CHAT_TOPIC.matcher(destino);
+            if (!chat.matches()) {
+                return descartar(accessor, destino, message, ChatErrorCode.INVALID_PAYLOAD,
+                        "Destino de chat no válido; usá /topic/projects/{id}/chat");
+            }
+            return autorizarChat(accessor, message, destino, chat.group("projectId"));
+        }
+        // Un patrón de fuera (/topic/**, /topic/*/**, /**, /topic/*/*/chat...) que podría
+        // cubrir algo bajo /topic/projects/. matchStart responde justo eso: si alguna ruta que
+        // empiece por ese prefijo casaría con el patrón.
+        if (esPatron && PATRONES_DEL_BROKER.matchStart(destino, PREFIJO_TOPIC_PROYECTOS)) {
+            return descartar(accessor, destino, message, ChatErrorCode.INVALID_PAYLOAD,
+                    "Ese patrón cubriría el chat de otros proyectos");
+        }
+        // Fuera de alcance, igual que antes: /topic/diagrams/** (incluso con comodines: hueco
+        // conocido), /user/queue/** y el resto.
+        return message;
+    }
+
+    /**
+     * Si el broker trataría el destino como patrón. Las llaves se miran a mano además de
+     * {@code isPattern}: {@code /topic/projects/{x}/chat} es una variable de plantilla que
+     * casa con cualquier proyecto, y no conviene depender de que la regex o el UUID la frenen.
+     */
+    private static boolean esPatron(String destino) {
+        return destino.indexOf('*') >= 0
+                || destino.indexOf('?') >= 0
+                || destino.indexOf('{') >= 0
+                || destino.indexOf('}') >= 0
+                || PATRONES_DEL_BROKER.isPattern(destino);
+    }
+
+    /** Descarta el frame; si hay identidad, avisa por /user/queue/errors. */
+    private Message<?> descartar(
+            StompHeaderAccessor accessor, String destino, Message<?> message,
+            ChatErrorCode code, String motivo) {
+        Principal principal = accessor.getUser();
+        UUID userId = null;
+        if (principal != null) {
+            try {
+                userId = UUID.fromString(principal.getName());
+            } catch (IllegalArgumentException e) {
+                userId = null;
+            }
+        }
+        if (userId == null) {
+            log.warn("{} a {} sin identidad válida; se descarta", accessor.getCommand(), destino);
+            return null;
+        }
+        rechazarChat(message, destino, userId, code, motivo);
+        return null;
+    }
+
+    /**
+     * Membresía para el chat, con cualquier rol. Igual que en los diagramas, un rechazo descarta
+     * el frame y avisa por {@code /user/queue/errors}: la sesión sigue viva para el lienzo.
+     */
+    private Message<?> autorizarChat(
+            StompHeaderAccessor accessor, Message<?> message, String destino, String proyecto) {
+        Principal principal = accessor.getUser();
+        if (principal == null) {
+            log.warn("{} a {} sin Principal en la sesión; se descarta", accessor.getCommand(), destino);
+            return null;
+        }
+        UUID userId;
+        try {
+            userId = UUID.fromString(principal.getName());
+        } catch (IllegalArgumentException e) {
+            log.warn("{} a {} con Principal no-UUID; se descarta", accessor.getCommand(), destino);
+            return null;
+        }
+        UUID projectId;
+        try {
+            projectId = UUID.fromString(proyecto);
+        } catch (IllegalArgumentException e) {
+            rechazarChat(message, destino, userId, ChatErrorCode.INVALID_PAYLOAD,
+                    "El identificador del proyecto no es válido");
+            return null;
+        }
+        if (rolEnProyectoDeLaSesion(accessor, projectId, userId).isEmpty()) {
+            rechazarChat(message, destino, userId, ChatErrorCode.NOT_PROJECT_MEMBER,
+                    "No sos miembro de este proyecto");
+            return null;
+        }
+        return message;
+    }
+
+    private void rechazarChat(
+            Message<?> message, String destino, UUID userId, ChatErrorCode code, String motivo) {
+        log.debug("{} en {} para el usuario {}", code, destino, userId);
+        // clientMutationId lleva el clientMessageId del chat, para que el cliente sepa cuál de
+        // sus mensajes fue rechazado. En un SUBSCRIBE no hay cuerpo y queda nulo.
+        messagingTemplate.convertAndSendToUser(
+                userId.toString(),
+                COLA_ERRORES,
+                new StompErrorMessage(
+                        code.status(), code.name(), destino,
+                        campoDelCuerpo(message, "clientMessageId"), motivo));
+    }
+
+    /** Igual que {@link #rolDeLaSesion}, pero por proyecto: clave {@code role:project:{id}}. */
+    private Optional<ProjectRole> rolEnProyectoDeLaSesion(
+            StompHeaderAccessor accessor, UUID projectId, UUID userId) {
+        Map<String, Object> sesion = accessor.getSessionAttributes();
+        String clave = PREFIJO_CACHE_ROL_PROYECTO + projectId;
+
+        if (sesion != null && sesion.get(clave) instanceof Optional<?> cacheado) {
+            @SuppressWarnings("unchecked")
+            Optional<ProjectRole> rol = (Optional<ProjectRole>) cacheado;
+            return rol;
+        }
+        Optional<ProjectRole> rol =
+                projectMemberRepository
+                        .findByIdProjectIdAndIdUserId(projectId, userId)
+                        .map(ProjectMember::getRole);
+        if (sesion != null) {
+            sesion.put(clave, rol);
+        }
+        return rol;
+    }
+
     // ------------------------------------------------------------ rol y caché
 
     private Optional<ProjectRole> rolDeLaSesion(
@@ -274,11 +448,15 @@ public class StompChannelInterceptor implements ChannelInterceptor {
      * deserialización la hace el converter, una sola vez, más adelante.
      */
     private String clientMutationIdDe(Message<?> message) {
+        return campoDelCuerpo(message, "clientMutationId");
+    }
+
+    private String campoDelCuerpo(Message<?> message, String nombre) {
         if (!(message.getPayload() instanceof byte[] cuerpo) || cuerpo.length == 0) {
             return null;
         }
         try {
-            JsonNode campo = objectMapper.readTree(cuerpo).get("clientMutationId");
+            JsonNode campo = objectMapper.readTree(cuerpo).get(nombre);
             return campo == null || campo.isNull() ? null : campo.asText();
         } catch (Exception e) {
             // Un cuerpo ilegible no debe impedir que el 403 llegue; se manda con el campo nulo.

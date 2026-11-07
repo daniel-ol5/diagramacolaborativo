@@ -1,0 +1,30 @@
+.chat-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--gray-page);
+  color: var(--brand-dark);
+}
+
+.chat-panel__empty {
+  flex: 1;
+  padding: var(--space-4);
+}
+
+.chat-panel__hint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+/* Igual que .modal__error: --color-danger sobre --color-danger-bg (5,46:1 sobre blanco). */
+.chat-panel__error {
+  margin: 0 var(--space-4) var(--space-3);
+  padding: 6px 10px;
+  border: 1px solid rgba(201, 42, 42, 0.25);
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}

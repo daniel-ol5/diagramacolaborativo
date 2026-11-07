@@ -39,6 +39,23 @@ function parseColor(color: string): [number, number, number] | null {
 const BLANCO: [number, number, number] = [255, 255, 255];
 const TINTA: [number, number, number] = [0x1a, 0x1a, 0x2e]; // --color-text / --color-border-strong
 
+const NEGRO: [number, number, number] = [0, 0, 0];
+
+/**
+ * Blanco o negro (#000), el que dé MAS contraste WCAG (luminancia relativa)
+ * contra `background`. Para la inicial de los circulos de presencia, que
+ * usan el color del colaborador como RELLENO. Con blanco/negro los ocho
+ * colores de la paleta pasan 4,5:1 (peor caso #7570B3: 4,73:1 con negro);
+ * con blanco/--brand-dark o blanco/tinta, cuatro o dos de ellos no llegaban.
+ * No cambia el color de fondo.
+ */
+export function blackOrWhiteText(background: string): "#ffffff" | "#000000" {
+  const rgb = parseColor(background);
+  if (!rgb) return "#ffffff";
+  const lBg = luminance(rgb);
+  return contrastRatio(lBg, luminance(BLANCO)) >= contrastRatio(lBg, luminance(NEGRO)) ? "#ffffff" : "#000000";
+}
+
 /** Blanco o la tinta oscura del lienzo, el que contraste mas contra `background`. */
 export function readableTextColor(background: string): string {
   const rgb = parseColor(background);

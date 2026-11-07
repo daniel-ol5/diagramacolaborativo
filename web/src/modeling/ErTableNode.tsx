@@ -2,6 +2,7 @@ import type { NodeProps } from "reactflow";
 import { Handle, Position } from "reactflow";
 import type { ErTableData } from "./erView";
 import "./ErTableNode.css";
+import { useReviewStore } from "../assistant/review/reviewStore";
 
 function keyBadge(pk: boolean, fk: boolean): string {
   if (pk && fk) return "PK,FK"; // herencia JOINED: el id del hijo es clave primaria Y foranea al padre a la vez
@@ -17,11 +18,22 @@ function keyBadge(pk: boolean, fk: boolean): string {
  * caja UML en un lugar donde todavia no existe.
  */
 export function ErTableNode({ data }: NodeProps<ErTableData>) {
+  const classIssue = useReviewStore(
+    (s) => s.issuesByClassName[data.tableName]
+  );
   return (
     <div className={`er-table${data.isJunction ? " er-table--junction" : ""}`}>
       <Handle type="target" position={Position.Top} style={{ visibility: "hidden" }} />
       <div className="er-table__name" title={data.isAbstract ? "Tiene tabla propia, pero sin API REST (superclase abstracta)" : undefined}>
         {data.tableName}
+        {classIssue && (
+          <span
+            className={`er-table__issue-badge er-table__issue-badge--${classIssue.severity.toLowerCase()}`}
+            title={classIssue.messages.join("\n")}
+          >
+            {classIssue.severity === "ERROR" ? "!" : "⚠"}
+          </span>
+        )}
         {data.isAbstract && <span className="er-table__abstract-mark"> (sin API)</span>}
       </div>
       {data.columns.length === 0 && <div className="er-table__empty">(sin columnas)</div>}

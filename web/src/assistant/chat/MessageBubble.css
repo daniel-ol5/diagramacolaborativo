@@ -1,0 +1,153 @@
+/* Un mensaje del chat. Texto siempre --brand-dark sobre fondo claro. */
+.message-bubble {
+  align-self: flex-start;
+  max-width: 85%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--brand-dark);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Mis mensajes a la derecha, con el tinte de la marca. */
+.message-bubble--mine {
+  align-self: flex-end;
+  background: var(--brand-tint);
+  border-color: var(--brand-tint-strong);
+}
+
+/* La IA: borde izquierdo --brand-light. */
+.message-bubble--ai {
+  border-left: 3px solid var(--brand-light);
+}
+
+/* SYSTEM: centrado y discreto, sin burbuja. */
+.message-bubble--system {
+  align-self: center;
+  max-width: 90%;
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.message-bubble--system .message-bubble__text {
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}
+
+.message-bubble__meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: 2px;
+}
+
+/* Como los chips de presencia: "● daniel". */
+.message-bubble__author {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--brand-dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-bubble__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  /* Sin authorColor: un gris neutro. */
+  background: var(--gray-border);
+}
+
+.message-bubble__author--ai {
+  letter-spacing: 0.01em;
+}
+
+.message-bubble__time {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Propio sin eco todavia: borde punteado, sin bajar el contraste del texto. */
+.message-bubble--sending {
+  border-style: dashed;
+}
+
+/* Propio rechazado: borde --color-danger. */
+.message-bubble--failed {
+  border-color: var(--color-danger);
+}
+
+.message-bubble__status {
+  margin: var(--space-1) 0 0;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+
+.message-bubble__status--failed {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.message-bubble__retry {
+  padding: 2px 8px;
+  border: 1px solid var(--brand-dark);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--brand-dark);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.message-bubble__retry:hover:not(:disabled) {
+  background: var(--brand-tint-strong);
+}
+
+.message-bubble__retry:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 1px;
+  box-shadow: var(--focus-ring);
+}
+
+.message-bubble__retry:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* REVIEW: tarjeta completa de auditoría */
+.message-bubble--review {
+  align-self: stretch;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.message-bubble__text {
+  margin: 0;
+  font-size: var(--font-size-base);
+  line-height: 1.4;
+  /* Texto plano: respeta saltos de linea y corta palabras/URL largas. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

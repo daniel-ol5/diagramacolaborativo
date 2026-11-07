@@ -1,0 +1,170 @@
+/* Campo de envio, fijo abajo del panel. Texto --brand-dark sobre fondo claro. */
+.chat-input {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border-top: 1px solid var(--color-border-muted);
+  background: var(--color-bg);
+  color: var(--brand-dark);
+}
+
+.chat-input__notice {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.chat-input__field {
+  position: relative;
+}
+
+.chat-input__textarea {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  max-height: 160px;
+  resize: vertical;
+  padding: 8px 10px;
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--brand-dark);
+  font: inherit;
+  font-size: var(--font-size-base);
+  line-height: 1.4;
+}
+
+.chat-input__textarea::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.chat-input__textarea:focus-visible {
+  outline: none;
+  border-color: var(--brand-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.chat-input__textarea:disabled {
+  background: var(--gray-page);
+  cursor: not-allowed;
+}
+
+/* Sugerencia de "@IA" por encima del campo. */
+.chat-input__suggestions {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 4px);
+  z-index: 2;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--color-bg);
+  border: 1px solid var(--brand-light);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+}
+
+.chat-input__suggestion {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--brand-tint);
+  color: var(--brand-dark);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chat-input__kbd {
+  margin-left: var(--space-2);
+  padding: 0 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+}
+
+.chat-input__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.chat-input__ask {
+  padding: 6px 10px;
+  border: 1px solid var(--brand-light);
+  border-radius: var(--radius-sm);
+  background: var(--brand-tint);
+  color: var(--brand-dark);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chat-input__ask:hover:not(:disabled) {
+  background: var(--brand-tint-strong);
+}
+
+.chat-input__counter {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.chat-input__counter--max {
+  color: var(--color-danger);
+  font-weight: 700;
+}
+
+/* Enviar: --brand-dark con texto claro (11,8:1). NUNCA blanco sobre --brand-primary. */
+.chat-input__send {
+  margin-left: auto;
+  padding: 6px 16px;
+  border: 1px solid var(--brand-dark);
+  border-radius: var(--radius-sm);
+  background: var(--brand-dark);
+  color: var(--color-text-on-dark);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chat-input__counter + .chat-input__send {
+  margin-left: 0;
+}
+
+.chat-input__send:hover:not(:disabled) {
+  background: var(--brand-dark-elevated);
+}
+
+.chat-input__ask:focus-visible,
+.chat-input__send:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+}
+
+.chat-input__ask:disabled,
+.chat-input__send:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.chat-input__error {
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid rgba(201, 42, 42, 0.25);
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}

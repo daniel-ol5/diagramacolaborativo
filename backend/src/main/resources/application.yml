@@ -62,6 +62,11 @@ modelcollab:
     endpoint: ${OPENAI_ENDPOINT:${GEMINI_ENDPOINT:https://api.openai.com/v1}}
     timeout-ms: ${AI_TIMEOUT_MS:${GEMINI_TIMEOUT_MS:30000}}
 
+  # CU19. Donde vive el historial del chat: "postgres" (por defecto, tablas de V4
+  # en la misma base) o "memory", que no persiste nada y se pierde al reiniciar.
+  chat:
+    store: ${CHAT_STORE:postgres}
+
 logging:
   level:
     com.modelcollab: DEBUG

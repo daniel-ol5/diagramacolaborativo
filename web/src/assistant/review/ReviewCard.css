@@ -1,0 +1,214 @@
+.review-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-muted);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  max-width: 100%;
+}
+
+.review-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.review-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.review-card__icon {
+  font-size: 1.1rem;
+}
+
+.review-card__title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.review-card__version {
+  font-size: 0.75rem;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-subtle);
+  padding: 1px var(--space-1);
+  border-radius: var(--radius-sm);
+}
+
+.review-card__score {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.review-card__score--high {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border: 1px solid var(--color-success);
+}
+
+.review-card__score--mid {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning);
+}
+
+.review-card__score--low {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+}
+
+.review-card__score-total {
+  font-size: 0.75rem;
+  font-weight: normal;
+  opacity: 0.85;
+}
+
+.review-card__stale-warning {
+  font-size: 0.78rem;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--color-warning);
+}
+
+.review-card__pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.review-card__pill {
+  font-size: 0.75rem;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
+}
+
+.review-card__pill--error {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.review-card__pill--warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  font-weight: 600;
+}
+
+.review-card__pill--suggestion {
+  background: var(--brand-tint);
+  color: var(--brand-dark);
+}
+
+.review-card__comment {
+  margin: var(--space-1) 0 0 0;
+  padding: var(--space-2);
+  background: var(--brand-tint);
+  border-left: 3px solid var(--brand-primary);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.review-card__comment-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--brand-dark);
+  margin-bottom: 2px;
+}
+
+.review-card__comment-text {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--brand-dark);
+  line-height: 1.35;
+}
+
+.review-card__issues {
+  margin-top: var(--space-1);
+}
+
+.review-card__issues-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.review-card__issues-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.review-card__issue-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  font-size: 0.8rem;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-page);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.review-card__issue-item:hover {
+  background: var(--color-bg-muted);
+}
+
+.review-card__issue-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1px var(--space-1);
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.review-card__issue-item--error .review-card__issue-badge {
+  background: var(--color-danger);
+  color: #fff;
+}
+
+.review-card__issue-item--warning .review-card__issue-badge {
+  background: var(--color-warning);
+  color: #fff;
+}
+
+.review-card__issue-item--suggestion .review-card__issue-badge {
+  background: var(--brand-primary);
+  color: #fff;
+}
+
+.review-card__issue-element {
+  font-weight: 600;
+  color: var(--color-text);
+  flex-shrink: 0;
+}
+
+.review-card__issue-msg {
+  color: var(--color-text-secondary);
+}
+
+.review-card__fallback {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
