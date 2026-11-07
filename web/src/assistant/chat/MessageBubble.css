@@ -133,6 +133,16 @@
   cursor: default;
 }
 
+/* REVIEW: tarjeta completa de auditoría */
+.message-bubble--review {
+  align-self: stretch;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
 .message-bubble__text {
   margin: 0;
   font-size: var(--font-size-base);

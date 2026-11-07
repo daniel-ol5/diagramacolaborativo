@@ -84,3 +84,30 @@
   font-style: italic;
   font-family: "Inter", "Segoe UI", Roboto, sans-serif;
 }
+
+
+/* Insignias de auditoría arquitectónica (CU22) */
+.er-table__issue-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  color: #ffffff;
+  margin-left: 6px;
+  cursor: help;
+  vertical-align: middle;
+}
+
+.er-table__issue-badge--error {
+  background: var(--color-danger);
+}
+
+.er-table__issue-badge--warning,
+.er-table__issue-badge--suggestion {
+  background: var(--color-warning);
+}

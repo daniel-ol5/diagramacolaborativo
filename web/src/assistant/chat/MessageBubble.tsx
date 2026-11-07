@@ -1,5 +1,7 @@
 import type { ChatMessage } from "./types";
 import { partirPorCoincidencia } from "./highlight";
+import { ReviewCard } from "../review/ReviewCard";
+import type { ReviewCardMeta } from "../review/types";
 import "./MessageBubble.css";
 
 interface Props {
@@ -48,6 +50,20 @@ export function MessageBubble({ message, mine, status, errorText, onRetry, retry
     return (
       <li className="message-bubble message-bubble--system" data-chat-id={message.id}>
         <p className="message-bubble__text">{texto}</p>
+        {hora && (
+          <time className="message-bubble__time" dateTime={message.createdAt}>
+            {hora}
+          </time>
+        )}
+      </li>
+    );
+  }
+
+  if (message.kind === "REVIEW") {
+    const meta = (message.meta as ReviewCardMeta | undefined) ?? ({} as ReviewCardMeta);
+    return (
+      <li className="message-bubble message-bubble--review">
+        <ReviewCard meta={meta} textFallback={message.text} />
         {hora && (
           <time className="message-bubble__time" dateTime={message.createdAt}>
             {hora}

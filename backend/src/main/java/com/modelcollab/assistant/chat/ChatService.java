@@ -13,6 +13,7 @@ import com.modelcollab.collaboration.dto.Participante;
 import java.security.Principal;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -421,6 +422,49 @@ public class ChatService {
                                 null, null, null,
                                 clientId, ChatMessageKind.SYSTEM, text, reloj.instant(), null))
                 .message();
+    }
+
+    /**
+     * Escribe una tarjeta estructurada en el chat (como una revisión CU22 o un resumen CU24).
+     * El texto se guarda en texto plano para clientes simples (como el móvil), y los datos
+     * estructurados viajan en {@code meta}.
+     */
+    public ChatMessage postCard(
+            UUID projectId,
+            String diagramId,
+            ChatMessageKind kind,
+            String text,
+            Map<String, Object> meta) {
+        if (projectId == null || kind == null) {
+            throw new IllegalArgumentException("postCard: projectId y kind son obligatorios");
+        }
+        if (text == null || text.isBlank()) {
+            throw new IllegalArgumentException("El texto de la tarjeta no puede estar vacío");
+        }
+        String proyecto = projectId.toString();
+        String clientId = "card-" + kind.name().toLowerCase() + "-" + UUID.randomUUID();
+        return agregar(
+                projectId,
+                clientId,
+                null,
+                seq -> new ChatMessage(
+                        UUID.randomUUID().toString(),
+                        proyecto,
+                        diagramId,
+                        seq,
+                        ChatAuthorType.AI,
+                        null,
+                        NOMBRE_IA,
+                        null,
+                        null,
+                        null,
+                        null,
+                        clientId,
+                        kind,
+                        text,
+                        reloj.instant(),
+                        meta != null ? new LinkedHashMap<>(meta) : Map.of()
+                )).message();
     }
 
     // ------------------------------------------------------------- escritura

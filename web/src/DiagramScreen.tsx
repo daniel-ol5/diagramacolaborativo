@@ -9,6 +9,9 @@ import { AssistantPanel } from "./assistant/shell/AssistantPanel";
 import { ChatPanel } from "./assistant/chat/ChatPanel";
 import { ProjectChatFeed } from "./assistant/chat/ProjectChatFeed";
 import { useChatStore } from "./assistant/chat/chatStore";
+import { AssistantSettingsModal } from "./assistant/settings/AssistantSettingsModal";
+import { requestDiagramReview } from "./assistant/review/reviewApi";
+import { useReviewStore } from "./assistant/review/reviewStore";
 
 interface Props {
   session: Session;
@@ -30,6 +33,10 @@ export function DiagramScreen({ session }: Props) {
   const [assistantOpen, setAssistantOpen] = useState(false);
   // CU23: no leidos del chat, para la insignia del boton "Chat IA".
   const unread = useChatStore((s) => (projectId && s.projectId === projectId ? s.unreadCount : 0));
+  // CU21: modal de configuracion de la IA para el proyecto.
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  // CU22: estado de solicitud de revisión del diagrama por la IA.
+  const [reviewing, setReviewing] = useState(false);
 
   useEffect(() => {
     if (!diagramId) return;
@@ -48,6 +55,19 @@ export function DiagramScreen({ session }: Props) {
       cancelado = true;
     };
   }, [diagramId, session.token, setModel]);
+
+  const handleReviewDiagram = async () => {
+    if (!diagramId || reviewing) return;
+    setReviewing(true);
+    try {
+      const review = await requestDiagramReview(diagramId, session.token);
+      useReviewStore.getState().setActiveReview(review);
+    } catch (e) {
+      console.error("Error al pedir revisión de diagrama:", e);
+    } finally {
+      setReviewing(false);
+    }
+  };
 
   if (error) {
     return (
@@ -75,7 +95,12 @@ export function DiagramScreen({ session }: Props) {
         }
         sidePanel={
           projectId && assistantOpen ? (
-            <AssistantPanel onClose={() => setAssistantOpen(false)}>
+            <AssistantPanel
+              onClose={() => setAssistantOpen(false)}
+              onOpenSettings={() => setSettingsOpen(true)}
+              onReviewDiagram={handleReviewDiagram}
+              isReviewing={reviewing}
+            >
               <ChatPanel
                 projectId={projectId}
                 diagramId={diagramId}
@@ -95,7 +120,13 @@ export function DiagramScreen({ session }: Props) {
       {/* El chat sigue recibiendo con el panel cerrado (no leidos). Va DESPUES
           del lienzo: asi registra sus handlers despues y, en cada CONNECT, las
           4 suscripciones del lienzo salen primero y en el mismo orden de antes. */}
-      {projectId && <ProjectChatFeed projectId={projectId} token={session.token} myUserId={session.userId} />}
+      {settingsOpen && projectId && (
+        <AssistantSettingsModal
+          projectId={projectId}
+          token={session.token}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
     </StompConnectionProvider>
   );
 }

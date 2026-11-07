@@ -51,6 +51,38 @@
   color: var(--color-text-on-dark);
 }
 
+.assistant-panel__header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1, 4px);
+}
+
+.assistant-panel__review-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background: var(--brand-dark-elevated);
+  color: var(--brand-light);
+  border: 1px solid var(--brand-light);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.assistant-panel__review-btn:hover:not(:disabled) {
+  background: var(--brand-light);
+  color: var(--brand-dark);
+}
+
+.assistant-panel__review-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.assistant-panel__icon-btn,
 .assistant-panel__close {
   display: inline-flex;
   align-items: center;
@@ -63,15 +95,18 @@
   color: var(--brand-light);
   font-size: var(--font-size-base);
   cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 /* Nada de texto blanco sobre --brand-primary (3,21:1): el hover sube a
    --brand-dark-elevated y el texto pasa a blanco sobre fondo oscuro. */
+.assistant-panel__icon-btn:hover,
 .assistant-panel__close:hover {
   background: var(--brand-dark-elevated);
   color: var(--color-text-on-dark);
 }
 
+.assistant-panel__icon-btn:focus-visible,
 .assistant-panel__close:focus-visible {
   outline: 2px solid var(--brand-light);
   outline-offset: 2px;
