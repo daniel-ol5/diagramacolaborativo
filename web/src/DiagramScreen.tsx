@@ -8,6 +8,8 @@ import { StompConnectionProvider } from "./assistant/shell/StompConnectionProvid
 import { AssistantPanel } from "./assistant/shell/AssistantPanel";
 import { ChatPanel } from "./assistant/chat/ChatPanel";
 import { AssistantSettingsModal } from "./assistant/settings/AssistantSettingsModal";
+import { requestDiagramReview } from "./assistant/review/reviewApi";
+import { useReviewStore } from "./assistant/review/reviewStore";
 
 interface Props {
   session: Session;
@@ -29,6 +31,8 @@ export function DiagramScreen({ session }: Props) {
   const [assistantOpen, setAssistantOpen] = useState(false);
   // CU21: modal de configuracion de la IA para el proyecto.
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // CU22: estado de solicitud de revisión del diagrama por la IA.
+  const [reviewing, setReviewing] = useState(false);
 
   useEffect(() => {
     if (!diagramId) return;
@@ -47,6 +51,19 @@ export function DiagramScreen({ session }: Props) {
       cancelado = true;
     };
   }, [diagramId, session.token, setModel]);
+
+  const handleReviewDiagram = async () => {
+    if (!diagramId || reviewing) return;
+    setReviewing(true);
+    try {
+      const review = await requestDiagramReview(diagramId, session.token);
+      useReviewStore.getState().setActiveReview(review);
+    } catch (e) {
+      console.error("Error al pedir revisión de diagrama:", e);
+    } finally {
+      setReviewing(false);
+    }
+  };
 
   if (error) {
     return (
@@ -75,6 +92,8 @@ export function DiagramScreen({ session }: Props) {
             <AssistantPanel
               onClose={() => setAssistantOpen(false)}
               onOpenSettings={() => setSettingsOpen(true)}
+              onReviewDiagram={handleReviewDiagram}
+              isReviewing={reviewing}
             >
               <ChatPanel
                 projectId={projectId}

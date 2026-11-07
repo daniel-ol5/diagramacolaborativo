@@ -4,6 +4,8 @@ import "./AssistantPanel.css";
 interface Props {
   onClose: () => void;
   onOpenSettings?: () => void;
+  onReviewDiagram?: () => void;
+  isReviewing?: boolean;
   /** El contenido de la pestaña activa (hoy, solo el chat). */
   children: ReactNode;
 }
@@ -12,12 +14,14 @@ interface Props {
  * Panel lateral del asistente, a la derecha del lienzo (no flota encima:
  * es hermano de .app__canvas dentro de .app__body, asi el lienzo se achica
  * y React Flow se reajusta solo).
- *
- * Por ahora solo el "Chat IA". Preparado para sumar pestañas (resumenes,
- * revision) en la cabecera sin cambiar el marco: el contenido llega como
- * children.
  */
-export function AssistantPanel({ onClose, onOpenSettings, children }: Props) {
+export function AssistantPanel({
+  onClose,
+  onOpenSettings,
+  onReviewDiagram,
+  isReviewing,
+  children,
+}: Props) {
   return (
     <aside id="assistant-panel" className="assistant-panel" aria-labelledby="assistant-panel-title">
       <header className="assistant-panel__header">
@@ -25,12 +29,24 @@ export function AssistantPanel({ onClose, onOpenSettings, children }: Props) {
           Chat IA
         </h2>
         <div className="assistant-panel__header-actions">
+          {onReviewDiagram && (
+            <button
+              type="button"
+              className="assistant-panel__review-btn"
+              onClick={onReviewDiagram}
+              disabled={isReviewing}
+              title="Pedirle a la IA una revisión arquitectónica del diagrama (CU22)"
+              aria-label="Revisar diagrama con IA"
+            >
+              {isReviewing ? "Revisando…" : "📋 Revisar"}
+            </button>
+          )}
           {onOpenSettings && (
             <button
               type="button"
               className="assistant-panel__icon-btn"
               onClick={onOpenSettings}
-              title="Configuración de la IA del proyecto"
+              title="Configuración de la IA del proyecto (CU21)"
               aria-label="Configuración de la IA"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

@@ -5,6 +5,7 @@ import { visibilitySymbol, methodSignature } from "../lib/uml";
 import { useCollaborationActions } from "../hooks/collaborationActionsContext";
 import { useCollaborationStore } from "../store/collaborationStore";
 import { useOfflineStore } from "../store/offlineStore";
+import { useReviewStore } from "../assistant/review/reviewStore";
 import { AttributeFormModal } from "./AttributeFormModal";
 import { MethodFormModal } from "./MethodFormModal";
 import "./UmlClassNode.css";
@@ -49,6 +50,7 @@ export function UmlClassNode({ data, selected }: NodeProps<ClassEntity>) {
   const myUserId = useCollaborationStore((s) => s.myUserId);
   const editingTargetId = useCollaborationStore((s) => s.editingTargetId);
   const isOffline = useOfflineStore((s) => s.state === "OFFLINE");
+  const classIssue = useReviewStore((s) => s.issuesByClassId[data.id] || s.issuesByClassName[data.name]);
   const actions = useCollaborationActions();
 
   const [pending, setPending] = useState<Pending>(null);
@@ -196,6 +198,15 @@ export function UmlClassNode({ data, selected }: NodeProps<ClassEntity>) {
         ) : (
           <span className="uml-class-node__name-row">
             <span className="uml-class-node__name-text">{data.name}</span>
+            {classIssue && (
+              <span
+                className={`uml-class-node__issue-badge uml-class-node__issue-badge--${classIssue.severity.toLowerCase()}`}
+                title={classIssue.messages.join("\n")}
+                aria-label={`Problema: ${classIssue.messages[0]}`}
+              >
+                {classIssue.severity === "ERROR" ? "!" : "⚠"}
+              </span>
+            )}
             {lock && (
               <span className="uml-class-node__lock-icon" style={{ color: lock.color }}>
                 🔒

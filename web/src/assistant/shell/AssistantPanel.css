@@ -57,6 +57,31 @@
   gap: var(--space-1, 4px);
 }
 
+.assistant-panel__review-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background: var(--brand-dark-elevated);
+  color: var(--brand-light);
+  border: 1px solid var(--brand-light);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.assistant-panel__review-btn:hover:not(:disabled) {
+  background: var(--brand-light);
+  color: var(--brand-dark);
+}
+
+.assistant-panel__review-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
 .assistant-panel__icon-btn,
 .assistant-panel__close {
   display: inline-flex;
