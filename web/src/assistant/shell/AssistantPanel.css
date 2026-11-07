@@ -57,6 +57,7 @@
   gap: var(--space-1, 4px);
 }
 
+.assistant-panel__action-btn,
 .assistant-panel__review-btn {
   display: inline-flex;
   align-items: center;
@@ -72,11 +73,13 @@
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
+.assistant-panel__action-btn:hover:not(:disabled),
 .assistant-panel__review-btn:hover:not(:disabled) {
   background: var(--brand-light);
   color: var(--brand-dark);
 }
 
+.assistant-panel__action-btn:disabled,
 .assistant-panel__review-btn:disabled {
   opacity: 0.55;
   cursor: wait;

@@ -21,6 +21,7 @@ import { PackagePanel } from "./components/PackagePanel";
 import { RelationshipFormModal } from "./components/RelationshipFormModal";
 import { OfflineSyncBadge } from "./components/OfflineSyncBadge";
 import { ReconciliationModal } from "./components/ReconciliationModal";
+import { ReviewCanvasBanner } from "./assistant/review/ReviewCanvasBanner";
 import { toFlowNodes } from "./lib/toFlowNodes";
 import { toFlowEdges } from "./lib/toFlowEdges";
 import { useCanonicalStore } from "./store/canonicalStore";
@@ -661,6 +662,7 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft, a
         <CollaborationToasts />
         {diagramId && <OfflineSyncBadge />}
         <ReconciliationModal />
+        <ReviewCanvasBanner />
         {viewMode === "uml" && model && (
           <aside className="app__rel-toolbox" aria-label="Herramientas de relación">
             <div className="app__rel-toolbox-title">Relacionar</div>

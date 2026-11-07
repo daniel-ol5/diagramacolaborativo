@@ -107,7 +107,12 @@
   background: var(--color-danger);
 }
 
-.er-table__issue-badge--warning,
-.er-table__issue-badge--suggestion {
+.er-table__issue-badge--warning {
   background: var(--color-warning);
 }
+
+.er-table__issue-badge--suggestion {
+  background: #0288d1;
+  font-size: 9px;
+}
+

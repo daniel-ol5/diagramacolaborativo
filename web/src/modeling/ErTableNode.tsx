@@ -18,8 +18,8 @@ function keyBadge(pk: boolean, fk: boolean): string {
  * caja UML en un lugar donde todavia no existe.
  */
 export function ErTableNode({ data }: NodeProps<ErTableData>) {
-  const classIssue = useReviewStore(
-    (s) => s.issuesByClassName[data.tableName]
+  const classIssue = useReviewStore((s) =>
+    s.visibleOnCanvas ? s.issuesByClassName[data.tableName] : undefined
   );
   return (
     <div className={`er-table${data.isJunction ? " er-table--junction" : ""}`}>
@@ -31,7 +31,11 @@ export function ErTableNode({ data }: NodeProps<ErTableData>) {
             className={`er-table__issue-badge er-table__issue-badge--${classIssue.severity.toLowerCase()}`}
             title={classIssue.messages.join("\n")}
           >
-            {classIssue.severity === "ERROR" ? "!" : "⚠"}
+            {classIssue.severity === "ERROR"
+              ? "!"
+              : classIssue.severity === "WARNING"
+              ? "⚠"
+              : "💡"}
           </span>
         )}
         {data.isAbstract && <span className="er-table__abstract-mark"> (sin API)</span>}

@@ -1,0 +1,129 @@
+.summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-muted);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  max-width: 100%;
+  text-align: left;
+}
+
+.summary-card--fallback {
+  border-left-color: var(--color-border-muted);
+}
+
+.summary-card__fallback-text {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--color-text);
+}
+
+.summary-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--color-border-muted);
+  padding-bottom: var(--space-2);
+}
+
+.summary-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.summary-card__icon {
+  font-size: 1.1rem;
+}
+
+.summary-card__title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.summary-card__range {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-subtle);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.summary-card__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.summary-card__section-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.summary-card__bullet-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.summary-card__section--decisions .summary-card__bullet-icon {
+  background: var(--color-success-bg, rgba(46, 125, 50, 0.15));
+  color: var(--color-success, #2e7d32);
+}
+
+.summary-card__section--questions .summary-card__bullet-icon {
+  background: var(--color-warning-bg, rgba(237, 108, 2, 0.15));
+  color: var(--color-warning, #ed6c02);
+}
+
+.summary-card__list {
+  margin: 0;
+  padding: 0 0 0 var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+
+.summary-card__item {
+  position: relative;
+}
+
+.summary-card__item--decision {
+  list-style-type: disc;
+}
+
+.summary-card__item--question {
+  list-style-type: circle;
+}
+
+.summary-card__empty-hint {
+  margin: 0;
+  padding-left: var(--space-2);
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--color-text-tertiary);
+}
+

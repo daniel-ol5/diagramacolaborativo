@@ -133,8 +133,9 @@
   cursor: default;
 }
 
-/* REVIEW: tarjeta completa de auditoría */
-.message-bubble--review {
+/* REVIEW y SUMMARY: tarjetas completas estructuradas */
+.message-bubble--review,
+.message-bubble--summary {
   align-self: stretch;
   max-width: 100%;
   padding: 0;
