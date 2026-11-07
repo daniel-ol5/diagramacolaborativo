@@ -269,19 +269,37 @@ public class OperationTranslator {
 
     private Traduccion borrarRelacion(CanonicalModel modelo, AiOperation propuesta) {
         ClassEntity origen = exigirClase(modelo, propuesta.target());
-        ClassEntity destino = exigirClase(modelo, exigirTexto(propuesta, "to"));
+        String hacia = propuesta.texto("to");
+        ClassEntity destino = (hacia == null || hacia.isBlank()) ? null : buscarPorNombre(modelo, hacia);
 
+        if (destino == null) {
+            Set<String> idsClases = new HashSet<>();
+            modelo.classes().forEach(c -> idsClases.add(c.id()));
+            Relationship huerfana = modelo.relationships().stream()
+                    .filter(r -> (origen.id().equals(r.sourceClassId()) && !idsClases.contains(r.targetClassId()))
+                            || (origen.id().equals(r.targetClassId()) && !idsClases.contains(r.sourceClassId())))
+                    .findFirst()
+                    .orElse(null);
+            if (huerfana != null) {
+                return new Traduccion(
+                        mensaje(OperationType.DELETE_RELATIONSHIP, huerfana.id(), Map.of()),
+                        "Eliminé la relación huérfana de '" + origen.name() + "'.");
+            }
+            destino = exigirClase(modelo, exigirTexto(propuesta, "to"));
+        }
+
+        final ClassEntity destinoFinal = destino;
         Relationship relacion = modelo.relationships().stream()
-                .filter(r -> (r.sourceClassId().equals(origen.id()) && r.targetClassId().equals(destino.id()))
-                        || (r.sourceClassId().equals(destino.id()) && r.targetClassId().equals(origen.id())))
+                .filter(r -> (r.sourceClassId().equals(origen.id()) && r.targetClassId().equals(destinoFinal.id()))
+                        || (r.sourceClassId().equals(destinoFinal.id()) && r.targetClassId().equals(origen.id())))
                 .findFirst()
                 .orElseThrow(() -> new ComandoRechazadoException(
                         AiCommandResponse.OBJETIVO_INEXISTENTE,
-                        "No encontré ninguna relación entre '" + origen.name() + "' y '" + destino.name() + "'."));
+                        "No encontré ninguna relación entre '" + origen.name() + "' y '" + destinoFinal.name() + "'."));
 
         return new Traduccion(
                 mensaje(OperationType.DELETE_RELATIONSHIP, relacion.id(), Map.of()),
-                "Eliminé la relación entre '" + origen.name() + "' y '" + destino.name() + "'.");
+                "Eliminé la relación entre '" + origen.name() + "' y '" + destinoFinal.name() + "'.");
     }
 
     // ------------------------------------------------------------ ensayo seco

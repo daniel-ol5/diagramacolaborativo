@@ -129,6 +129,8 @@ export function ChatPanel({ projectId, diagramId, token, myUserId, myName }: Pro
             onLoadOlder={search.cargarAnteriores}
             trackReadPosition={false}
             highlight={search.q}
+            diagramId={diagramId}
+            token={token}
           />
         ) : (
           <div className="chat-panel__empty" />
@@ -154,6 +156,8 @@ export function ChatPanel({ projectId, diagramId, token, myUserId, myName }: Pro
         onLeave={(p) => {
           posicionLinea.current = p;
         }}
+        diagramId={diagramId}
+        token={token}
       />
     ) : (
       <div className="chat-panel__empty">

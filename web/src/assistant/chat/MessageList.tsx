@@ -42,6 +42,9 @@ interface Props {
    * al final.
    */
   newMarkerId?: string | null;
+  /** Diagrama activo y token para aplicar propuestas del Senior desde el chat. */
+  diagramId?: string | null;
+  token?: string;
 }
 
 /** Donde estaba el usuario: al final, o un mensaje de referencia y su distancia al borde superior. */
@@ -102,6 +105,8 @@ export function MessageList({
   highlight = null,
   label = "Mensajes del chat",
   newMarkerId = null,
+  diagramId = null,
+  token,
 }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const pegadoAlFondo = useRef(initialPosition ? initialPosition.atBottom : true);
@@ -307,6 +312,8 @@ export function MessageList({
                 message={m}
                 mine={m.authorType === "USER" && m.authorId != null && m.authorId === me.userId}
                 highlight={highlight}
+                diagramId={diagramId}
+                token={token}
               />
             </Fragment>
           );

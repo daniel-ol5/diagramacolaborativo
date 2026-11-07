@@ -7,6 +7,10 @@ import com.modelcollab.assistant.core.ChatPublisher;
 import com.modelcollab.assistant.core.ChatStore;
 import com.modelcollab.assistant.core.SlidingWindowRateLimiter;
 import com.modelcollab.assistant.core.UserMessageListener;
+import com.modelcollab.diagram.dto.ValidationReportDTO;
+import com.modelcollab.metamodel.model.CanonicalModel;
+import com.modelcollab.metamodel.service.IdentifierSanitizer;
+import com.modelcollab.metamodel.service.MetamodelValidator;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -75,9 +79,9 @@ public class AssistantOrchestrator implements UserMessageListener {
     public static final String OCUPADA = "La IA está ocupada, intenta de nuevo en unos segundos";
     public static final String MUCHAS_CONSULTAS = "La IA está recibiendo muchas consultas; espera un momento";
 
-    /** "@IA" como palabra: ni pegado a algo antes (correo@ia) ni seguido de letras (@iaas). */
+    /** "@IA" o "@Senior" como palabra, o "Senior," / "Senior:" al dirigirse al asistente. */
     static final Pattern MENCION = Pattern.compile(
-            "(?<![\\p{L}\\p{N}_@])@ia(?![\\p{L}\\p{N}_])",
+            "(?<![\\p{L}\\p{N}_@])@(?:ia|senior)(?![\\p{L}\\p{N}_])|(?<![\\p{L}\\p{N}_@])senior\\s*[,:]",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
 
     private final ChatService chatService;
@@ -296,12 +300,55 @@ public class AssistantOrchestrator implements UserMessageListener {
             return null;
         }
         try {
-            return diagramas.cargar(UUID.fromString(id), proyecto).map(DiagramDigest::of).orElse(null);
+            return diagramas.cargar(UUID.fromString(id), proyecto)
+                    .map(AssistantOrchestrator::resumenConValidacion)
+                    .orElse(null);
         } catch (RuntimeException e) {
             log.warn("Chat: no se pudo armar el resumen del diagrama; se responde sin él ({})",
                     e.getClass().getSimpleName());
             return null;
         }
+    }
+
+    static String resumenConValidacion(CanonicalModel modelo) {
+        String base = DiagramDigest.of(modelo);
+        if (modelo == null || modelo.classes().isEmpty()) {
+            return base;
+        }
+        ValidationReportDTO reporte = new MetamodelValidator(new IdentifierSanitizer()).validar(modelo);
+        boolean tieneDetalle = !modelo.relationships().isEmpty()
+                || modelo.classes().stream().anyMatch(c ->
+                        c != null && (!c.attributes().isEmpty() || !c.methods().isEmpty()));
+        List<ValidationReportDTO.ValidationIssue> errores = reporte.errors();
+        List<ValidationReportDTO.ValidationIssue> avisos = tieneDetalle ? reporte.warnings() : List.of();
+        if (errores.isEmpty() && avisos.isEmpty()) {
+            return base;
+        }
+        StringBuilder sb = new StringBuilder(base);
+        if (!errores.isEmpty()) {
+            sb.append("\nErrores del validador:");
+            for (ValidationReportDTO.ValidationIssue err : errores) {
+                String linea = "\n- " + ConversationContextBuilder.neutralizar(err.message());
+                if (sb.length() + linea.length() > DiagramDigest.TOPE) {
+                    break;
+                }
+                sb.append(linea);
+            }
+        }
+        if (!avisos.isEmpty()) {
+            String encabezado = "\nAvisos del validador:";
+            if (sb.length() + encabezado.length() <= DiagramDigest.TOPE) {
+                sb.append(encabezado);
+                for (ValidationReportDTO.ValidationIssue warn : avisos) {
+                    String linea = "\n- " + ConversationContextBuilder.neutralizar(warn.message());
+                    if (sb.length() + linea.length() > DiagramDigest.TOPE) {
+                        break;
+                    }
+                    sb.append(linea);
+                }
+            }
+        }
+        return sb.toString();
     }
 
     /**
