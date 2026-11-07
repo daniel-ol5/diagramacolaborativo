@@ -522,6 +522,35 @@ class AiCommandServiceTest {
         assertThat(resultado.respuesta().message().length()).isLessThan(400);
     }
 
+    @Test
+    @DisplayName("Escenario C: la propuesta del Senior limpia una relación huérfana, rehace el vínculo y agrega el atributo")
+    void escenarioCSalvavidasRelacionHuerfana() {
+        ClassEntity factura = new ClassEntity(
+                "factura-1", "Factura", null, false, new Position(20, 20), null, null,
+                List.of(), List.of());
+        ClassEntity venta = new ClassEntity(
+                "venta-1", "Venta", null, false, new Position(360, 20), null, null,
+                List.of(), List.of());
+        Relationship huerfana = new Relationship(
+                "rel-huerfana", "factura-1", "clase-borrada", RelationshipType.ASSOCIATION,
+                null, null, null, null, null, null, null, List.of());
+        when(estados.estadoDe(DIAGRAMA)).thenReturn(
+                new CanonicalModel("1.0.0", 8L, List.of(), List.of(factura, venta), List.of(huerfana)));
+
+        AiCommandService.Resultado resultado = ejecutar("""
+            {"intent":"EDIT_MODEL","reply":"Solucionado.","operations":[
+              {"op":"DELETE_RELATIONSHIP","target":"Factura","args":{"to":"huerfana"}},
+              {"op":"ADD_RELATIONSHIP","target":"Factura","args":{"to":"Venta","type":"ASSOCIATION","sourceMultiplicity":"0..*","targetMultiplicity":"1..1"}},
+              {"op":"ADD_ATTRIBUTE","target":"Factura","args":{"name":"fechaEmision","type":"DATE"}}
+            ]}""");
+
+        assertThat(resultado.respuesta().applied()).isTrue();
+        assertThat(aplicadas).extracting(StompMutationMessage::op)
+                .containsExactly("DELETE_RELATIONSHIP", "ADD_RELATIONSHIP", "ADD_ATTRIBUTE");
+        assertThat(aplicadas.get(0).targetId()).isEqualTo("rel-huerfana");
+        assertThat(resultado.difusiones()).hasSize(3);
+    }
+
     private static void assertThatUuid(String valor) {
         assertThat(UUID.fromString(valor)).isNotNull();
     }

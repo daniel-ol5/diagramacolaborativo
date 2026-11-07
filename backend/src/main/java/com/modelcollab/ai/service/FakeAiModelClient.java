@@ -30,8 +30,15 @@ public class FakeAiModelClient implements AiModelClient {
     /** "Agrega el atributo telefono varchar a Proveedor" (RF-02.3). */
     private static final Pattern AGREGAR_ATRIBUTO = Pattern.compile(
             "(?:agrega|agregá|agregar|añade|anade|pone|poné|poner)\\s+"
-                    + "(?:el\\s+|un\\s+)?(?:atributo|campo)\\s+(\\w+)(?:\\s+(\\w+))?\\s+"
+                    + "(?:el\\s+|un\\s+)?(?:atributo|campo)\\s+(\\w+)(?:[\\s:]+(\\w+))?\\s+"
                     + "a\\s+(?:la\\s+)?(?:clase\\s+)?(\\w+)\\s*$",
+            BANDERAS);
+
+    /** "Agrega a la clase Cita los atributos fecha:DATE y motivo:VARCHAR". */
+    private static final Pattern AGREGAR_ATRIBUTOS_A_CLASE = Pattern.compile(
+            "(?:agrega|agregá|agregar|añade|anade|pone|poné|poner)\\s+"
+                    + "a\\s+(?:la\\s+)?(?:clase\\s+)?(\\w+)\\s+"
+                    + "(?:los\\s+|las\\s+|el\\s+|un\\s+|una\\s+)?(?:atributos?|campos?)\\s+(.+)\\s*$",
             BANDERAS);
 
     /** "Renombra la clase Cliente a Comprador". */
@@ -71,6 +78,20 @@ public class FakeAiModelClient implements AiModelClient {
     private static final Pattern ELIMINAR_CLASE = Pattern.compile(
             "(?:elimina|eliminá|eliminar|borra|borrá|borrar|quita|quitá|quitar)\\s+"
                     + "(?:la\\s+|una\\s+)?clase\\s+(\\w+)\\s*$",
+            BANDERAS);
+
+    /** "Elimina la relación huérfana de Factura". */
+    private static final Pattern ELIMINAR_RELACION_HUERFANA = Pattern.compile(
+            "(?:elimina|eliminá|eliminar|borra|borrá|borrar|quita|quitá|quitar)\\s+"
+                    + "(?:la\\s+|una\\s+)?relaci[oó]n\\s+hu[eé]rfana\\s+"
+                    + "(?:de|en)\\s+(?:la\\s+)?(?:clase\\s+)?(\\w+)\\s*$",
+            BANDERAS);
+
+    /** "Elimina la relación entre Factura y Venta". */
+    private static final Pattern ELIMINAR_RELACION = Pattern.compile(
+            "(?:elimina|eliminá|eliminar|borra|borrá|borrar|quita|quitá|quitar)\\s+"
+                    + "(?:la\\s+|una\\s+)?relaci[oó]n\\s+entre\\s+"
+                    + "(?:la\\s+clase\\s+)?(\\w+)\\s+(?:y|con)\\s+(?:la\\s+clase\\s+)?(\\w+)\\s*$",
             BANDERAS);
 
     /** Separa "total decimal, fecha date y cliente varchar". */
@@ -145,12 +166,32 @@ public class FakeAiModelClient implements AiModelClient {
                             Map.of("name", nombre, "type", tipo)));
         }
 
+        Matcher atributosAClase = AGREGAR_ATRIBUTOS_A_CLASE.matcher(comando);
+        if (atributosAClase.matches()) {
+            return agregarAtributosAClase(atributosAClase.group(1), atributosAClase.group(2));
+        }
+
         Matcher delAttr = ELIMINAR_ATRIBUTO.matcher(comando);
         if (delAttr.matches()) {
             String nombre = delAttr.group(1);
             String clase = delAttr.group(2);
             return plan("Elimino el atributo " + nombre + " de " + clase + ".",
                     new AiOperation("DELETE_ATTRIBUTE", clase, Map.of("name", nombre)));
+        }
+
+        Matcher delRelHuerfana = ELIMINAR_RELACION_HUERFANA.matcher(comando);
+        if (delRelHuerfana.matches()) {
+            String clase = delRelHuerfana.group(1);
+            return plan("Elimino la relación huérfana de " + clase + ".",
+                    new AiOperation("DELETE_RELATIONSHIP", clase, Map.of("to", "huerfana")));
+        }
+
+        Matcher delRel = ELIMINAR_RELACION.matcher(comando);
+        if (delRel.matches()) {
+            String origen = delRel.group(1);
+            String destino = delRel.group(2);
+            return plan("Elimino la relación entre " + origen + " y " + destino + ".",
+                    new AiOperation("DELETE_RELATIONSHIP", origen, Map.of("to", destino)));
         }
 
         Matcher delClase = ELIMINAR_CLASE.matcher(comando);
@@ -194,10 +235,24 @@ public class FakeAiModelClient implements AiModelClient {
     private AiPlan crearClase(String nombre, String listaDeAtributos) {
         List<AiOperation> operaciones = new ArrayList<>();
         operaciones.add(new AiOperation("ADD_CLASS", nombre, Map.of()));
+        operaciones.addAll(parsearAtributos(nombre, listaDeAtributos));
+        return new AiPlan(AiPlan.EDITAR, "Creo la clase " + nombre + ".", operaciones);
+    }
 
+    private AiPlan agregarAtributosAClase(String nombre, String listaDeAtributos) {
+        List<AiOperation> operaciones = parsearAtributos(nombre, listaDeAtributos);
+        if (operaciones.isEmpty()) {
+            return new AiPlan(AiPlan.NO_SOPORTADO,
+                    "No supe traducir eso a una operación sobre el diagrama.", List.of());
+        }
+        return new AiPlan(AiPlan.EDITAR, "Agrego atributos a " + nombre + ".", operaciones);
+    }
+
+    private static List<AiOperation> parsearAtributos(String nombre, String listaDeAtributos) {
+        List<AiOperation> operaciones = new ArrayList<>();
         if (listaDeAtributos != null && !listaDeAtributos.isBlank()) {
             for (String trozo : SEPARADOR_DE_ATRIBUTOS.split(listaDeAtributos.strip())) {
-                String[] palabras = trozo.strip().split("\\s+");
+                String[] palabras = trozo.strip().split("[\\s:]+");
                 if (palabras.length == 0 || palabras[0].isBlank()) {
                     continue;
                 }
@@ -206,7 +261,7 @@ public class FakeAiModelClient implements AiModelClient {
                         Map.of("name", palabras[0], "type", tipo)));
             }
         }
-        return new AiPlan(AiPlan.EDITAR, "Creo la clase " + nombre + ".", operaciones);
+        return operaciones;
     }
 
     private AiPlan relacionar(String origen, String destino, String desde, String hasta) {

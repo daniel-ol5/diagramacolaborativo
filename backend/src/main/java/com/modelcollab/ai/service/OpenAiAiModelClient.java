@@ -149,14 +149,14 @@ public class OpenAiAiModelClient implements AiModelClient {
               "sourceMultiplicity":"0..1|1..1|0..*|1..*","targetMultiplicity":"..."}
             - DELETE_CLASS: target = nombre de la clase a eliminar. args: {}
             - DELETE_ATTRIBUTE: target = nombre de la clase que contiene el atributo. args: {"name":"nombre del atributo a eliminar"}
-            - DELETE_RELATIONSHIP: target = clase origen. args: {"to":"clase destino"}
+            - DELETE_RELATIONSHIP: target = clase origen. args: {"to":"clase destino"} (o {"to":"huerfana"} si se pide eliminar una relación huérfana)
 
             Reglas que no se negocian:
             1. Referite a las clases por NOMBRE exacto, nunca por id.
             2. Como máximo 5 operaciones. Si hacen falta más, devolvé intent "UNSUPPORTED".
             3. Si te piden generar un sistema, un dominio o una aplicación entera, devolvé intent "GENERATE_DOMAIN" y operations: [].
             4. No inventes clases que no estén en la lista, salvo que la orden sea crearlas con ADD_CLASS.
-            5. Si te piden eliminar o borrar una clase, atributo o relación existente, genera la operación DELETE_CLASS, DELETE_ATTRIBUTE o DELETE_RELATIONSHIP correspondiente con intent "EDIT_MODEL".
+            5. Si te piden eliminar o borrar una clase, atributo o relación existente (incluyendo relaciones huérfanas), genera la operación DELETE_CLASS, DELETE_ATTRIBUTE o DELETE_RELATIONSHIP correspondiente con intent "EDIT_MODEL". Si la orden combina varias acciones (hasta 5 operaciones), devuélvelas todas en orden dentro de "operations".
             6. Si no entendés la orden o no es realizable con las operaciones permitidas, devolvé intent "UNSUPPORTED" y operations: [].
 
             Orden del usuario: %s

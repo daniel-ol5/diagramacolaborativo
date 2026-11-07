@@ -13,6 +13,8 @@ import com.modelcollab.assistant.store.InMemoryChatStore;
 import com.modelcollab.collaboration.interceptor.StompPrincipal;
 import com.modelcollab.metamodel.model.CanonicalModel;
 import com.modelcollab.metamodel.model.ClassEntity;
+import com.modelcollab.metamodel.model.Relationship;
+import com.modelcollab.metamodel.model.RelationshipType;
 import com.modelcollab.project.model.ProjectRole;
 import java.time.Clock;
 import java.time.Duration;
@@ -599,5 +601,24 @@ class AssistantOrchestratorTest {
 
         assertThat(orquestador.resumenDelDiagrama(PROYECTO, raro)).isNull();
         assertThat(diagramas.consultados).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Escenario C: invocar como 'Senior, ...' adjunta los errores del validador al contexto")
+    void escenarioCSeniorConErroresDelValidador() {
+        UUID diagrama = UUID.randomUUID();
+        CanonicalModel conRelacionHuerfana = new CanonicalModel(
+                null, 1L, List.of(),
+                List.of(new ClassEntity("c1", "Factura", null, false, null, null, null, List.of(), List.of())),
+                List.of(new Relationship("r1", "c1", "clase-eliminada", RelationshipType.ASSOCIATION,
+                        null, null, null, null, null, null, null, List.of())));
+        diagramas.guardar(diagrama, PROYECTO, conRelacionHuerfana);
+
+        escribirConDiagrama(ana, "Senior, me saltó un error en el validador y no sé cómo resolverlo, ayudame.", diagrama);
+
+        assertThat(systemDelUnicoPedido())
+                .contains("Factura -> (clase desconocida)")
+                .contains("Errores del validador:");
+        respondioSinAvisos();
     }
 }
