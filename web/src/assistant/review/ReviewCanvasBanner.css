@@ -1,0 +1,77 @@
+.review-canvas-banner {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 18;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 12px;
+  background: var(--brand-dark, #1e293b);
+  color: var(--color-text-on-dark, #ffffff);
+  border: 1px solid var(--brand-light, #38bdf8);
+  border-radius: var(--radius-md, 6px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
+  font-size: 12px;
+  animation: review-banner-appear 0.2s ease-out;
+}
+
+@keyframes review-banner-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.review-canvas-banner__info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.review-canvas-banner__icon {
+  font-size: 14px;
+}
+
+.review-canvas-banner__title {
+  font-weight: 600;
+  color: var(--color-text-on-dark, #ffffff);
+}
+
+.review-canvas-banner__badge {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm, 4px);
+  background: var(--brand-dark-elevated, #334155);
+  color: var(--brand-light, #38bdf8);
+  font-weight: 500;
+}
+
+.review-canvas-banner__actions {
+  display: flex;
+  align-items: center;
+  margin-left: 4px;
+}
+
+.review-canvas-banner__btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm, 4px);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.review-canvas-banner__btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #ffffff;
+}
+

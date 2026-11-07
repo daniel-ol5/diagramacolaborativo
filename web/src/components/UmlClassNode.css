@@ -244,8 +244,14 @@
   box-shadow: 0 0 0 1.5px #ffffff;
 }
 
-.uml-class-node__issue-badge--warning,
-.uml-class-node__issue-badge--suggestion {
+.uml-class-node__issue-badge--warning {
   background: var(--color-warning);
   box-shadow: 0 0 0 1.5px #ffffff;
 }
+
+.uml-class-node__issue-badge--suggestion {
+  background: #0288d1;
+  box-shadow: 0 0 0 1.5px #ffffff;
+  font-size: 9px;
+}
+

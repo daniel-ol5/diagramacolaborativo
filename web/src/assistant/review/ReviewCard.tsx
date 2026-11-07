@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import type { ReviewCardMeta } from "./types";
 import { useReviewStore } from "./reviewStore";
 import "./ReviewCard.css";
@@ -16,11 +15,33 @@ export function ReviewCard({
   textFallback,
   onSelectElement,
 }: Props) {
-  // Cuando se renderiza la tarjeta de revisión, sincronizamos la revisión activa en el store
-  // para que los nodos del lienzo muestren sus insignias
-  useEffect(() => {
-    if (meta && typeof meta.score === "number") {
-      useReviewStore.getState().setActiveReview({
+  const activeReview = useReviewStore((s) => s.activeReview);
+  const visibleOnCanvas = useReviewStore((s) => s.visibleOnCanvas);
+  const setVisibleOnCanvas = useReviewStore((s) => s.setVisibleOnCanvas);
+  const setActiveReview = useReviewStore((s) => s.setActiveReview);
+
+  if (!meta || typeof meta.score !== "number") {
+    return <p className="review-card__fallback">{textFallback}</p>;
+  }
+
+  const isCurrentCardActive =
+    activeReview != null &&
+    activeReview.diagramVersion === meta.diagramVersion &&
+    visibleOnCanvas;
+
+  const scoreClass =
+    meta.score >= 80 ? "high" : meta.score >= 50 ? "mid" : "low";
+
+  const isStale =
+    currentMutationVersion != null &&
+    meta.diagramVersion != null &&
+    currentMutationVersion > meta.diagramVersion;
+
+  const handleToggleCanvas = () => {
+    if (isCurrentCardActive) {
+      setVisibleOnCanvas(false);
+    } else {
+      setActiveReview({
         score: meta.score,
         totalErrors: meta.totalErrors ?? 0,
         totalWarnings: meta.totalWarnings ?? 0,
@@ -30,19 +51,7 @@ export function ReviewCard({
         issues: meta.issues ?? [],
       });
     }
-  }, [meta]);
-
-  if (!meta || typeof meta.score !== "number") {
-    return <p className="review-card__fallback">{textFallback}</p>;
-  }
-
-  const scoreClass =
-    meta.score >= 80 ? "high" : meta.score >= 50 ? "mid" : "low";
-
-  const isStale =
-    currentMutationVersion != null &&
-    meta.diagramVersion != null &&
-    currentMutationVersion > meta.diagramVersion;
+  };
 
   return (
     <article className="review-card" aria-label="Tarjeta de revisión de diagrama">
@@ -86,6 +95,18 @@ export function ReviewCard({
         </span>
       </div>
 
+      <div className="review-card__actions-row">
+        <button
+          type="button"
+          className={`review-card__toggle-btn${isCurrentCardActive ? " review-card__toggle-btn--active" : ""}`}
+          onClick={handleToggleCanvas}
+          aria-pressed={isCurrentCardActive}
+          title={isCurrentCardActive ? "Ocultar insignias en las clases del lienzo" : "Mostrar insignias en las clases del lienzo"}
+        >
+          {isCurrentCardActive ? "Ocultar marcas en lienzo" : "Ver marcas en el lienzo"}
+        </button>
+      </div>
+
       {meta.comment && (
         <blockquote className="review-card__comment">
           <div className="review-card__comment-label">Consejo del Mentor:</div>
@@ -125,4 +146,3 @@ export function ReviewCard({
     </article>
   );
 }
-

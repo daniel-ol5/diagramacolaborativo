@@ -6,6 +6,8 @@ interface Props {
   onOpenSettings?: () => void;
   onReviewDiagram?: () => void;
   isReviewing?: boolean;
+  onSummarizeChat?: () => void;
+  isSummarizing?: boolean;
   /** El contenido de la pestaña activa (hoy, solo el chat). */
   children: ReactNode;
 }
@@ -20,6 +22,8 @@ export function AssistantPanel({
   onOpenSettings,
   onReviewDiagram,
   isReviewing,
+  onSummarizeChat,
+  isSummarizing,
   children,
 }: Props) {
   return (
@@ -29,16 +33,28 @@ export function AssistantPanel({
           Chat IA
         </h2>
         <div className="assistant-panel__header-actions">
+          {onSummarizeChat && (
+            <button
+              type="button"
+              className="assistant-panel__action-btn"
+              onClick={onSummarizeChat}
+              disabled={isSummarizing}
+              title="Condensar la conversación en decisiones y dudas pendientes (CU24)"
+              aria-label="Resumir conversación"
+            >
+              {isSummarizing ? "Resumiendo…" : "Resumir"}
+            </button>
+          )}
           {onReviewDiagram && (
             <button
               type="button"
-              className="assistant-panel__review-btn"
+              className="assistant-panel__action-btn"
               onClick={onReviewDiagram}
               disabled={isReviewing}
               title="Pedirle a la IA una revisión arquitectónica del diagrama (CU22)"
               aria-label="Revisar diagrama con IA"
             >
-              {isReviewing ? "Revisando…" : "📋 Revisar"}
+              {isReviewing ? "Revisando…" : "Revisar"}
             </button>
           )}
           {onOpenSettings && (

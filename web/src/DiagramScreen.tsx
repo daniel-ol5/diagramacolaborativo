@@ -12,6 +12,7 @@ import { useChatStore } from "./assistant/chat/chatStore";
 import { AssistantSettingsModal } from "./assistant/settings/AssistantSettingsModal";
 import { requestDiagramReview } from "./assistant/review/reviewApi";
 import { useReviewStore } from "./assistant/review/reviewStore";
+import { triggerChatSummary, SummaryApiError } from "./assistant/summary/summaryApi";
 
 interface Props {
   session: Session;
@@ -37,6 +38,8 @@ export function DiagramScreen({ session }: Props) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   // CU22: estado de solicitud de revisión del diagrama por la IA.
   const [reviewing, setReviewing] = useState(false);
+  // CU24: estado de solicitud de resumen del chat por la IA.
+  const [summarizing, setSummarizing] = useState(false);
 
   useEffect(() => {
     if (!diagramId) return;
@@ -66,6 +69,21 @@ export function DiagramScreen({ session }: Props) {
       console.error("Error al pedir revisión de diagrama:", e);
     } finally {
       setReviewing(false);
+    }
+  };
+
+  const handleSummarizeChat = async () => {
+    if (!projectId || summarizing) return;
+    setSummarizing(true);
+    try {
+      await triggerChatSummary(projectId, session.token);
+    } catch (e) {
+      console.error("Error al pedir resumen de conversación:", e);
+      if (e instanceof SummaryApiError && e.status === 403) {
+        alert("Solo los miembros con rol OWNER o EDITOR pueden generar resúmenes manuales.");
+      }
+    } finally {
+      setSummarizing(false);
     }
   };
 
@@ -100,6 +118,8 @@ export function DiagramScreen({ session }: Props) {
               onOpenSettings={() => setSettingsOpen(true)}
               onReviewDiagram={handleReviewDiagram}
               isReviewing={reviewing}
+              onSummarizeChat={handleSummarizeChat}
+              isSummarizing={summarizing}
             >
               <ChatPanel
                 projectId={projectId}
@@ -120,6 +140,7 @@ export function DiagramScreen({ session }: Props) {
       {/* El chat sigue recibiendo con el panel cerrado (no leidos). Va DESPUES
           del lienzo: asi registra sus handlers despues y, en cada CONNECT, las
           4 suscripciones del lienzo salen primero y en el mismo orden de antes. */}
+      {projectId && <ProjectChatFeed projectId={projectId} token={session.token} myUserId={session.userId} />}
       {settingsOpen && projectId && (
         <AssistantSettingsModal
           projectId={projectId}

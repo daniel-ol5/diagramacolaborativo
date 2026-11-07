@@ -11,7 +11,10 @@ interface ReviewState {
   activeReview: DiagramReviewResponse | null;
   issuesByClassId: Record<string, ClassIssueSummary>;
   issuesByClassName: Record<string, ClassIssueSummary>;
+  visibleOnCanvas: boolean;
   setActiveReview: (review: DiagramReviewResponse | null) => void;
+  setVisibleOnCanvas: (visible: boolean) => void;
+  toggleVisibleOnCanvas: () => void;
   clearReview: () => void;
 }
 
@@ -59,19 +62,24 @@ export const useReviewStore = create<ReviewState>((set) => ({
   activeReview: null,
   issuesByClassId: {},
   issuesByClassName: {},
+  visibleOnCanvas: false,
   setActiveReview: (review) => {
     const { byId, byName } = computeIssueMaps(review);
     set({
       activeReview: review,
       issuesByClassId: byId,
       issuesByClassName: byName,
+      visibleOnCanvas: review !== null,
     });
   },
+  setVisibleOnCanvas: (visible) => set({ visibleOnCanvas: visible }),
+  toggleVisibleOnCanvas: () => set((s) => ({ visibleOnCanvas: !s.visibleOnCanvas })),
   clearReview: () => {
     set({
       activeReview: null,
       issuesByClassId: {},
       issuesByClassName: {},
+      visibleOnCanvas: false,
     });
   },
 }));

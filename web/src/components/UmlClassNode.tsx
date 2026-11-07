@@ -50,7 +50,9 @@ export function UmlClassNode({ data, selected }: NodeProps<ClassEntity>) {
   const myUserId = useCollaborationStore((s) => s.myUserId);
   const editingTargetId = useCollaborationStore((s) => s.editingTargetId);
   const isOffline = useOfflineStore((s) => s.state === "OFFLINE");
-  const classIssue = useReviewStore((s) => s.issuesByClassId[data.id] || s.issuesByClassName[data.name]);
+  const classIssue = useReviewStore((s) =>
+    s.visibleOnCanvas ? s.issuesByClassId[data.id] || s.issuesByClassName[data.name] : undefined
+  );
   const actions = useCollaborationActions();
 
   const [pending, setPending] = useState<Pending>(null);
@@ -204,7 +206,11 @@ export function UmlClassNode({ data, selected }: NodeProps<ClassEntity>) {
                 title={classIssue.messages.join("\n")}
                 aria-label={`Problema: ${classIssue.messages[0]}`}
               >
-                {classIssue.severity === "ERROR" ? "!" : "⚠"}
+                {classIssue.severity === "ERROR"
+                  ? "!"
+                  : classIssue.severity === "WARNING"
+                  ? "⚠"
+                  : "💡"}
               </span>
             )}
             {lock && (
