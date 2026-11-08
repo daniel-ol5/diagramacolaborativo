@@ -6,10 +6,33 @@ import type { DiagramSummary, Project } from "./types";
 import { fechaYHora } from "./types";
 import { NewDiagramModal } from "./NewDiagramModal";
 import { ShareModal } from "./ShareModal";
+import { OnboardingGuide, type GuideStep } from "../onboarding/OnboardingGuide";
 import "./access.css";
+
+const PROJECT_GUIDE_STEPS: GuideStep[] = [
+  {
+    selector: '[data-tour="share-project"]',
+    title: "1. Compartir el proyecto",
+    description:
+      "Con este botón puedes generar enlaces de invitación con rol de Editor o Lector para que tus compañeros colaboren en vivo.",
+  },
+  {
+    selector: '[data-tour="new-diagram"]',
+    title: "2. Crear un diagrama",
+    description:
+      "Crea un nuevo lienzo de trabajo para diseñar tus clases, atributos y relaciones del sistema.",
+  },
+  {
+    selector: '[data-tour="diagram-list"]',
+    title: "3. Abrir el lienzo",
+    description:
+      "Haz clic en un diagrama existente para ingresar al editor colaborativo en tiempo real.",
+  },
+];
 
 interface Props {
   session: Session;
+  onLogout?: () => void;
 }
 
 /**
@@ -20,7 +43,7 @@ interface Props {
  * ("no sos miembro" == "no existe"): no se distingue tampoco del lado del
  * cliente.
  */
-export function ProjectScreen({ session }: Props) {
+export function ProjectScreen({ session, onLogout }: Props) {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null | undefined>(undefined);
@@ -29,6 +52,7 @@ export function ProjectScreen({ session }: Props) {
   const [forbidden, setForbidden] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
     if (!projectId) return;
@@ -73,7 +97,19 @@ export function ProjectScreen({ session }: Props) {
           <Link className="access-page__back" to="/">
             ← Proyectos
           </Link>
-          <span className="access-page__session">{session.email}</span>
+          <div className="access-page__header-right">
+            <span className="access-page__session">{session.email}</span>
+            <button
+              type="button"
+              className="access-page__logout-btn"
+              onClick={() => {
+                onLogout?.();
+                navigate("/login", { replace: true });
+              }}
+            >
+              Cerrar sesión
+            </button>
+          </div>
         </header>
         <div className="access-page__body">
           <p className="access-page__error">⚠ No tenés acceso a este proyecto.</p>
@@ -89,19 +125,39 @@ export function ProjectScreen({ session }: Props) {
         <Link className="access-page__back" to="/">
           ← Proyectos
         </Link>
-        <span className="access-page__session">{session.email}</span>
+        <div className="access-page__header-right">
+          <span className="access-page__session">{session.email}</span>
+          <button type="button" className="onboarding-trigger-btn" onClick={() => setShowGuide(true)}>
+            Guía
+          </button>
+          <button
+            type="button"
+            className="access-page__logout-btn"
+            onClick={() => {
+              onLogout?.();
+              navigate("/login", { replace: true });
+            }}
+          >
+            Cerrar sesión
+          </button>
+        </div>
       </header>
       <div className="access-page__body">
         <div className="access-page__row">
           <h1>{project?.name ?? "Cargando…"}</h1>
           <div className="access-page__actions">
             {project?.role === "OWNER" && (
-              <button type="button" onClick={() => setShowShare(true)}>
+              <button type="button" data-tour="share-project" onClick={() => setShowShare(true)}>
                 Compartir
               </button>
             )}
             {project && project.role !== "VIEWER" && (
-              <button type="button" className="access-page__primary-btn" onClick={() => setShowNew(true)}>
+              <button
+                type="button"
+                className="access-page__primary-btn"
+                data-tour="new-diagram"
+                onClick={() => setShowNew(true)}
+              >
                 + Nuevo diagrama
               </button>
             )}
@@ -134,7 +190,7 @@ export function ProjectScreen({ session }: Props) {
         )}
 
         {diagrams && diagrams.length > 0 && (
-          <div className="access-list">
+          <div className="access-list" data-tour="diagram-list">
             {diagrams.map((d) => (
               <button
                 key={d.id}
@@ -156,6 +212,12 @@ export function ProjectScreen({ session }: Props) {
       {showShare && projectId && (
         <ShareModal session={session} projectId={projectId} onClose={() => setShowShare(false)} />
       )}
+      <OnboardingGuide
+        screenId="project"
+        steps={PROJECT_GUIDE_STEPS}
+        manualOpen={showGuide}
+        onCloseManual={() => setShowGuide(false)}
+      />
     </div>
   );
 }

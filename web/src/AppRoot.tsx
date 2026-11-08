@@ -38,6 +38,7 @@ function LoginRoute({ onLogin }: { onLogin: (session: Session) => void }) {
  */
 export function AppRoot() {
   const [session, setSession] = useState<Session | null>(null);
+  const handleLogout = () => setSession(null);
 
   return (
     <Routes>
@@ -47,7 +48,7 @@ export function AppRoot() {
         path="/"
         element={
           <RequireSession session={session}>
-            <ProjectsScreen session={session!} />
+            <ProjectsScreen session={session!} onLogout={handleLogout} />
           </RequireSession>
         }
       />
@@ -55,7 +56,7 @@ export function AppRoot() {
         path="/projects/:projectId"
         element={
           <RequireSession session={session}>
-            <ProjectScreen session={session!} />
+            <ProjectScreen session={session!} onLogout={handleLogout} />
           </RequireSession>
         }
       />
@@ -63,7 +64,7 @@ export function AppRoot() {
         path="/projects/:projectId/diagrams/:diagramId"
         element={
           <RequireSession session={session}>
-            <DiagramScreen session={session!} />
+            <DiagramScreen session={session!} onLogout={handleLogout} />
           </RequireSession>
         }
       />
@@ -71,7 +72,7 @@ export function AppRoot() {
         path="/demo"
         element={
           <RequireSession session={session}>
-            <App session={session!} />
+            <App session={session!} onLogout={handleLogout} />
           </RequireSession>
         }
       />

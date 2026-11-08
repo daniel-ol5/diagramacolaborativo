@@ -46,8 +46,42 @@ import { fetchSchemaPreview, type SchemaPreview } from "./modeling/schemaPreview
 import { exportXmi } from "./xmi/xmiApi";
 import { ImportXmiModal } from "./xmi/ImportXmiModal";
 import { AssistantToggleButton } from "./assistant/shell/AssistantToggleButton";
+import { OnboardingGuide, type GuideStep } from "./onboarding/OnboardingGuide";
 import { blackOrWhiteText } from "./lib/readableTextColor";
 import "./App.css";
+
+const DIAGRAM_GUIDE_STEPS: GuideStep[] = [
+  {
+    selector: '[data-tour="build-group"]',
+    title: "1. Construir y poblar el diagrama",
+    description:
+      "Usa '+ Clase' para crear entidades manualmente, 'Comando' para dictar por voz o texto natural, 'Importar foto' para digitalizar una pizarra con IA o 'Importar XMI' desde Enterprise Architect.",
+  },
+  {
+    selector: ".app__rel-toolbox",
+    title: "2. Conectar relaciones UML",
+    description:
+      "Selecciona el tipo de relación en esta paleta lateral (Asociación, Agregación, Composición, Herencia, Muchos a Muchos o Clase Asociación) y haz clic en la clase origen y luego en la clase destino.",
+  },
+  {
+    selector: '[data-tour="view-toggle"]',
+    title: "3. Vista UML y Entidad-Relación (ER)",
+    description:
+      "Alterna en tiempo real entre el modelo conceptual de clases (UML) y el esquema físico de tablas relacionales (ER) con llaves primarias (PK), foráneas (FK) y tablas intermedias generadas automáticamente.",
+  },
+  {
+    selector: '[data-tour="export-group"]',
+    title: "4. Validar y generar código Backend",
+    description:
+      "Verifica la consistencia del modelo con 'Validar' y descarga un proyecto completo Spring Boot + migraciones SQL Flyway listo para ejecutar con 'Generar backend'.",
+  },
+  {
+    selector: '[data-tour="assistant-toggle"]',
+    title: "5. Chat IA y Mentoría Senior",
+    description:
+      "Abre el panel lateral del Agente Senior para conversar en equipo, pedirle una auditoría con 'Revisar', 'Resumir' acuerdos, configurar su nivel pedagógico o aplicar sus propuestas directamente al lienzo.",
+  },
+];
 
 const nodeTypes = { umlClass: UmlClassNode, erTable: ErTableNode };
 const edgeTypes = { umlRelationship: UmlRelationshipEdge, erRelationship: ErRelationshipEdge };
@@ -236,6 +270,7 @@ interface PendingConnection {
 
 interface Props {
   session: Session;
+  onLogout?: () => void;
   /** Id real del diagrama en el servidor, o null para un demo local sin colaboracion en vivo. */
   diagramId: string | null;
   /**
@@ -259,7 +294,7 @@ interface Props {
  * de un proyecto -- la diferencia entre los dos es solo `diagramId` (null
  * en el demo salvo para "barberia") y que hay a la izquierda de la barra.
  */
-export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft, assistant, sidePanel }: Props) {
+export function DiagramWorkspace({ session, onLogout, diagramId, projectId, toolbarLeft, assistant, sidePanel }: Props) {
   const [showNewClass, setShowNewClass] = useState(false);
   const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
   const [validationReport, setValidationReport] = useState<{ report: ValidationReport; blocked: boolean } | null>(null);
@@ -272,6 +307,7 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft, a
   const [showXmiImport, setShowXmiImport] = useState(false);
   const [exportingXmi, setExportingXmi] = useState(false);
   const [showPackages, setShowPackages] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
   const [activeRelTool, setActiveRelTool] = useState<RelToolType | null>(null);
   const [relSourceId, setRelSourceId] = useState<string | null>(null);
   const selectNode = usePresentationStore((s) => s.selectNode);
@@ -547,7 +583,7 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft, a
         {toolbarLeft}
 
         {diagramId && (
-          <div className="app__toolbar-group" aria-label="Construir el modelo">
+          <div className="app__toolbar-group" aria-label="Construir el modelo" data-tour="build-group">
             <button type="button" className="app__new-class-btn" onClick={() => setShowNewClass(true)}>
               + Clase
             </button>
@@ -574,7 +610,7 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft, a
         )}
 
         {model && (
-          <div className="app__toolbar-group app__view-toggle" role="group" aria-label="Cómo se ve">
+          <div className="app__toolbar-group app__view-toggle" role="group" aria-label="Cómo se ve" data-tour="view-toggle">
             <button
               type="button"
               className={`app__view-toggle-btn${viewMode === "uml" ? " app__view-toggle-btn--active" : ""}`}
@@ -596,7 +632,7 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft, a
         )}
 
         {diagramId && (
-          <div className="app__toolbar-group" aria-label="Sacar algo del modelo">
+          <div className="app__toolbar-group" aria-label="Sacar algo del modelo" data-tour="export-group">
             <button type="button" className="app__toolbar-btn--fixed" onClick={handleValidate} disabled={validating}>
               {validating ? "Validando…" : "Validar"}
             </button>
@@ -636,8 +672,18 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft, a
               {!collaboration.error && collaboration.status === "error" && "⚠ error de conexión"}
             </span>
           )}
+          <button
+            type="button"
+            className="onboarding-trigger-btn"
+            onClick={() => setShowGuide(true)}
+            title="Iniciar recorrido guiado del lienzo"
+          >
+            Guía
+          </button>
           {assistant && (
-            <AssistantToggleButton open={assistant.open} onToggle={assistant.onToggle} unread={assistant.unread ?? 0} />
+            <span data-tour="assistant-toggle" style={{ display: "inline-flex" }}>
+              <AssistantToggleButton open={assistant.open} onToggle={assistant.onToggle} unread={assistant.unread ?? 0} />
+            </span>
           )}
           {diagramId && <RosterPanel />}
           {/* Divisor: la cuenta no es una persona mas de la presencia. */}
@@ -654,6 +700,17 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft, a
               />
             </svg>
           </span>
+          <button
+            type="button"
+            className="app__logout-btn"
+            onClick={() => {
+              onLogout?.();
+              navigate("/login", { replace: true });
+            }}
+            title={`Cerrar sesión (${session.email})`}
+          >
+            Cerrar sesión
+          </button>
         </div>
       </header>
       <div className="app__body">
@@ -824,6 +881,12 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft, a
           }}
         />
       )}
+      <OnboardingGuide
+        screenId="diagram"
+        steps={DIAGRAM_GUIDE_STEPS}
+        manualOpen={showGuide}
+        onCloseManual={() => setShowGuide(false)}
+      />
     </div>
   );
 }

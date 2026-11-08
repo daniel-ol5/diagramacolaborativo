@@ -23,6 +23,7 @@ const DIAGRAMA_EN_VIVO: keyof typeof DIAGRAMS = "barberia";
 
 interface Props {
   session: Session;
+  onLogout?: () => void;
 }
 
 /**
@@ -32,7 +33,7 @@ interface Props {
  * evidencia mas directa de la notacion UML completa (rombos, triangulos,
  * punteado) sin depender de datos sembrados.
  */
-function App({ session }: Props) {
+function App({ session, onLogout }: Props) {
   const [diagramKey, setDiagramKey] = useState<keyof typeof DIAGRAMS>("barberia");
   const setModel = useCanonicalStore((s) => s.setModel);
 
@@ -45,6 +46,7 @@ function App({ session }: Props) {
   return (
     <DiagramWorkspace
       session={session}
+      onLogout={onLogout}
       diagramId={liveDiagramId}
       projectId={null}
       toolbarLeft={
