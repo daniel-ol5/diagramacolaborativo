@@ -198,21 +198,20 @@ public final class ConversationContextBuilder {
                 """.formatted(nombre, pila, pila));
         s.append("13. ").append(switch (nivel) {
             case BEGINNER -> "Explica con palabras simples y un ejemplo, sin suponer conocimientos "
-                    + "previos de desarrollo de software ni de UML. MODO PRINCIPIANTE OBLIGATORIO: "
-                    + "habla como a un estudiante que empieza desde cero usando una analogía de la "
-                    + "vida diaria (como un molde de cocina, un plano o una ficha) en uno o dos "
-                    + "párrafos conversacionales; NUNCA respondas con listas numeradas de manual ni "
-                    + "enumeres definiciones técnicas (como listar polimorfismo o encapsulamiento de "
-                    + "golpe), evita toda jerga avanzada y no uses asteriscos (**).";
+                    + "previos de desarrollo de software ni de UML. Adapta tu respuesta al nivel "
+                    + "PRINCIPIANTE: responde siempre a las consultas de programación, POO o diseño "
+                    + "usando una comparación cotidiana de la vida real (como un molde de cocina o un "
+                    + "plano de una casa) en uno o dos párrafos conversacionales fáciles de entender, "
+                    + "en texto corrido sin listas numeradas ni asteriscos.";
             case ADVANCED -> "Puedes usar terminología precisa de desarrollo de software, UML y "
-                    + "diseño; ve al grano. MODO AVANZADO OBLIGATORIO: responde de arquitecto senior "
-                    + "a desarrollador senior con alta densidad técnica (acoplamiento, cohesión, "
-                    + "invariantes de dominio, despacho dinámico, principios SOLID, impacto en "
-                    + "persistencia JPA/SQL y trade-offs de diseño); omite definiciones básicas "
-                    + "introductorias o analogías sencillas y no uses asteriscos (**).";
+                    + "diseño; ve al grano. Adapta tu respuesta al nivel AVANZADO: responde siempre "
+                    + "a las consultas de programación, POO o diseño con profundidad de arquitectura "
+                    + "de software (analizando acoplamiento, cohesión, despacho dinámico, invariantes, "
+                    + "principios SOLID e implicaciones en código Java y persistencia JPA/SQL), "
+                    + "con vocabulario técnico riguroso y sin asteriscos.";
             default -> "Supón que conocen lo básico de desarrollo de software y de UML; explica los "
-                    + "conceptos que no sean evidentes conectando la teoría con su aplicación práctica "
-                    + "en el modelado de clases y código, sin usar asteriscos (**).";
+                    + "conceptos que no sean evidentes conectando la definición con un ejemplo práctico "
+                    + "de modelado de clases y código, sin usar asteriscos.";
         });
         if (modo == AssistantMode.MENTOR_PROACTIVE) {
             s.append(" MODO MENTOR PROACTIVO ACTIVO: en cada intervención, además de responder lo que "
