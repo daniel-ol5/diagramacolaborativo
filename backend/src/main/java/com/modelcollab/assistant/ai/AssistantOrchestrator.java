@@ -295,26 +295,35 @@ public class AssistantOrchestrator implements UserMessageListener {
     /**
      * Si se cambió la configuración de la IA en el chat, descarta las respuestas anteriores a ese
      * cambio para que el modelo no imite el nivel pedagógico viejo al responder la misma pregunta.
+     * También excluye rechazos previos ("fuera de mi rol") para que no contaminen nuevas consultas.
      */
     static List<ChatMessage> historialDesdeUltimoCambioDeAjustes(List<ChatMessage> historial) {
         if (historial == null || historial.isEmpty()) {
             return List.of();
         }
         long corteSeq = Long.MIN_VALUE;
+        java.util.Set<String> idsRechazados = new java.util.HashSet<>();
         for (ChatMessage m : historial) {
-            if (m != null
-                    && m.authorType() == ChatAuthorType.SYSTEM
+            if (m == null) {
+                continue;
+            }
+            if (m.authorType() == ChatAuthorType.SYSTEM
                     && m.text() != null
                     && m.text().contains("actualizó la configuración de la IA")) {
                 corteSeq = Math.max(corteSeq, m.seq());
             }
-        }
-        if (corteSeq == Long.MIN_VALUE) {
-            return historial;
+            if (m.authorType() == ChatAuthorType.AI
+                    && m.text() != null
+                    && m.text().toLowerCase(java.util.Locale.ROOT).contains("fuera de mi rol")) {
+                idsRechazados.add(m.id());
+                if (m.replyToId() != null) {
+                    idsRechazados.add(m.replyToId());
+                }
+            }
         }
         final long minSeq = corteSeq;
         return historial.stream()
-                .filter(m -> m != null && m.seq() > minSeq)
+                .filter(m -> m != null && m.seq() > minSeq && !idsRechazados.contains(m.id()))
                 .toList();
     }
 
