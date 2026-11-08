@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Modal } from "./Modal";
+import { generateUUID } from "../lib/uuid";
 import type { Attribute, AttributeType, Visibility } from "../types/canonical";
 
 const TYPES: AttributeType[] = [
@@ -39,7 +40,7 @@ export function AttributeFormModal({ initial, onSubmit, onClose }: Props) {
     const trimmed = name.trim();
     if (!trimmed) return;
     onSubmit({
-      id: initial?.id ?? crypto.randomUUID(),
+      id: initial?.id ?? generateUUID(),
       name: trimmed,
       type,
       visibility,

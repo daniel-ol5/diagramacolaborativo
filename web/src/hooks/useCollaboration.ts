@@ -22,6 +22,7 @@ import {
 } from "../services/offlineQueue";
 import { syncOffline } from "../services/offlineApi";
 import { fetchDiagramSnapshot } from "../services/diagramApi";
+import { generateUUID } from "../lib/uuid";
 
 /** Tope por lote que exige el servidor (§9.2) — un lote mas grande se manda en varias tandas sucesivas. */
 const MAX_OPERATIONS_PER_BATCH = 500;
@@ -564,7 +565,7 @@ export function useCollaboration(
   function publishMutate(op: string, targetId: string | null, payload: Record<string, unknown>) {
     if (!diagramId) return;
     const client = connection.getClient();
-    const clientMutationId = crypto.randomUUID();
+    const clientMutationId = generateUUID();
 
     if (!client?.connected) {
       // OFFLINE (§8.4): se encola en vez de perderse — incluidas las

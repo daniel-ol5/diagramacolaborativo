@@ -10,6 +10,7 @@ import {
 } from "./visionApi";
 import { fetchDiagramSnapshot } from "../services/diagramApi";
 import { useCanonicalStore } from "../store/canonicalStore";
+import { generateUUID } from "../lib/uuid";
 import "./VisionImportModal.css";
 
 interface Props {
@@ -96,7 +97,7 @@ export function VisionImportModal({ diagramId, token, onClose }: Props) {
           return !excluida(r.from) && !excluida(r.to);
         }),
       };
-      const resultado = await confirmImport(diagramId, token, draftFinal, crypto.randomUUID());
+      const resultado = await confirmImport(diagramId, token, draftFinal, generateUUID());
 
       if (resultado.applied) {
         try {

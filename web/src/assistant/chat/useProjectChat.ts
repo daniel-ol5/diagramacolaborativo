@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useStompConnection } from "../shell/stompConnection";
+import { generateUUID } from "../../lib/uuid";
 import { MAX_CHARS } from "./chatErrors";
 import { sincronizarChat, useChatStore, type OutgoingMessage } from "./chatStore";
 import { SIN_CONEXION } from "./useProjectChatFeed";
@@ -50,7 +51,7 @@ export function useProjectChat(projectId: string, diagramId: string | null): Pro
       if (!s.connected) return false;
       const outgoing: OutgoingMessage = {
         // UUID v4 en hex: nunca empieza por los prefijos reservados "ai-" ni "sys-".
-        clientMessageId: crypto.randomUUID(),
+        clientMessageId: generateUUID(),
         text,
         diagramId: diagramId ?? undefined,
         createdAt: new Date().toISOString(),

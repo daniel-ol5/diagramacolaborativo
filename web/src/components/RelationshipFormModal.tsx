@@ -3,6 +3,7 @@ import { Modal } from "./Modal";
 import type { Multiplicity, OwningSide, Relationship, RelationshipType } from "../types/canonical";
 import { deriveOwningSide } from "../lib/relationship";
 import { relationshipTypeLabel } from "../lib/uml";
+import { generateUUID } from "../lib/uuid";
 
 const TYPES: RelationshipType[] = [
   "ASSOCIATION",
@@ -91,7 +92,7 @@ export function RelationshipFormModal({
 
     const llevaMultiplicidad = LLEVA_MULTIPLICIDAD(type);
     onSubmit({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       sourceClassId: sourceId,
       targetClassId: targetId,
       type,
