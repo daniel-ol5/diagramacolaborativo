@@ -30,6 +30,7 @@ import { useCollaborationStore } from "./store/collaborationStore";
 import { useCollaboration } from "./hooks/useCollaboration";
 import { CollaborationActionsContext } from "./hooks/collaborationActionsContext";
 import { triggerDownload } from "./lib/download";
+import { generateUUID } from "./lib/uuid";
 import { generateBackend, validateDiagram } from "./generator/api";
 import type { ValidationReport } from "./generator/types";
 import { ValidationDialog } from "./generator/ValidationDialog";
@@ -397,7 +398,7 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft, a
       : { x: 200, y: 200 };
     const jitter = () => Math.round(Math.random() * 60 - 30);
     collaboration.addClass({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       name,
       visibility: "PUBLIC",
       isAbstract: false,
@@ -496,7 +497,7 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft, a
       ? Math.round((source.position.y + target.position.y) / 2) + 70
       : 200;
 
-    const newClassId = crypto.randomUUID();
+    const newClassId = generateUUID();
 
     // 1. Agregar la clase intermedia al lienzo
     collaboration.addClass({
@@ -513,7 +514,7 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft, a
 
     // 2. Conectar source -> intermedia
     collaboration.addRelationship({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       sourceClassId: pendingConnection.sourceId,
       targetClassId: newClassId,
       type: "ASSOCIATION",
@@ -526,7 +527,7 @@ export function DiagramWorkspace({ session, diagramId, projectId, toolbarLeft, a
 
     // 3. Conectar target -> intermedia
     collaboration.addRelationship({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       sourceClassId: pendingConnection.targetId,
       targetClassId: newClassId,
       type: "ASSOCIATION",

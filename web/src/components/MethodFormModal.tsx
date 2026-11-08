@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Modal } from "./Modal";
+import { generateUUID } from "../lib/uuid";
 import type { Method, Parameter, Visibility } from "../types/canonical";
 
 const VISIBILITIES: Visibility[] = ["PUBLIC", "PACKAGE", "PROTECTED", "PRIVATE"];
@@ -44,7 +45,7 @@ export function MethodFormModal({ initial, onSubmit, onClose }: Props) {
       .map((p) => ({ name: p.name.trim(), type: p.type.trim() }))
       .filter((p) => p.name && p.type);
     onSubmit({
-      id: initial?.id ?? crypto.randomUUID(),
+      id: initial?.id ?? generateUUID(),
       name: trimmed,
       returnType: returnType.trim() || "void",
       visibility,

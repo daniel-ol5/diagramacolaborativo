@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { CanonicalModel, Package } from "../types/canonical";
+import { generateUUID } from "../lib/uuid";
 import { useCollaborationStore } from "../store/collaborationStore";
 import { useOfflineStore } from "../store/offlineStore";
 import "./PackagePanel.css";
@@ -104,7 +105,7 @@ export function PackagePanel({ model, actions, onClose }: Props) {
   function crear(nombre: string) {
     const trimmed = nombre.trim();
     if (!trimmed) return;
-    actions.addPackage({ id: crypto.randomUUID(), name: trimmed, classIds: [] });
+    actions.addPackage({ id: generateUUID(), name: trimmed, classIds: [] });
     setPending(null);
   }
 

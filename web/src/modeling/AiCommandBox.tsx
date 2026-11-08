@@ -1,5 +1,6 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { sendAiCommand, type AiCommandResult } from "./aiCommandApi";
+import { generateUUID } from "../lib/uuid";
 import { useSpeechRecognition } from "./useSpeechRecognition";
 import "./AiCommandBox.css";
 
@@ -101,7 +102,7 @@ export function AiCommandBox({ diagramId, token, onClose, initialListening }: Pr
     setSending(true);
     setError(null);
     try {
-      const { httpStatus, body } = await sendAiCommand(diagramId, token, trimmed, crypto.randomUUID());
+      const { httpStatus, body } = await sendAiCommand(diagramId, token, trimmed, generateUUID());
       setHistory((prev) => [...prev, { command: trimmed, httpStatus, result: body }]);
       setCommand("");
     } catch (e) {
