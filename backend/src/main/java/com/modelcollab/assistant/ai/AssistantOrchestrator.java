@@ -267,11 +267,13 @@ public class AssistantOrchestrator implements UserMessageListener {
         }
         escribiendo(proyecto, pregunta, true);
         try {
-            List<ChatMessage> historial = store.latest(proyecto.toString(), VENTANA);
+            List<ChatMessage> historial = historialDesdeUltimoCambioDeAjustes(
+                    store.latest(proyecto.toString(), VENTANA));
             ChatRequest pedido = contexto.build(
                     pregunta, historial, pendiente.ajustes(), resumenDelDiagrama(proyecto, pregunta));
             ChatCompletion respuesta = llamarConTope(pedido);
-            String texto = AddressingGuard.apply(respuesta.text(), pedido.askerFirstName());
+            String limpio = respuesta.text() == null ? "" : respuesta.text().replace("**", "");
+            String texto = AddressingGuard.apply(limpio, pedido.askerFirstName());
             chatService.postFromAi(proyecto, ChatAuthorType.AI, texto, pregunta);
         } catch (AiUnavailableException e) {
             log.warn("{} no respondió en el chat: {} ({})",
@@ -288,6 +290,32 @@ public class AssistantOrchestrator implements UserMessageListener {
         } finally {
             escribiendo(proyecto, pregunta, false);
         }
+    }
+
+    /**
+     * Si se cambió la configuración de la IA en el chat, descarta las respuestas anteriores a ese
+     * cambio para que el modelo no imite el nivel pedagógico viejo al responder la misma pregunta.
+     */
+    static List<ChatMessage> historialDesdeUltimoCambioDeAjustes(List<ChatMessage> historial) {
+        if (historial == null || historial.isEmpty()) {
+            return List.of();
+        }
+        long corteSeq = Long.MIN_VALUE;
+        for (ChatMessage m : historial) {
+            if (m != null
+                    && m.authorType() == ChatAuthorType.SYSTEM
+                    && m.text() != null
+                    && m.text().contains("actualizó la configuración de la IA")) {
+                corteSeq = Math.max(corteSeq, m.seq());
+            }
+        }
+        if (corteSeq == Long.MIN_VALUE) {
+            return historial;
+        }
+        final long minSeq = corteSeq;
+        return historial.stream()
+                .filter(m -> m != null && m.seq() > minSeq)
+                .toList();
     }
 
     /**
