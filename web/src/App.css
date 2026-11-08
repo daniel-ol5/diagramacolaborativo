@@ -351,6 +351,24 @@
   user-select: none;
 }
 
+.app__logout-btn {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-on-dark);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.app__logout-btn:hover {
+  background: rgba(201, 42, 42, 0.35);
+  border-color: rgba(255, 168, 168, 0.6);
+}
+
 .app__toasts {
   position: absolute;
   top: var(--space-3);

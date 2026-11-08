@@ -16,6 +16,7 @@ import { triggerChatSummary, SummaryApiError } from "./assistant/summary/summary
 
 interface Props {
   session: Session;
+  onLogout?: () => void;
 }
 
 /**
@@ -25,7 +26,7 @@ interface Props {
  * antes de las pantallas no habia forma de abrir un diagrama que no fuera
  * el sembrado a mano.
  */
-export function DiagramScreen({ session }: Props) {
+export function DiagramScreen({ session, onLogout }: Props) {
   const { projectId, diagramId } = useParams<{ projectId: string; diagramId: string }>();
   const setModel = useCanonicalStore((s) => s.setModel);
   const [error, setError] = useState<string | null>(null);
@@ -106,6 +107,7 @@ export function DiagramScreen({ session }: Props) {
     <StompConnectionProvider diagramId={diagramId} token={session.token}>
       <DiagramWorkspace
         session={session}
+        onLogout={onLogout}
         diagramId={diagramId}
         projectId={projectId ?? null}
         assistant={

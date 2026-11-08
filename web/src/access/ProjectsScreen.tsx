@@ -5,19 +5,37 @@ import { createProject, listProjects } from "./api";
 import type { Project } from "./types";
 import { rolEnCastellano } from "./types";
 import { NewProjectModal } from "./NewProjectModal";
+import { OnboardingGuide, type GuideStep } from "../onboarding/OnboardingGuide";
 import "./access.css";
+
+const PROJECTS_GUIDE_STEPS: GuideStep[] = [
+  {
+    selector: '[data-tour="new-project"]',
+    title: "1. Crear un proyecto",
+    description:
+      "¡Bienvenido a ModelCollab! Aquí creas un proyecto nuevo colocando su nombre y una descripción breve para agrupar tus diagramas y tu equipo.",
+  },
+  {
+    selector: '[data-tour="project-list"]',
+    title: "2. Entrar a tus proyectos",
+    description:
+      "Aquí verás todos los proyectos a los que perteneces junto con tu rol (Propietario, Editor o Lector). Haz clic en uno para abrirlo.",
+  },
+];
 
 interface Props {
   session: Session;
+  onLogout?: () => void;
 }
 
 
 /** CU08/CU09: los proyectos donde soy miembro, cada uno con mi rol -- crear, entrar. */
-export function ProjectsScreen({ session }: Props) {
+export function ProjectsScreen({ session, onLogout }: Props) {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
     let cancelado = false;
@@ -49,12 +67,32 @@ export function ProjectsScreen({ session }: Props) {
     <div className="access-page">
       <header className="access-page__header">
         <span className="access-page__brand">ModelCollab</span>
-        <span className="access-page__session">{session.email}</span>
+        <div className="access-page__header-right">
+          <span className="access-page__session">{session.email}</span>
+          <button type="button" className="onboarding-trigger-btn" onClick={() => setShowGuide(true)}>
+            Guía
+          </button>
+          <button
+            type="button"
+            className="access-page__logout-btn"
+            onClick={() => {
+              onLogout?.();
+              navigate("/login", { replace: true });
+            }}
+          >
+            Cerrar sesión
+          </button>
+        </div>
       </header>
       <div className="access-page__body">
         <div className="access-page__row">
           <h1>Tus proyectos</h1>
-          <button type="button" className="access-page__primary-btn" onClick={() => setShowNew(true)}>
+          <button
+            type="button"
+            className="access-page__primary-btn"
+            data-tour="new-project"
+            onClick={() => setShowNew(true)}
+          >
             + Nuevo proyecto
           </button>
         </div>
@@ -83,7 +121,7 @@ export function ProjectsScreen({ session }: Props) {
         )}
 
         {projects && projects.length > 0 && (
-          <div className="access-list">
+          <div className="access-list" data-tour="project-list">
             {projects.map((p) => (
               <button
                 key={p.id}
@@ -105,6 +143,12 @@ export function ProjectsScreen({ session }: Props) {
       </div>
 
       {showNew && <NewProjectModal onCreate={handleCreate} onClose={() => setShowNew(false)} />}
+      <OnboardingGuide
+        screenId="projects"
+        steps={PROJECTS_GUIDE_STEPS}
+        manualOpen={showGuide}
+        onCloseManual={() => setShowGuide(false)}
+      />
     </div>
   );
 }

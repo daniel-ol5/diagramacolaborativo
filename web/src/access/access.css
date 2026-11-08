@@ -55,14 +55,38 @@
   text-decoration: none;
 }
 
-.access-page__session {
+.access-page__header-right {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.access-page__session {
   font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--brand-light);
   padding: 4px 12px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.08);
+}
+
+.access-page__logout-btn {
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-on-dark);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.access-page__logout-btn:hover {
+  background: rgba(201, 42, 42, 0.35);
+  border-color: rgba(255, 168, 168, 0.6);
 }
 
 .access-page__body {
