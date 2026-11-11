@@ -41,6 +41,26 @@ public class DiagramReviewService {
     private final ObjectMapper canonicalObjectMapper;
     private final AiChatModelClient aiClient;
     private final ChatService chatService;
+    private final com.modelcollab.assistant.ai.AssistantSettingsProvider settingsProvider;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public DiagramReviewService(
+            DiagramRepository diagramRepository,
+            ProjectMemberRepository projectMemberRepository,
+            DiagramReviewRulesEngine rulesEngine,
+            ObjectMapper canonicalObjectMapper,
+            AiChatModelClient aiClient,
+            ChatService chatService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false)
+            com.modelcollab.assistant.ai.AssistantSettingsProvider settingsProvider) {
+        this.diagramRepository = diagramRepository;
+        this.projectMemberRepository = projectMemberRepository;
+        this.rulesEngine = rulesEngine;
+        this.canonicalObjectMapper = canonicalObjectMapper;
+        this.aiClient = aiClient;
+        this.chatService = chatService;
+        this.settingsProvider = settingsProvider;
+    }
 
     public DiagramReviewService(
             DiagramRepository diagramRepository,
@@ -49,12 +69,7 @@ public class DiagramReviewService {
             ObjectMapper canonicalObjectMapper,
             AiChatModelClient aiClient,
             ChatService chatService) {
-        this.diagramRepository = diagramRepository;
-        this.projectMemberRepository = projectMemberRepository;
-        this.rulesEngine = rulesEngine;
-        this.canonicalObjectMapper = canonicalObjectMapper;
-        this.aiClient = aiClient;
-        this.chatService = chatService;
+        this(diagramRepository, projectMemberRepository, rulesEngine, canonicalObjectMapper, aiClient, chatService, null);
     }
 
     public DiagramReviewResponse reviewDiagram(UUID diagramId, UUID userId) {
@@ -85,10 +100,10 @@ public class DiagramReviewService {
                 .limit(3)
                 .toList();
 
-        String mentorComment = generateMentorComment(analysis.score(), topIssues);
+        UUID projectId = diagram.getProject().getId();
+        String mentorComment = generateMentorComment(projectId, analysis.score(), topIssues);
 
         // Publicar la tarjeta en el chat del proyecto
-        UUID projectId = diagram.getProject().getId();
         publicarEnChat(projectId, diagram.getId(), diagram.getMutationVersion(), analysis, mentorComment);
 
         return new DiagramReviewResponse(
@@ -101,7 +116,7 @@ public class DiagramReviewService {
                 analysis.issues());
     }
 
-    private String generateMentorComment(int score, List<ReviewIssue> topIssues) {
+    private String generateMentorComment(UUID projectId, int score, List<ReviewIssue> topIssues) {
         if (topIssues.isEmpty()) {
             return "¡Excelente trabajo! El modelo cumple con las convenciones arquitectónicas y de diseño. No se encontraron errores ni advertencias.";
         }
@@ -130,7 +145,11 @@ public class DiagramReviewService {
                     250,
                     "Equipo");
 
-            var completion = aiClient.chat(request);
+            AiChatModelClient clientActivo = (aiClient instanceof com.modelcollab.assistant.ai.AssistantChatModelRouter router && settingsProvider != null && projectId != null)
+                    ? router.clientePara(settingsProvider.forProject(projectId))
+                    : aiClient;
+
+            var completion = clientActivo.chat(request);
             if (completion != null && completion.text() != null && !completion.text().isBlank()
                     && !completion.text().contains("(respuesta simulada)")) {
                 return completion.text().trim();

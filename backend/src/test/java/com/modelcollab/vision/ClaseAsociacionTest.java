@@ -249,5 +249,100 @@ class ClaseAsociacionTest {
                     .hasSize(2);
         }
     }
+
+    @Test
+    @DisplayName("projects_members huérfana sólo se reconecta entre users y projects, sin robar relaciones de diagram_operations")
+    void projectsMembersNoRobaRelacionesAjenas() {
+        VisionDraft draft = new VisionDraft(
+                List.of(
+                        new VisionClass("users", List.of(new VisionAttribute("id", "INTEGER"))),
+                        new VisionClass("projects", List.of(new VisionAttribute("id", "INTEGER"))),
+                        new VisionClass("diagram_operations", List.of(new VisionAttribute("id", "INTEGER"))),
+                        new VisionClass("diagrams", List.of(new VisionAttribute("id", "INTEGER"))),
+                        new VisionClass("projects_members", List.of())),
+                List.of(
+                        new VisionRelationship("users", "diagram_operations", "ASSOCIATION", "1..1", "1..*"),
+                        new VisionRelationship("diagram_operations", "diagrams", "ASSOCIATION", "1..*", "1..1"),
+                        new VisionRelationship("projects", "diagrams", "ASSOCIATION", "1..1", "0..*"),
+                        new VisionRelationship("users", "projects", "ASSOCIATION", "1..1", "1..1")));
+
+        VisionMerger.Resultado r = fusionador.fusionar(CanonicalModel.empty(), draft, false);
+
+        ClassEntity pm = r.modelo().classes().stream()
+                .filter(c -> c.name().equals("projects_members"))
+                .findFirst()
+                .orElseThrow();
+
+        ClassEntity diagOps = r.modelo().classes().stream()
+                .filter(c -> c.name().equals("diagram_operations"))
+                .findFirst()
+                .orElseThrow();
+
+        // projects_members debe tener exactamente 2 relaciones (hacia users y projects)
+        List<Relationship> pmRels = r.modelo().relationships().stream()
+                .filter(rel -> rel.sourceClassId().equals(pm.id()) || rel.targetClassId().equals(pm.id()))
+                .toList();
+        assertThat(pmRels).hasSize(2);
+
+        // diagram_operations NO debe conectarse con projects_members bajo ninguna circunstancia
+        boolean conectadoConDiagOps = pmRels.stream()
+                .anyMatch(rel -> rel.sourceClassId().equals(diagOps.id()) || rel.targetClassId().equals(diagOps.id()));
+        assertThat(conectadoConDiagOps).isFalse();
+
+        // diagram_operations conserva sus 2 relaciones originales (con users y diagrams)
+        List<Relationship> diagOpsRels = r.modelo().relationships().stream()
+                .filter(rel -> rel.sourceClassId().equals(diagOps.id()) || rel.targetClassId().equals(diagOps.id()))
+                .toList();
+        assertThat(diagOpsRels).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("Saneamiento garantiza relaciones de users con chat_read_state, users con diagram_operations y diagram_operations con diagrams")
+    void reconciliacionDeRelacionesEsencialesModelCollab() {
+        VisionDraft draft = new VisionDraft(
+                List.of(
+                        new VisionClass("users", List.of(new VisionAttribute("id", "INTEGER"))),
+                        new VisionClass("projects", List.of(new VisionAttribute("id", "INTEGER"))),
+                        new VisionClass("diagram_operations", List.of(new VisionAttribute("id", "INTEGER"))),
+                        new VisionClass("diagrams", List.of(new VisionAttribute("id", "INTEGER"))),
+                        new VisionClass("chat_read_state", List.of(new VisionAttribute("id", "INTEGER"))),
+                        new VisionClass("projects_members", List.of())),
+                List.of(
+                        // IA alucinó relación entre diagram_operations y projects_members
+                        new VisionRelationship("diagram_operations", "projects_members", "ASSOCIATION", "1..*", "1..1"),
+                        new VisionRelationship("users", "projects", "ASSOCIATION", "1..1", "1..1")));
+
+        VisionMerger.Resultado r = fusionador.fusionar(CanonicalModel.empty(), draft, false);
+
+        ClassEntity users = r.modelo().classes().stream().filter(c -> c.name().equals("users")).findFirst().orElseThrow();
+        ClassEntity chatReadState = r.modelo().classes().stream().filter(c -> c.name().equals("chat_read_state")).findFirst().orElseThrow();
+        ClassEntity diagOps = r.modelo().classes().stream().filter(c -> c.name().equals("diagram_operations")).findFirst().orElseThrow();
+        ClassEntity diagrams = r.modelo().classes().stream().filter(c -> c.name().equals("diagrams")).findFirst().orElseThrow();
+        ClassEntity pm = r.modelo().classes().stream().filter(c -> c.name().equals("projects_members")).findFirst().orElseThrow();
+
+        // 1. users con chat_read_state
+        boolean usersConChatReadState = r.modelo().relationships().stream().anyMatch(rel ->
+                (rel.sourceClassId().equals(users.id()) && rel.targetClassId().equals(chatReadState.id()))
+                        || (rel.sourceClassId().equals(chatReadState.id()) && rel.targetClassId().equals(users.id())));
+        assertThat(usersConChatReadState).isTrue();
+
+        // 2. users con diagram_operations
+        boolean usersConDiagOps = r.modelo().relationships().stream().anyMatch(rel ->
+                (rel.sourceClassId().equals(users.id()) && rel.targetClassId().equals(diagOps.id()))
+                        || (rel.sourceClassId().equals(diagOps.id()) && rel.targetClassId().equals(users.id())));
+        assertThat(usersConDiagOps).isTrue();
+
+        // 3. diagram_operations con diagrams
+        boolean diagOpsConDiagrams = r.modelo().relationships().stream().anyMatch(rel ->
+                (rel.sourceClassId().equals(diagOps.id()) && rel.targetClassId().equals(diagrams.id()))
+                        || (rel.sourceClassId().equals(diagrams.id()) && rel.targetClassId().equals(diagOps.id())));
+        assertThat(diagOpsConDiagrams).isTrue();
+
+        // 4. diagram_operations NUNCA con projects_members
+        boolean diagOpsConPm = r.modelo().relationships().stream().anyMatch(rel ->
+                (rel.sourceClassId().equals(diagOps.id()) && rel.targetClassId().equals(pm.id()))
+                        || (rel.sourceClassId().equals(pm.id()) && rel.targetClassId().equals(diagOps.id())));
+        assertThat(diagOpsConPm).isFalse();
+    }
 }
 

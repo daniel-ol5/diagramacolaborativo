@@ -46,9 +46,34 @@
 
 .assistant-panel__title {
   margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: var(--font-size-base);
   font-weight: 700;
   color: var(--color-text-on-dark);
+}
+
+.assistant-panel__provider-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  line-height: 1.2;
+}
+
+.assistant-panel__provider-badge--cloud {
+  background: rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.assistant-panel__provider-badge--local {
+  background: #059669;
+  color: #ffffff;
+  border: 1px solid #10b981;
 }
 
 .assistant-panel__header-actions {

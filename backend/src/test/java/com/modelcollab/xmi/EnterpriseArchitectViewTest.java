@@ -203,6 +203,38 @@ class EnterpriseArchitectViewTest {
     }
 
     @Test
+    @DisplayName("El rombo de composición en EA va en el extremo del contenedor (source), no en la parte (target)")
+    void romboDeComposicionVaEnExtremoCorrecto() throws Exception {
+        CanonicalModel modelo = leer("reference-diagrams/barberia.json");
+        com.modelcollab.metamodel.model.Relationship comp = modelo.relationships().stream()
+                .filter(r -> r.type() == com.modelcollab.metamodel.model.RelationshipType.COMPOSITION)
+                .findFirst()
+                .orElseThrow();
+
+        Document doc = parsear(exportador.exportar(modelo, "Barberia"));
+        Element extension = extensionDeEa(doc);
+        NodeList conectores = primerHijo(extension, "connectors").getElementsByTagName("connector");
+
+        Element conectorComp = null;
+        for (int i = 0; i < conectores.getLength(); i++) {
+            Element c = (Element) conectores.item(i);
+            if (comp.id().equals(c.getAttributeNS(XmiExporterService.NS_XMI, "idref"))) {
+                conectorComp = c;
+                break;
+            }
+        }
+        assertThat(conectorComp).isNotNull();
+
+        Element source = primerHijo(conectorComp, "source");
+        Element target = primerHijo(conectorComp, "target");
+
+        // En Cita(source) -> Pago(target), el rombo (todo) está en Cita. EA dibuja el rombo
+        // en el extremo que tiene aggregation="composite".
+        assertThat(primerHijo(source, "type").getAttribute("aggregation")).isEqualTo("composite");
+        assertThat(primerHijo(target, "type").getAttribute("aggregation")).isEqualTo("none");
+    }
+
+    @Test
     @DisplayName("Cada línea de la lámina dice qué dos objetos une")
     void cadaLineaDiceQueUne() throws Exception {
         CanonicalModel modelo = leer("reference-diagrams/barberia.json");

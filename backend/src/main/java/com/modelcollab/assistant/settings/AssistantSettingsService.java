@@ -97,11 +97,34 @@ public class AssistantSettingsService {
                     throw new ResponseStatusException(
                             HttpStatus.BAD_REQUEST, "La URL del servidor local debe comenzar con http:// o https://");
                 }
+                String host = uri.getHost();
+                if (host == null || !esHostLocalOPrivado(host)) {
+                    throw new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST,
+                            "La URL del servidor local debe apuntar a una dirección local o de red privada (localhost, host.docker.internal o IP privada)");
+                }
+            } catch (ResponseStatusException e) {
+                throw e;
             } catch (Exception e) {
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST, "La URL del servidor local no es válida: " + e.getMessage());
             }
         }
+    }
+
+    private static boolean esHostLocalOPrivado(String host) {
+        if (host == null || host.isBlank()) return false;
+        String h = host.toLowerCase(java.util.Locale.ROOT).trim();
+        if (h.equals("localhost") || h.equals("127.0.0.1") || h.equals("::1") || h.equals("host.docker.internal")) {
+            return true;
+        }
+        if (h.startsWith("192.168.") || h.startsWith("10.") || h.startsWith("169.254.")) {
+            return true;
+        }
+        if (h.matches("^172\\.(1[6-9]|2[0-9]|3[0-1])\\..*")) {
+            return true;
+        }
+        return false;
     }
 
     private void notificarCambioEnChat(
