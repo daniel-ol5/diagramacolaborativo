@@ -19,6 +19,7 @@ interface Props {
   token: string;
   myUserId: string;
   myName: string;
+  onImportPhoto?: () => void;
 }
 
 /**
@@ -30,7 +31,7 @@ interface Props {
  * de la linea de tiempo; la linea de tiempo sigue recibiendo en vivo y, al
  * salir de la busqueda, vuelve a la posicion en que estaba.
  */
-export function ChatPanel({ projectId, diagramId, token, myUserId, myName }: Props) {
+export function ChatPanel({ projectId, diagramId, token, myUserId, myName, onImportPhoto }: Props) {
   const { send, retry } = useProjectChat(projectId, diagramId);
   const loadOlder = useLoadOlder(projectId, token);
   const search = useChatSearch(projectId, token);
@@ -185,7 +186,7 @@ export function ChatPanel({ projectId, diagramId, token, myUserId, myName }: Pro
         </p>
       )}
       <TypingIndicator forUserNames={deEsteProyecto ? Object.values(aiTyping) : []} />
-      <ChatInput connected={connected} error={sendError} onSend={send} />
+      <ChatInput connected={connected} error={sendError} onSend={send} onImportPhoto={onImportPhoto} />
     </div>
   );
 }

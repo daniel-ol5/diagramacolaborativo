@@ -20,6 +20,7 @@ export default defineConfig({
     },
   },
   server: {
+    host: true,
     fs: {
       allow: [import.meta.dirname, fixturesDir],
     },

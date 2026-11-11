@@ -6,11 +6,13 @@
  * localhost:8080 que el navegador del usuario nunca podria alcanzar. Las
  * variables VITE_MC_* siguen pudiendo forzar cualquiera de los dos casos.
  */
-export const HTTP_BASE = import.meta.env.VITE_MC_HTTP_BASE ?? (import.meta.env.DEV ? "http://localhost:8080" : "");
+const devHost = typeof window !== "undefined" && window.location.hostname ? window.location.hostname : "localhost";
+
+export const HTTP_BASE = import.meta.env.VITE_MC_HTTP_BASE ?? (import.meta.env.DEV ? `http://${devHost}:8080` : "");
 export const WS_URL =
   import.meta.env.VITE_MC_WS_URL ??
   (import.meta.env.DEV
-    ? "ws://localhost:8080/ws"
+    ? `ws://${devHost}:8080/ws`
     : `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws`);
 
 /** Diagrama sembrado por scripts/seed-dev.sql — es barberia.json, el unico que existe en el servidor. */

@@ -15,6 +15,7 @@ import type { AssistantProvider } from "./assistant/settings/types";
 import { requestDiagramReview } from "./assistant/review/reviewApi";
 import { useReviewStore } from "./assistant/review/reviewStore";
 import { triggerChatSummary, SummaryApiError } from "./assistant/summary/summaryApi";
+import { VisionImportModal } from "./modeling/VisionImportModal";
 
 interface Props {
   session: Session;
@@ -44,6 +45,8 @@ export function DiagramScreen({ session, onLogout }: Props) {
   const [reviewing, setReviewing] = useState(false);
   // CU24: estado de solicitud de resumen del chat por la IA.
   const [summarizing, setSummarizing] = useState(false);
+  // CU17: modal de importación de foto desde el chat.
+  const [chatVisionOpen, setChatVisionOpen] = useState(false);
 
   useEffect(() => {
     if (!projectId) return;
@@ -136,6 +139,7 @@ export function DiagramScreen({ session, onLogout }: Props) {
               isReviewing={reviewing}
               onSummarizeChat={handleSummarizeChat}
               isSummarizing={summarizing}
+              onImportPhoto={diagramId ? () => setChatVisionOpen(true) : undefined}
               provider={assistantProvider}
             >
               <ChatPanel
@@ -144,6 +148,7 @@ export function DiagramScreen({ session, onLogout }: Props) {
                 token={session.token}
                 myUserId={session.userId}
                 myName={session.fullName}
+                onImportPhoto={diagramId ? () => setChatVisionOpen(true) : undefined}
               />
             </AssistantPanel>
           ) : null
@@ -164,6 +169,13 @@ export function DiagramScreen({ session, onLogout }: Props) {
           token={session.token}
           onClose={() => setSettingsOpen(false)}
           onSaved={(s) => setAssistantProvider(s.provider)}
+        />
+      )}
+      {chatVisionOpen && diagramId && (
+        <VisionImportModal
+          diagramId={diagramId}
+          token={session.token}
+          onClose={() => setChatVisionOpen(false)}
         />
       )}
     </StompConnectionProvider>

@@ -17,6 +17,7 @@ interface Props {
   diagramId: string;
   token: string;
   onClose: () => void;
+  onImportConfirmed?: (addedClasses: number, addedRelationships: number) => void;
 }
 
 interface EditableAttribute extends VisionAttribute {
@@ -39,7 +40,7 @@ interface EditableClass extends Omit<VisionClass, "attributes" | "methods"> {
  * existe ningún camino por el que una foto se aplique sin que alguien la
  * revise y confirme en este mismo modal.
  */
-export function VisionImportModal({ diagramId, token, onClose }: Props) {
+export function VisionImportModal({ diagramId, token, onClose, onImportConfirmed }: Props) {
   const [step, setStep] = useState<"subir" | "revisar">("subir");
   const [file, setFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -106,6 +107,7 @@ export function VisionImportModal({ diagramId, token, onClose }: Props) {
         } catch (err) {
           console.warn("[vision] no se pudo recargar snapshot directamente:", err);
         }
+        onImportConfirmed?.(resultado.addedClasses, resultado.addedRelationships);
       }
 
       setConfirmedResult(
@@ -213,8 +215,7 @@ export function VisionImportModal({ diagramId, token, onClose }: Props) {
         {step === "subir" && (
           <>
             <p className="vision-modal__message">
-              Subí una foto de un diagrama dibujado a mano o una captura de pantalla. Vas a poder revisar y
-              corregir lo que se detectó antes de que se agregue algo.
+              Sube una foto de un diagrama dibujado a mano o una captura de pantalla. La IA de OpenAI (visión multimodal) analizará y detectará clases, atributos y relaciones para que puedas revisarlas antes de aplicarlas al lienzo.
             </p>
             <input
               type="file"
