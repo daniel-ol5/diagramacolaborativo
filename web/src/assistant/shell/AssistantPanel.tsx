@@ -9,6 +9,7 @@ interface Props {
   isReviewing?: boolean;
   onSummarizeChat?: () => void;
   isSummarizing?: boolean;
+  onImportPhoto?: () => void;
   provider?: AssistantProvider;
   /** El contenido de la pestaña activa (hoy, solo el chat). */
   children: ReactNode;
@@ -26,6 +27,7 @@ export function AssistantPanel({
   isReviewing,
   onSummarizeChat,
   isSummarizing,
+  onImportPhoto,
   provider,
   children,
 }: Props) {
@@ -50,6 +52,17 @@ export function AssistantPanel({
           </span>
         </h2>
         <div className="assistant-panel__header-actions">
+          {onImportPhoto && (
+            <button
+              type="button"
+              className="assistant-panel__action-btn"
+              onClick={onImportPhoto}
+              title="Digitalizar e importar diagrama desde foto con IA multimodal (OpenAI)"
+              aria-label="Importar diagrama desde foto"
+            >
+              Foto
+            </button>
+          )}
           {onSummarizeChat && (
             <button
               type="button"

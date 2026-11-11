@@ -9,6 +9,8 @@ interface Props {
   error: string | null;
   /** true si se envio (entonces se vacia el campo). */
   onSend: (text: string) => boolean;
+  /** Abrir modal de digitalización e importación de diagrama desde foto con OpenAI Vision. */
+  onImportPhoto?: () => void;
 }
 
 /** A partir de aca se muestra el contador. */
@@ -32,7 +34,7 @@ function mencionEnCurso(value: string, caret: number): number | null {
  * caracteres, con contador al acercarse. "Preguntar a la IA" inserta "@IA ",
  * y al escribir "@" se sugiere completarlo (Enter o Tab acepta, Esc cierra).
  */
-export function ChatInput({ connected, error, onSend }: Props) {
+export function ChatInput({ connected, error, onSend, onImportPhoto }: Props) {
   const [value, setValue] = useState("");
   const [caret, setCaret] = useState(0);
   const [sugerenciaCerrada, setSugerenciaCerrada] = useState(false);
@@ -167,6 +169,31 @@ export function ChatInput({ connected, error, onSend }: Props) {
       </div>
 
       <div className="chat-input__actions">
+        {onImportPhoto && (
+          <button
+            type="button"
+            className="chat-input__photo-btn"
+            onClick={onImportPhoto}
+            title="Digitalizar e importar diagrama desde foto con IA multimodal (OpenAI)"
+            aria-label="Importar foto de diagrama"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+            Foto
+          </button>
+        )}
         <button type="button" className="chat-input__ask" onClick={insertarMencion} disabled={!connected}>
           Preguntar a la IA
         </button>
