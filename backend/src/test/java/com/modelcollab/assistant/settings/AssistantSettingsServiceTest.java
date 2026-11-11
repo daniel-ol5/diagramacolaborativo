@@ -150,6 +150,28 @@ class AssistantSettingsServiceTest {
         assertThatThrownBy(() -> service.updateSettings(projectId, userId, reqProtocoloInvalido))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
+
+        AssistantSettingsUpdateRequest reqHostPublico = new AssistantSettingsUpdateRequest(
+                AssistantMode.ON_MENTION, AssistantLevel.INTERMEDIATE, AssistantProvider.LOCAL, "http://sitio-externo.com/v1", 400, 30);
+
+        assertThatThrownBy(() -> service.updateSettings(projectId, userId, reqHostPublico))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(e -> assertThat(((ResponseStatusException) e).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    @DisplayName("updateSettings: permite proveedor LOCAL con localhost, host.docker.internal e IP privada")
+    void updateSettingsLocalValido() {
+        when(participants.roleIn(projectId, userId)).thenReturn(Optional.of(ProjectRole.OWNER));
+        when(participants.fullName(userId)).thenReturn(Optional.of("Daniel"));
+        when(repository.findById(projectId)).thenReturn(Optional.empty());
+
+        AssistantSettingsUpdateRequest reqDocker = new AssistantSettingsUpdateRequest(
+                AssistantMode.ON_MENTION, AssistantLevel.INTERMEDIATE, AssistantProvider.LOCAL, "http://host.docker.internal:11434/v1", 400, 30);
+
+        AssistantSettingsResponse res = service.updateSettings(projectId, userId, reqDocker);
+        assertThat(res.provider()).isEqualTo(AssistantProvider.LOCAL);
+        assertThat(res.localEndpoint()).isEqualTo("http://host.docker.internal:11434/v1");
     }
 }
 

@@ -4,6 +4,7 @@ import { fetchAssistantSettings, updateAssistantSettings } from "./settingsApi";
 import type {
   AssistantLevel,
   AssistantMode,
+  AssistantProvider,
   AssistantSettingsResponse,
 } from "./types";
 import "./AssistantSettingsModal.css";
@@ -12,9 +13,10 @@ interface Props {
   projectId: string;
   token: string;
   onClose: () => void;
+  onSaved?: (settings: AssistantSettingsResponse) => void;
 }
 
-export function AssistantSettingsModal({ projectId, token, onClose }: Props) {
+export function AssistantSettingsModal({ projectId, token, onClose, onSaved }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,6 +24,8 @@ export function AssistantSettingsModal({ projectId, token, onClose }: Props) {
 
   const [mode, setMode] = useState<AssistantMode>("ON_MENTION");
   const [level, setLevel] = useState<AssistantLevel>("INTERMEDIATE");
+  const [provider, setProvider] = useState<AssistantProvider>("CLOUD");
+  const [localEndpoint, setLocalEndpoint] = useState<string>("http://localhost:11434/v1");
   const [summaryFrequency, setSummaryFrequency] = useState(30);
   const [canEdit, setCanEdit] = useState(false);
 
@@ -35,6 +39,8 @@ export function AssistantSettingsModal({ projectId, token, onClose }: Props) {
         if (!activo) return;
         setMode(data.mode);
         setLevel(data.level);
+        setProvider(data.provider ?? "CLOUD");
+        setLocalEndpoint(data.localEndpoint || "http://localhost:11434/v1");
         setSummaryFrequency(data.summaryFrequency ?? 30);
         setCanEdit(data.canEdit);
         setLoading(false);
@@ -59,14 +65,20 @@ export function AssistantSettingsModal({ projectId, token, onClose }: Props) {
     setSuccess(false);
 
     try {
-      await updateAssistantSettings(projectId, token, {
+      const endpointEfectivo =
+        provider === "LOCAL"
+          ? (localEndpoint.trim() || "http://localhost:11434/v1")
+          : null;
+
+      const updated = await updateAssistantSettings(projectId, token, {
         mode,
         level,
-        provider: "CLOUD",
-        localEndpoint: null,
+        provider,
+        localEndpoint: endpointEfectivo,
         summaryFrequency: Number(summaryFrequency) || 30,
       });
       setSuccess(true);
+      onSaved?.(updated);
       setTimeout(() => {
         onClose();
       }, 1000);
@@ -98,6 +110,47 @@ export function AssistantSettingsModal({ projectId, token, onClose }: Props) {
           {success && (
             <div className="assistant-settings__success" role="status">
               ✓ Configuración guardada correctamente.
+            </div>
+          )}
+
+          {/* PROVEEDOR DE IA (NUBE vs LOCAL OLLAMA) */}
+          <div className="assistant-settings__group">
+            <label className="assistant-settings__label" htmlFor="asst-provider">
+              Proveedor de IA
+            </label>
+            <select
+              id="asst-provider"
+              value={provider}
+              disabled={!canEdit || saving}
+              onChange={(e) => setProvider(e.target.value as AssistantProvider)}
+              className="assistant-settings__select"
+            >
+              <option value="CLOUD">En la nube (OpenAI / Gemini)</option>
+              <option value="LOCAL">Local (Ollama en red / localhost)</option>
+            </select>
+            <span className="assistant-settings__help">
+              Elige si las respuestas del chat, resumen y revisión se procesan en la nube o en tu servidor local Ollama.
+            </span>
+          </div>
+
+          {/* ENDPOINT LOCAL (SOLO SI ES LOCAL) */}
+          {provider === "LOCAL" && (
+            <div className="assistant-settings__group">
+              <label className="assistant-settings__label" htmlFor="asst-local-endpoint">
+                URL del endpoint Ollama
+              </label>
+              <input
+                id="asst-local-endpoint"
+                type="text"
+                value={localEndpoint}
+                placeholder="http://localhost:11434/v1"
+                disabled={!canEdit || saving}
+                onChange={(e) => setLocalEndpoint(e.target.value)}
+                className="assistant-settings__input"
+              />
+              <span className="assistant-settings__help">
+                Usa <code>http://localhost:11434/v1</code> (local), <code>http://host.docker.internal:11434/v1</code> (Docker) o la IP privada de la laptop (ej. <code>http://192.168.1.50:11434/v1</code>).
+              </span>
             </div>
           )}
 

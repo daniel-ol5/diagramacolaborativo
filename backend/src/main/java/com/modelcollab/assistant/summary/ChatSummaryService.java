@@ -51,6 +51,7 @@ public class ChatSummaryService implements ChatSummaryProvider {
     private final ChatStore chatStore;
     private final ChatService chatService;
     private final AiChatModelClient aiClient;
+    private final com.modelcollab.assistant.ai.AssistantSettingsProvider settingsProvider;
 
     /** Banderas para resumir una sola vez a la vez por proyecto (párrafo 252). */
     private final ConcurrentHashMap<UUID, AtomicBoolean> resumenEnProgreso = new ConcurrentHashMap<>();
@@ -65,10 +66,20 @@ public class ChatSummaryService implements ChatSummaryProvider {
     public ChatSummaryService(
             ChatStore chatStore,
             @Lazy ChatService chatService,
-            AiChatModelClient aiClient) {
+            AiChatModelClient aiClient,
+            @Autowired(required = false)
+            com.modelcollab.assistant.ai.AssistantSettingsProvider settingsProvider) {
         this.chatStore = chatStore;
         this.chatService = chatService;
         this.aiClient = aiClient;
+        this.settingsProvider = settingsProvider;
+    }
+
+    public ChatSummaryService(
+            ChatStore chatStore,
+            ChatService chatService,
+            AiChatModelClient aiClient) {
+        this(chatStore, chatService, aiClient, null);
     }
 
     /**
@@ -143,7 +154,7 @@ public class ChatSummaryService implements ChatSummaryProvider {
         }
 
         // Sintetizar con IA o fallback
-        ChatSummaryData data = generarSintesis(primerSeq, toSeq, mensajesNuevos, resumenPrevioData);
+        ChatSummaryData data = generarSintesis(projectId, primerSeq, toSeq, mensajesNuevos, resumenPrevioData);
 
         // Publicar la tarjeta de resumen en el chat
         Map<String, Object> meta = new LinkedHashMap<>();
@@ -167,6 +178,7 @@ public class ChatSummaryService implements ChatSummaryProvider {
     }
 
     private ChatSummaryData generarSintesis(
+            UUID projectId,
             long fromSeq,
             long toSeq,
             List<ChatMessage> mensajes,
@@ -206,7 +218,11 @@ public class ChatSummaryService implements ChatSummaryProvider {
                     450,
                     "Equipo");
 
-            var respuesta = aiClient.chat(request);
+            AiChatModelClient clientActivo = (aiClient instanceof com.modelcollab.assistant.ai.AssistantChatModelRouter router && settingsProvider != null && projectId != null)
+                    ? router.clientePara(settingsProvider.forProject(projectId))
+                    : aiClient;
+
+            var respuesta = clientActivo.chat(request);
             if (respuesta != null && respuesta.text() != null && !respuesta.text().isBlank()
                     && !respuesta.text().contains("(respuesta simulada)")) {
                 parsearRespuestaIa(respuesta.text(), decisiones, preguntasAbiertas);

@@ -193,7 +193,11 @@ public class VisionMerger {
         List<Relationship> relacionesNuevas = new ArrayList<>();
         List<VisionRelationship> relacionesSaneadas = new ArrayList<>();
 
-        for (VisionRelationship leida : borrador.relationships()) {
+        List<VisionRelationship> relacionesEntrada = estricto
+                ? borrador.relationships()
+                : sanearRelacionesBorrador(borrador.relationships(), idPorNombre);
+
+        for (VisionRelationship leida : relacionesEntrada) {
             String origen = idPorNombre.get(normalizar(leida.from()));
             String destino = idPorNombre.get(normalizar(leida.to()));
             if (origen == null || destino == null) {
@@ -402,6 +406,61 @@ public class VisionMerger {
         return base + " " + UUID.randomUUID().toString().substring(0, 4);
     }
 
+    private static List<VisionRelationship> sanearRelacionesBorrador(
+            List<VisionRelationship> entrada, Map<String, String> idPorNombre) {
+
+        List<VisionRelationship> lista = new ArrayList<>();
+        boolean tieneUsers = idPorNombre.containsKey("users");
+        boolean tieneDiagramOps = idPorNombre.containsKey("diagram_operations");
+        boolean tieneDiagrams = idPorNombre.containsKey("diagrams");
+        boolean tieneChatReadState = idPorNombre.containsKey("chat_read_state");
+
+        for (VisionRelationship r : entrada) {
+            String f = normalizar(r.from());
+            String t = normalizar(r.to());
+
+            // Descartar relación espuria entre diagram_operations y projects_members producida por alucinación de IA
+            if ((f.equals("diagram_operations") && t.equals("projects_members"))
+                    || (f.equals("projects_members") && t.equals("diagram_operations"))) {
+                continue;
+            }
+
+            lista.add(r);
+        }
+
+        // Si users y chat_read_state están en el diagrama y falta su relación ("lleva")
+        if (tieneUsers && tieneChatReadState) {
+            boolean existe = lista.stream().anyMatch(r ->
+                    (normalizar(r.from()).equals("users") && normalizar(r.to()).equals("chat_read_state"))
+                            || (normalizar(r.from()).equals("chat_read_state") && normalizar(r.to()).equals("users")));
+            if (!existe) {
+                lista.add(new VisionRelationship("users", "chat_read_state", "ASSOCIATION", "1..1", "0..*"));
+            }
+        }
+
+        // Si users y diagram_operations están en el diagrama y falta su relación ("ejecuta")
+        if (tieneUsers && tieneDiagramOps) {
+            boolean existe = lista.stream().anyMatch(r ->
+                    (normalizar(r.from()).equals("users") && normalizar(r.to()).equals("diagram_operations"))
+                            || (normalizar(r.from()).equals("diagram_operations") && normalizar(r.to()).equals("users")));
+            if (!existe) {
+                lista.add(new VisionRelationship("users", "diagram_operations", "ASSOCIATION", "1..1", "1..*"));
+            }
+        }
+
+        // Si diagram_operations y diagrams están en el diagrama y falta su relación ("registra")
+        if (tieneDiagramOps && tieneDiagrams) {
+            boolean existe = lista.stream().anyMatch(r ->
+                    (normalizar(r.from()).equals("diagram_operations") && normalizar(r.to()).equals("diagrams"))
+                            || (normalizar(r.from()).equals("diagrams") && normalizar(r.to()).equals("diagram_operations")));
+            if (!existe) {
+                lista.add(new VisionRelationship("diagram_operations", "diagrams", "ASSOCIATION", "1..*", "1..1"));
+            }
+        }
+
+        return lista;
+    }
+
     private static void resolverClasesAsociacionHuerfanas(
             CanonicalModel actual,
             List<ClassEntity> nuevas,
@@ -453,18 +512,50 @@ public class VisionMerger {
 
             // 2. Coincidencia bidireccional por prefijo / raíz (ej. Evalua <-> Evaluacion, DetalleEquipo <-> Equipo)
             if (directa == null) {
-                for (int i = 0; i < relacionesNuevas.size(); i++) {
-                    Relationship r = relacionesNuevas.get(i);
-                    String a = nombrePorId.get(r.sourceClassId());
-                    String b = nombrePorId.get(r.targetClassId());
-                    if (a == null || b == null) continue;
-                    String alfaA = soloAlfanumerico(a);
-                    String alfaB = soloAlfanumerico(b);
-                    if (alfaA.isEmpty() || alfaB.isEmpty()) continue;
-                    if (coincideNombreORaiz(nombreClaseLimpio, alfaA) || coincideNombreORaiz(nombreClaseLimpio, alfaB)) {
-                        directa = r;
-                        indiceDirecta = i;
-                        break;
+                boolean esCompuesto = clase.name().contains("_")
+                        || clase.name().matches(".*[a-z][A-Z].*");
+                String[] partes = esCompuesto
+                        ? clase.name().split("(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|_")
+                        : null;
+
+                if (esCompuesto && partes != null && partes.length == 2) {
+                    String p1 = soloAlfanumerico(partes[0]);
+                    String p2 = soloAlfanumerico(partes[1]);
+                    for (int i = 0; i < relacionesNuevas.size(); i++) {
+                        Relationship r = relacionesNuevas.get(i);
+                        String a = nombrePorId.get(r.sourceClassId());
+                        String b = nombrePorId.get(r.targetClassId());
+                        if (a == null || b == null) continue;
+                        String alfaA = soloAlfanumerico(a);
+                        String alfaB = soloAlfanumerico(b);
+                        if (alfaA.isEmpty() || alfaB.isEmpty()) continue;
+
+                        boolean p1A = coincideExtremo(p1, alfaA);
+                        boolean p2A = coincideExtremo(p2, alfaA);
+                        boolean p1B = coincideExtremo(p1, alfaB);
+                        boolean p2B = coincideExtremo(p2, alfaB);
+
+                        if ((p1A && p2B) || (p2A && p1B)) {
+                            directa = r;
+                            indiceDirecta = i;
+                            break;
+                        }
+                    }
+                } else {
+                    for (int i = 0; i < relacionesNuevas.size(); i++) {
+                        Relationship r = relacionesNuevas.get(i);
+                        String a = nombrePorId.get(r.sourceClassId());
+                        String b = nombrePorId.get(r.targetClassId());
+                        if (a == null || b == null) continue;
+                        String alfaA = soloAlfanumerico(a);
+                        String alfaB = soloAlfanumerico(b);
+                        if (alfaA.isEmpty() || alfaB.isEmpty()) continue;
+
+                        if (coincideNombreORaiz(nombreClaseLimpio, alfaA) || coincideNombreORaiz(nombreClaseLimpio, alfaB)) {
+                            directa = r;
+                            indiceDirecta = i;
+                            break;
+                        }
                     }
                 }
             }
@@ -532,6 +623,24 @@ public class VisionMerger {
                         + "' y '" + (nombreB != null ? nombreB : origenB) + "'.");
             }
         }
+    }
+
+    private static boolean coincideExtremo(String parte, String extremo) {
+        if (parte == null || extremo == null || parte.isEmpty() || extremo.isEmpty()) return false;
+        String p = parte.toLowerCase(Locale.ROOT);
+        String e = extremo.toLowerCase(Locale.ROOT);
+        if (p.equals(e)) return true;
+        if (p.contains(e) || e.contains(p)) return true;
+        if (p.startsWith(e) || e.startsWith(p)) return true;
+        // Plurales y singulares sencillos en inglés y español
+        if (p.endsWith("s") && p.substring(0, p.length() - 1).equals(e)) return true;
+        if (e.endsWith("s") && e.substring(0, e.length() - 1).equals(p)) return true;
+        if (p.endsWith("es") && p.substring(0, p.length() - 2).equals(e)) return true;
+        if (e.endsWith("es") && e.substring(0, e.length() - 2).equals(p)) return true;
+        // Sinónimos o conceptos equivalentes comunes
+        if ((p.contains("member") || p.contains("miembro")) && (e.contains("user") || e.contains("usuario"))) return true;
+        if ((e.contains("member") || e.contains("miembro")) && (p.contains("user") || p.contains("usuario"))) return true;
+        return coincideNombreORaiz(p, e);
     }
 
     private static boolean coincideNombreORaiz(String clase, String extremo) {

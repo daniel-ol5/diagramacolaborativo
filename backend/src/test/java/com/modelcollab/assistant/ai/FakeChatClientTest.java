@@ -48,9 +48,12 @@ class FakeChatClientTest {
         AiProperties sinClave = new AiProperties("openai", "", null, null, null, null);
         AiProperties conClave = new AiProperties("openai", "sk-x", null, null, null, null);
 
-        assertThat(config.aiChatModelClient(sinClave, JacksonConfig.canonicalObjectMapper()))
-                .isInstanceOf(FakeChatClient.class);
-        assertThat(config.aiChatModelClient(conClave, JacksonConfig.canonicalObjectMapper()))
-                .isInstanceOf(ProveedorAiChatModelClient.class);
+        AiChatModelClient clienteSinClave = config.aiChatModelClient(sinClave, JacksonConfig.canonicalObjectMapper());
+        AiChatModelClient clienteConClave = config.aiChatModelClient(conClave, JacksonConfig.canonicalObjectMapper());
+
+        assertThat(clienteSinClave).isInstanceOf(AssistantChatModelRouter.class);
+        assertThat(((AssistantChatModelRouter) clienteSinClave).cloudClient()).isInstanceOf(FakeChatClient.class);
+        assertThat(clienteConClave).isInstanceOf(AssistantChatModelRouter.class);
+        assertThat(((AssistantChatModelRouter) clienteConClave).cloudClient()).isInstanceOf(ProveedorAiChatModelClient.class);
     }
 }

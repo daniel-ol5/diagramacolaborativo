@@ -10,6 +10,8 @@ import { ChatPanel } from "./assistant/chat/ChatPanel";
 import { ProjectChatFeed } from "./assistant/chat/ProjectChatFeed";
 import { useChatStore } from "./assistant/chat/chatStore";
 import { AssistantSettingsModal } from "./assistant/settings/AssistantSettingsModal";
+import { fetchAssistantSettings } from "./assistant/settings/settingsApi";
+import type { AssistantProvider } from "./assistant/settings/types";
 import { requestDiagramReview } from "./assistant/review/reviewApi";
 import { useReviewStore } from "./assistant/review/reviewStore";
 import { triggerChatSummary, SummaryApiError } from "./assistant/summary/summaryApi";
@@ -37,10 +39,22 @@ export function DiagramScreen({ session, onLogout }: Props) {
   const unread = useChatStore((s) => (projectId && s.projectId === projectId ? s.unreadCount : 0));
   // CU21: modal de configuracion de la IA para el proyecto.
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [assistantProvider, setAssistantProvider] = useState<AssistantProvider>("CLOUD");
   // CU22: estado de solicitud de revisión del diagrama por la IA.
   const [reviewing, setReviewing] = useState(false);
   // CU24: estado de solicitud de resumen del chat por la IA.
   const [summarizing, setSummarizing] = useState(false);
+
+  useEffect(() => {
+    if (!projectId) return;
+    fetchAssistantSettings(projectId, session.token)
+      .then((data) => {
+        if (data && data.provider) {
+          setAssistantProvider(data.provider);
+        }
+      })
+      .catch(() => {});
+  }, [projectId, session.token]);
 
   useEffect(() => {
     if (!diagramId) return;
@@ -122,6 +136,7 @@ export function DiagramScreen({ session, onLogout }: Props) {
               isReviewing={reviewing}
               onSummarizeChat={handleSummarizeChat}
               isSummarizing={summarizing}
+              provider={assistantProvider}
             >
               <ChatPanel
                 projectId={projectId}
@@ -148,6 +163,7 @@ export function DiagramScreen({ session, onLogout }: Props) {
           projectId={projectId}
           token={session.token}
           onClose={() => setSettingsOpen(false)}
+          onSaved={(s) => setAssistantProvider(s.provider)}
         />
       )}
     </StompConnectionProvider>

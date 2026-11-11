@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { AssistantProvider } from "../settings/types";
 import "./AssistantPanel.css";
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
   isReviewing?: boolean;
   onSummarizeChat?: () => void;
   isSummarizing?: boolean;
+  provider?: AssistantProvider;
   /** El contenido de la pestaña activa (hoy, solo el chat). */
   children: ReactNode;
 }
@@ -24,6 +26,7 @@ export function AssistantPanel({
   isReviewing,
   onSummarizeChat,
   isSummarizing,
+  provider,
   children,
 }: Props) {
   return (
@@ -31,6 +34,20 @@ export function AssistantPanel({
       <header className="assistant-panel__header">
         <h2 id="assistant-panel-title" className="assistant-panel__title">
           Chat IA
+          <span
+            className={`assistant-panel__provider-badge ${
+              provider === "LOCAL"
+                ? "assistant-panel__provider-badge--local"
+                : "assistant-panel__provider-badge--cloud"
+            }`}
+            title={
+              provider === "LOCAL"
+                ? "Procesamiento con modelo local (Ollama)"
+                : "Procesamiento en la nube (OpenAI / Gemini)"
+            }
+          >
+            {provider === "LOCAL" ? "Local" : "Nube"}
+          </span>
         </h2>
         <div className="assistant-panel__header-actions">
           {onSummarizeChat && (

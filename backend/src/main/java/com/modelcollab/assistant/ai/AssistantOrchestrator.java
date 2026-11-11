@@ -266,30 +266,79 @@ public class AssistantOrchestrator implements UserMessageListener {
             return;
         }
         escribiendo(proyecto, pregunta, true);
+        AssistantSettings settings = pendiente.ajustes();
+        AiChatModelClient clienteActivo = resolverCliente(settings);
+        boolean esLocal = settings.provider() == AssistantProvider.LOCAL;
+        Duration topeActivo = esLocal ? Duration.ofSeconds(60) : tope;
         try {
             List<ChatMessage> historial = historialDesdeUltimoCambioDeAjustes(
                     store.latest(proyecto.toString(), VENTANA));
             ChatRequest pedido = contexto.build(
-                    pregunta, historial, pendiente.ajustes(), resumenDelDiagrama(proyecto, pregunta));
-            ChatCompletion respuesta = llamarConTope(pedido);
+                    pregunta, historial, settings, resumenDelDiagrama(proyecto, pregunta));
+            ChatCompletion respuesta = llamarConTope(pedido, clienteActivo, topeActivo);
             String limpio = respuesta.text() == null ? "" : respuesta.text().replace("**", "");
-            String texto = AddressingGuard.apply(limpio, pedido.askerFirstName());
+            String textoSinEco = esLocal ? limpiarEcoLocal(limpio, pregunta.text()) : limpio;
+            String texto = AddressingGuard.apply(textoSinEco, pedido.askerFirstName());
             chatService.postFromAi(proyecto, ChatAuthorType.AI, texto, pregunta);
         } catch (AiUnavailableException e) {
             log.warn("{} no respondió en el chat: {} ({})",
-                    cliente.descripcion(), e.getClass().getSimpleName(), e.reason());
-            sistema(proyecto, e.reason() == AiUnavailableException.Reason.PROVIDER_QUOTA ? SIN_CUOTA : NO_DISPONIBLE);
+                    clienteActivo.descripcion(), e.getClass().getSimpleName(), e.reason());
+            if (esLocal) {
+                String ep = settings.localEndpoint() != null ? settings.localEndpoint() : "servidor local";
+                sistema(proyecto, "El servidor local de IA no respondió en " + ep + ". Verifique que Ollama esté iniciado.");
+            } else {
+                sistema(proyecto, e.reason() == AiUnavailableException.Reason.PROVIDER_QUOTA ? SIN_CUOTA : NO_DISPONIBLE);
+            }
         } catch (TimeoutException e) {
             log.warn("{} no respondió en el chat en {} s: {}",
-                    cliente.descripcion(), tope.toSeconds(), e.getClass().getSimpleName());
-            sistema(proyecto, NO_DISPONIBLE);
+                    clienteActivo.descripcion(), topeActivo.toSeconds(), e.getClass().getSimpleName());
+            if (esLocal) {
+                sistema(proyecto, "El modelo local de IA superó el tiempo límite de espera (" + topeActivo.toSeconds() + " s).");
+            } else {
+                sistema(proyecto, NO_DISPONIBLE);
+            }
         } catch (RuntimeException e) {
             log.error("Fallo inesperado respondiendo en el chat con {}: {}",
-                    cliente.descripcion(), e.getClass().getSimpleName());
+                    clienteActivo.descripcion(), e.getClass().getSimpleName());
             sistema(proyecto, NO_DISPONIBLE);
         } finally {
             escribiendo(proyecto, pregunta, false);
         }
+    }
+
+    private AiChatModelClient resolverCliente(AssistantSettings settings) {
+        if (cliente instanceof AssistantChatModelRouter router) {
+            return router.clientePara(settings);
+        }
+        return cliente;
+    }
+
+    static String limpiarEcoLocal(String respuesta, String preguntaUsuario) {
+        if (respuesta == null || respuesta.isBlank()) {
+            return "";
+        }
+        String r = respuesta.strip();
+        if (r.matches("(?s)^\\s*\\[[^\\]]+\\]\\s*:.*")) {
+            r = r.replaceFirst("(?s)^\\s*\\[[^\\]]+\\]\\s*:\\s*", "").strip();
+            if (preguntaUsuario != null && !preguntaUsuario.isBlank()) {
+                String q = preguntaUsuario.strip();
+                String qSinMencion = q.replaceAll("(?i)^@(?:ia|senior)\\s*", "").strip();
+                if (r.toLowerCase(java.util.Locale.ROOT).startsWith(q.toLowerCase(java.util.Locale.ROOT))) {
+                    r = r.substring(q.length()).strip();
+                } else if (!qSinMencion.isEmpty() && r.toLowerCase(java.util.Locale.ROOT).startsWith(qSinMencion.toLowerCase(java.util.Locale.ROOT))) {
+                    r = r.substring(qSinMencion.length()).strip();
+                }
+                if (r.matches("(?s)^\\s*\\[[^\\]]+\\]\\s*:.*")) {
+                    r = r.replaceFirst("(?s)^\\s*\\[[^\\]]+\\]\\s*:\\s*", "").strip();
+                    if (r.toLowerCase(java.util.Locale.ROOT).startsWith(q.toLowerCase(java.util.Locale.ROOT))) {
+                        r = r.substring(q.length()).strip();
+                    } else if (!qSinMencion.isEmpty() && r.toLowerCase(java.util.Locale.ROOT).startsWith(qSinMencion.toLowerCase(java.util.Locale.ROOT))) {
+                        r = r.substring(qSinMencion.length()).strip();
+                    }
+                }
+            }
+        }
+        return r.strip();
     }
 
     /**
@@ -319,6 +368,13 @@ public class AssistantOrchestrator implements UserMessageListener {
                 if (m.replyToId() != null) {
                     idsRechazados.add(m.replyToId());
                 }
+            }
+            // Excluir respuestas defectuosas donde la IA solo hizo eco de corchetes del usuario
+            if (m.authorType() == ChatAuthorType.AI
+                    && m.text() != null
+                    && m.text().matches("(?s)^\\s*\\[[^\\]]+\\]:.*")
+                    && !m.text().contains("Daniel,") && !m.text().contains("Hola")) {
+                idsRechazados.add(m.id());
             }
         }
         final long minSeq = corteSeq;
@@ -389,20 +445,20 @@ public class AssistantOrchestrator implements UserMessageListener {
     }
 
     /**
-     * El modelo corre en otra tarea del mismo ejecutor y acá se espera hasta {@code tope}. Si se
+     * El modelo corre en otra tarea del mismo ejecutor y acá se espera hasta {@code topeActivo}. Si se
      * pasa, la respuesta tardía se descarta: nadie la lee.
      */
-    private ChatCompletion llamarConTope(ChatRequest pedido) throws TimeoutException {
+    private ChatCompletion llamarConTope(ChatRequest pedido, AiChatModelClient clienteActivo, Duration topeActivo) throws TimeoutException {
         CompletableFuture<ChatCompletion> futuro = new CompletableFuture<>();
         ejecutor.execute(() -> {
             try {
-                futuro.complete(cliente.chat(pedido));
+                futuro.complete(clienteActivo.chat(pedido));
             } catch (Throwable t) {
                 futuro.completeExceptionally(t);
             }
         });
         try {
-            return futuro.get(tope.toMillis(), TimeUnit.MILLISECONDS);
+            return futuro.get(topeActivo.toMillis(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new AiUnavailableException(AiUnavailableException.Reason.UNAVAILABLE, NO_DISPONIBLE, e);

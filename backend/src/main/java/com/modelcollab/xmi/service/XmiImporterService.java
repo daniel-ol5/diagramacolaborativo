@@ -289,13 +289,17 @@ public class XmiImporterService {
                 ? multiplicidad(atributo(ext, "targetMultiplicity"))
                 : (extremos.size() > 0 ? multiplicidadDeUml(extremos.get(0)) : null);
 
+        OwningSide owningSidePorDefecto = (tipo == RelationshipType.COMPOSITION || tipo == RelationshipType.AGGREGATION)
+                ? OwningSide.TARGET
+                : OwningSide.SOURCE;
+
         return new Relationship(
                 id,
                 origen,
                 destino,
                 tipo,
-                ext != null ? enumeracion(atributo(ext, "owningSide"), OwningSide.SOURCE)
-                        : OwningSide.SOURCE,
+                ext != null ? enumeracion(atributo(ext, "owningSide"), owningSidePorDefecto)
+                        : owningSidePorDefecto,
                 ext != null && !atributo(ext, "joinTableName").isBlank()
                         ? atributo(ext, "joinTableName") : null,
                 ms,

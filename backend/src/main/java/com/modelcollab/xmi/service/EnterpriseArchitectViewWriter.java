@@ -3,8 +3,10 @@ package com.modelcollab.xmi.service;
 import com.modelcollab.metamodel.model.CanonicalModel;
 import com.modelcollab.metamodel.model.ClassEntity;
 import com.modelcollab.metamodel.model.Multiplicity;
+import com.modelcollab.metamodel.model.OwningSide;
 import com.modelcollab.metamodel.model.Relationship;
 import com.modelcollab.metamodel.model.RelationshipType;
+import com.modelcollab.metamodel.service.OwningSideRule;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -178,17 +180,23 @@ public class EnterpriseArchitectViewWriter {
             modelDelConector.setAttribute("ea_localid", String.valueOf(localIdDelConector++));
             c.appendChild(modelDelConector);
 
+            // En Enterprise Architect, el rombo se dibuja en el extremo que declara la agregación
+            // (composite o shared). En el modelo de ModelCollab, el "todo" (donde va el rombo)
+            // es el extremo opuesto a owningSide (que marca dónde vive la FK / la parte).
+            OwningSide owning = OwningSideRule.efectivo(r);
+            boolean romboEnOrigen = owning != OwningSide.SOURCE;
+            String agregacionOrigen = romboEnOrigen ? agregacion(r.type()) : "none";
+            String agregacionDestino = romboEnOrigen ? "none" : agregacion(r.type());
+
             c.appendChild(extremo(doc, "source", r.sourceClassId(),
                     nombrePorClase.get(r.sourceClassId()),
                     localIdPorClase.get(r.sourceClassId()), r.sourceMultiplicity(),
-                    r.sourceRole(), "none"));
-            // La agregación va en el extremo del TODO, igual que en el UML estándar que ya
-            // emitimos: si acá se pusiera del otro lado, el mismo archivo diría dos cosas
-            // distintas sobre el mismo rombo.
+                    r.sourceRole(), agregacionOrigen));
+
             c.appendChild(extremo(doc, "target", r.targetClassId(),
                     nombrePorClase.get(r.targetClassId()),
                     localIdPorClase.get(r.targetClassId()), r.targetMultiplicity(),
-                    r.targetRole(), agregacion(r.type())));
+                    r.targetRole(), agregacionDestino));
 
             Element propiedades = doc.createElement("properties");
             propiedades.setAttribute("ea_type", tipoEa(r.type()));
